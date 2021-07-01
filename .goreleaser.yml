@@ -1,0 +1,68 @@
+before:
+  hooks:
+    - go mod download
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+      - android
+    goarch:
+      - 386
+      - amd64
+      - arm64
+    ignore:
+      - goos: android
+        goarch: 386
+      - goos: windows
+        goarch: arm64
+    main: ./cmd/werk
+archives:
+  - replacements:
+      darwin: darwin
+      linux: linux
+      windows: windows
+      android: android
+      386: i386
+      amd64: amd64
+      arm64: arm64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+nfpms:
+  -
+    id: werk
+    package_name: werk
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    vendor: Freshman
+    homepage: https://github.com/ayoisaiah/
+    maintainer: Ayooluwa Isaiah <ayo@freshman.tech>
+    description: Werk is a command-line pomodoro timer application
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    recommends:
+      - exiftool
+scoop:
+  url_template: "https://github.com/ayoisaiah/werk/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+  bucket:
+    owner: ayoisaiah
+    name: scoop-bucket
+    token: "{{ .Env.SCOOP_BUCKET_GITHUB_TOKEN }}"
+  commit_author:
+    name: goreleaserbot
+    email: goreleaser@carlosbecker.com
+  commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
+  homepage: "https://github.com/ayoisaiah/werk"
+  description: "Werk is a command-line pomodoro timer application"
+  license: MIT

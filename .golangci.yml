@@ -1,0 +1,85 @@
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+  goimports:
+    local-prefixes: github.com/ayoisaiah/f2
+  gomnd:
+    settings:
+      mnd:
+        # don't include the "operation" and "assign" checks
+        checks: argument,case,condition,return
+  govet:
+    check-shadowing: true
+  nolintlint:
+    require-explanation: true
+    require-specific: true
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - deadcode
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - errorlint
+    - exportloopref
+    - exhaustive
+    - goconst
+    - godot
+    - gocritic
+    - gofmt
+    - goimports
+    - gomnd
+    - gocyclo
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - nolintlint
+    - prealloc
+    - predeclared
+    - revive
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - thelper
+    - tparallel
+    - typecheck
+    - unconvert
+    - unparam
+    - varcheck
+    - whitespace
+    - wsl
+
+issues:
+  fix: true
+  exclude-rules:
+    - path: _test\.go # disable some linters for test files
+      linters:
+        - gocyclo
+        - gosec
+        - dupl
+    - linters:
+      - stylecheck
+      text: "error strings should not be capitalized"
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+run:
+  issues-exit-code: 1
