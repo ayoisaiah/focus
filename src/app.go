@@ -97,28 +97,28 @@ func GetApp() *cli.App {
 				Name:    "long",
 				Usage:   "Long break duration in minutes (default: 15)",
 				Aliases: []string{"l"},
-				Value:   15,
 			},
 			&cli.UintFlag{
 				Name:    "short",
 				Usage:   "Short break duration in minutes (default: 5)",
 				Aliases: []string{"s"},
-				Value:   5,
 			},
 			&cli.UintFlag{
 				Name:    "pomodoro",
 				Usage:   "Pomodoro interval duration in minutes (default: 25)",
 				Aliases: []string{"p"},
-				Value:   25,
 			},
 			&cli.UintFlag{
 				Name:  "long-break-interval",
 				Usage: "Set the number of pomodoro sessions before a long break (default: 4)",
-				Value: 4,
 			},
 		},
 		Action: func(c *cli.Context) error {
-			t := newTimer(c)
+			t, err := newTimer(c)
+			if err != nil {
+				return err
+			}
+
 			t.start(pomodoro)
 			return nil
 		},

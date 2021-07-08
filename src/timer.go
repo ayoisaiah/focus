@@ -46,10 +46,13 @@ type Timer struct {
 	currentSession    sessionType
 	kind              kind
 	autoStart         bool
-	longBreakSessions int
+	longBreakInterval int
 	Events            []event
 	maxPomodoros      int
 	iteration         int
+	pomodoroMessage   string
+	longBreakMessage  string
+	shortBreakMessage string
 }
 
 func (t *Timer) nextSession() {
@@ -57,7 +60,7 @@ func (t *Timer) nextSession() {
 
 	switch t.currentSession {
 	case pomodoro:
-		if t.iteration == t.longBreakSessions {
+		if t.iteration == t.longBreakInterval {
 			next = longBreak
 		} else {
 			next = shortBreak
@@ -94,7 +97,7 @@ func (t *Timer) printSession(endTime time.Time) {
 
 	switch t.currentSession {
 	case pomodoro:
-		text = printColor(green, "Focus on your task! "+fmt.Sprintf("(%d/%d)", t.iteration, t.longBreakSessions))
+		text = printColor(green, "Focus on your task! "+fmt.Sprintf("(%d/%d)", t.iteration, t.longBreakInterval))
 	case shortBreak:
 		text = printColor(yellow, "Take a breather!")
 	case longBreak:
@@ -109,7 +112,7 @@ func (t *Timer) start(session sessionType) {
 	t.currentSession = session
 
 	if session == pomodoro {
-		if t.iteration == t.longBreakSessions {
+		if t.iteration == t.longBreakInterval {
 			t.iteration = 1
 		} else {
 			t.iteration++
@@ -151,19 +154,43 @@ func (t *Timer) start(session sessionType) {
 
 // newTimer returns a new timer constructed from
 // command line arguments.
-func newTimer(c *cli.Context) *Timer {
-	t := &Timer{}
-
-	t.kind = kind{
-		pomodoro:   int(c.Uint("pomodoro")),
-		shortBreak: int(c.Uint("short")),
-		longBreak:  int(c.Uint("long")),
-	}
-	t.longBreakSessions = int(c.Uint("long-break-interval"))
-
-	if t.longBreakSessions <= 0 {
-		t.longBreakSessions = 4
+func newTimer(c *cli.Context) (*Timer, error) {
+	config, err := newConfig()
+	if err != nil {
+		return nil, err
 	}
 
-	return t
+	t := &Timer{
+		kind: kind{
+			pomodoro:   config.PomodoroMinutes,
+			shortBreak: config.ShortBreakMinutes,
+			longBreak:  config.LongBreakMinutes,
+		},
+		longBreakInterval: config.LongBreakInterval,
+		pomodoroMessage:   config.PomodoroMessage,
+		shortBreakMessage: config.ShortBreakMessage,
+		longBreakMessage:  config.LongBreakMessage,
+	}
+
+	if c.Uint("pomodoro") > 0 {
+		t.kind[pomodoro] = int(c.Uint("pomodoro"))
+	}
+
+	if c.Uint("shortBreak") > 0 {
+		t.kind[shortBreak] = int(c.Uint("shortBreak"))
+	}
+
+	if c.Uint("longBreak") > 0 {
+		t.kind[longBreak] = int(c.Uint("longBreak"))
+	}
+
+	if c.Uint("long-break-interval") > 0 {
+		t.longBreakInterval = int(c.Uint("long-break-interval"))
+	}
+
+	if t.longBreakInterval <= 0 {
+		t.longBreakInterval = 4
+	}
+
+	return t, nil
 }
