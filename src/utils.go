@@ -1,9 +1,17 @@
-package werk
+package focus
 
 import (
 	"os"
 
 	"github.com/gookit/color"
+)
+
+type colorString string
+
+const (
+	red    colorString = "red"
+	green  colorString = "green"
+	yellow colorString = "yellow"
 )
 
 func printColor(c colorString, text string) string {

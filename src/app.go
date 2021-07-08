@@ -1,4 +1,4 @@
-package werk
+package focus
 
 import (
 	"fmt"
@@ -78,42 +78,48 @@ func checkForUpdates(app *cli.App) {
 	}
 }
 
-// GetApp retrieves the werk app instance
+// GetApp retrieves the werk app instance.
 func GetApp() *cli.App {
 	return &cli.App{
-		Name: "Werk",
+		Name: "Pomodoro",
 		Authors: []*cli.Author{
 			{
 				Name:  "Ayooluwa Isaiah",
 				Email: "ayo@freshman.tech",
 			},
 		},
-		Usage:                "Werk is a cross-platform pomodoro app for the command line",
+		Usage:                "Pomodoro is a cross-platform pomodoro app for the command line",
 		UsageText:            "FLAGS [OPTIONS] [PATHS...]",
 		Version:              "v0.1.0",
 		EnableBashCompletion: true,
 		Flags: []cli.Flag{
 			&cli.UintFlag{
 				Name:    "long",
-				Usage:   "Long break duration in minutes",
+				Usage:   "Long break duration in minutes (default: 15)",
 				Aliases: []string{"l"},
 				Value:   15,
 			},
 			&cli.UintFlag{
 				Name:    "short",
-				Usage:   "Short break duration in minutes",
+				Usage:   "Short break duration in minutes (default: 5)",
 				Aliases: []string{"s"},
 				Value:   5,
 			},
 			&cli.UintFlag{
 				Name:    "pomodoro",
-				Usage:   "Pomodoro interval duration in minutes",
+				Usage:   "Pomodoro interval duration in minutes (default: 25)",
 				Aliases: []string{"p"},
 				Value:   25,
 			},
+			&cli.UintFlag{
+				Name:  "long-break-interval",
+				Usage: "Set the number of pomodoro sessions before a long break (default: 4)",
+				Value: 4,
+			},
 		},
 		Action: func(c *cli.Context) error {
-			newWerk(c)
+			t := newTimer(c)
+			t.start(pomodoro)
 			return nil
 		},
 	}
