@@ -53,6 +53,7 @@ type timer struct {
 	autoStartBreak      bool
 	longBreakInterval   int
 	maxPomodoros        int
+	counter             int
 	iteration           int
 	msg                 message
 	showNotification    bool
@@ -99,7 +100,19 @@ func (t *timer) printSession(endTime time.Time) {
 
 	switch t.currentSession {
 	case pomodoro:
-		text = fmt.Sprintf(printColor(green, "[Pomodoro %d/%d]"), t.iteration, t.longBreakInterval) + ": " + t.msg[pomodoro]
+		var count int
+
+		var total int
+
+		if t.maxPomodoros != 0 {
+			count = t.counter
+			total = t.maxPomodoros
+		} else {
+			count = t.iteration
+			total = t.longBreakInterval
+		}
+
+		text = fmt.Sprintf(printColor(green, "[Pomodoro %d/%d]"), count, total) + ": " + t.msg[pomodoro]
 	case shortBreak:
 		text = printColor(yellow, "[Short break]") + ": " + t.msg[shortBreak]
 	case longBreak:
@@ -137,6 +150,8 @@ func (t *timer) notify() {
 func (t *timer) start(session sessionType) {
 	t.currentSession = session
 
+	t.counter++
+
 	if session == pomodoro {
 		if t.iteration == t.longBreakInterval {
 			t.iteration = 1
@@ -167,6 +182,10 @@ func (t *timer) start(session sessionType) {
 		}
 
 		t.countdown(timeRemaining)
+	}
+
+	if t.counter == t.maxPomodoros {
+		return
 	}
 
 	if t.currentSession != pomodoro && !t.autoStartPomodoro || t.currentSession == pomodoro && !t.autoStartBreak {
@@ -223,6 +242,10 @@ func newTimer(ctx *cli.Context, c *config) *timer {
 
 	if ctx.Uint("long-break-interval") > 0 {
 		t.longBreakInterval = int(ctx.Uint("long-break-interval"))
+	}
+
+	if ctx.Uint("max-pomodoros") > 0 {
+		t.maxPomodoros = int(ctx.Uint("max-pomodoros"))
 	}
 
 	if ctx.Bool("auto-pomodoro") {

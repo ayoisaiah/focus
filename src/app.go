@@ -113,7 +113,12 @@ func GetApp() *cli.App {
 			},
 			&cli.UintFlag{
 				Name:  "long-break-interval",
-				Usage: "Set the number of pomodoro sessions before a long break (default: 4)",
+				Usage: "The number of pomodoro sessions before a long break (default: 4)",
+			},
+			&cli.UintFlag{
+				Name:    "max-pomodoros",
+				Aliases: []string{"max"},
+				Usage:   "The maximum number of pomodoro sessions (default: unlimited)",
 			},
 			&cli.BoolFlag{
 				Name:  "24-hour",
