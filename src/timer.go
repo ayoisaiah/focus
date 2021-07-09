@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gen2brain/beeep"
 	"github.com/urfave/cli/v2"
 )
 
@@ -31,8 +32,6 @@ const (
 	SKIPPED   sessionStatus = "SKIPPED"
 )
 
-type kind map[sessionType]int
-
 type event struct {
 	session         sessionType
 	status          sessionStatus
@@ -42,6 +41,10 @@ type event struct {
 	actualEndTime   time.Time
 }
 
+type kind map[sessionType]int
+
+type message map[sessionType]string
+
 type timer struct {
 	currentSession    sessionType
 	kind              kind
@@ -50,12 +53,12 @@ type timer struct {
 	Events            []event
 	maxPomodoros      int
 	iteration         int
-	pomodoroMessage   string
-	longBreakMessage  string
-	shortBreakMessage string
+	msg               message
+	showNotification  bool
 }
 
-func (t *timer) nextSession() {
+// nextSession retrieves the next session.
+func (t *timer) nextSession() sessionType {
 	var next sessionType
 
 	switch t.currentSession {
@@ -69,7 +72,7 @@ func (t *timer) nextSession() {
 		next = pomodoro
 	}
 
-	t.start(next)
+	return next
 }
 
 // getTimeRemaining subtracts the endTime from the currentTime
@@ -97,14 +100,33 @@ func (t *timer) printSession(endTime time.Time) {
 
 	switch t.currentSession {
 	case pomodoro:
-		text = fmt.Sprintf(printColor(green, "[Pomodoro %d/%d]"), t.iteration, t.longBreakInterval) + ": " + t.pomodoroMessage
+		text = fmt.Sprintf(printColor(green, "[Pomodoro %d/%d]"), t.iteration, t.longBreakInterval) + ": " + t.msg[pomodoro]
 	case shortBreak:
-		text = printColor(yellow, "[Short break]") + ": " + t.shortBreakMessage
+		text = printColor(yellow, "[Short break]") + ": " + t.msg[shortBreak]
 	case longBreak:
-		text = printColor(blue, "[Long break]") + ": " + t.longBreakMessage
+		text = printColor(blue, "[Long break]") + ": " + t.msg[longBreak]
 	}
 
 	fmt.Printf("%s (until %s)\n", text, endTime.Format("03:04:05 PM"))
+}
+
+func (t *timer) notify() {
+	fmt.Printf("Session completed!\n\n")
+
+	m := map[sessionType]string{
+		pomodoro:   "Pomodoro",
+		shortBreak: "Short break",
+		longBreak:  "Long break",
+	}
+
+	if t.showNotification {
+		msg := m[t.currentSession] + " is finished"
+
+		err := beeep.Notify(msg, t.msg[t.nextSession()], "")
+		if err != nil {
+			fmt.Println(fmt.Errorf("unable to display notification: %w", err))
+		}
+	}
 }
 
 // start begins a new session.
@@ -142,14 +164,14 @@ func (t *timer) start(session sessionType) {
 		timeRemaining := t.getTimeRemaining(endTime)
 
 		if timeRemaining.t <= 0 {
-			fmt.Printf("Session completed!\n\n")
+			t.notify()
 			break
 		}
 
 		fmt.Printf("Hours: %02d Minutes: %02d Seconds: %02d", timeRemaining.h, timeRemaining.m, timeRemaining.s)
 	}
 
-	t.nextSession()
+	t.start(t.nextSession())
 }
 
 // newTimer returns a new timer constructed from
@@ -162,9 +184,12 @@ func newTimer(ctx *cli.Context, c *config) *timer {
 			longBreak:  c.LongBreakMinutes,
 		},
 		longBreakInterval: c.LongBreakInterval,
-		pomodoroMessage:   c.PomodoroMessage,
-		shortBreakMessage: c.ShortBreakMessage,
-		longBreakMessage:  c.LongBreakMessage,
+		msg: message{
+			pomodoro:   c.PomodoroMessage,
+			shortBreak: c.ShortBreakMessage,
+			longBreak:  c.LongBreakMessage,
+		},
+		showNotification: c.Notify,
 	}
 
 	if ctx.Uint("pomodoro") > 0 {

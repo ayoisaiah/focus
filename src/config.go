@@ -30,6 +30,7 @@ type config struct {
 	LongBreakMinutes  int    `yaml:"long_break_mins"`
 	LongBreakMessage  string `yaml:"long_break_msg"`
 	LongBreakInterval int    `yaml:"long_break_interval"`
+	Notify            bool   `yaml:"notify"`
 }
 
 const (
@@ -40,6 +41,7 @@ const (
 	pomodoroMessage   = "Focus on your task"
 	shortBreakMessage = "Take a breather"
 	longBreakMessage  = "Take a long break"
+	notify            = true
 	configPath        = ".config/focus"
 	configFileName    = "config.yml"
 )
@@ -67,6 +69,27 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 	}
 
 	return num, nil
+}
+
+func boolPrompt(reader *bufio.Reader, defaultVal bool) (bool, error) {
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return "", errors.New(errReadingInput)
+	}
+
+	reader.Reset(os.Stdin)
+
+	input = strings.TrimSpace(strings.TrimSuffix(input, "\n"))
+	if input == "" {
+		return defaultVal, nil
+	}
+
+	s, err := strconv.ParseBool(input)
+	if err != nil {
+		return false, "input must be true or false"
+	}
+
+	return s, nil
 }
 
 func stringPrompt(reader *bufio.Reader, defaultVal string) (string, error) {
@@ -196,6 +219,21 @@ func (c *config) prompt(path string) {
 			}
 
 			c.LongBreakMessage = input
+		}
+
+		if !c.Notify {
+			fmt.Printf(
+				"Show notifications (default: '%t'): ",
+				notify,
+			)
+
+			input, err := boolPrompt(reader, notify)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			c.Notify = input
 		}
 
 		break
