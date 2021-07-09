@@ -19,9 +19,9 @@ type countdown struct {
 type sessionType int
 
 const (
-	pomodoro sessionType = iota
-	shortBreak
-	longBreak
+	Pomodoro sessionType = iota
+	ShortBreak
+	LongBreak
 )
 
 type sessionStatus string
@@ -46,7 +46,7 @@ type kind map[sessionType]int
 
 type message map[sessionType]string
 
-type timer struct {
+type Timer struct {
 	currentSession      sessionType
 	kind                kind
 	autoStartPomodoro   bool
@@ -61,18 +61,18 @@ type timer struct {
 }
 
 // nextSession retrieves the next session.
-func (t *timer) nextSession() sessionType {
+func (t *Timer) nextSession() sessionType {
 	var next sessionType
 
 	switch t.currentSession {
-	case pomodoro:
+	case Pomodoro:
 		if t.iteration == t.longBreakInterval {
-			next = longBreak
+			next = LongBreak
 		} else {
-			next = shortBreak
+			next = ShortBreak
 		}
-	case shortBreak, longBreak:
-		next = pomodoro
+	case ShortBreak, LongBreak:
+		next = Pomodoro
 	}
 
 	return next
@@ -81,7 +81,7 @@ func (t *timer) nextSession() sessionType {
 // getTimeRemaining subtracts the endTime from the currentTime
 // and returns the total number of hours, minutes and seconds
 // left.
-func (t *timer) getTimeRemaining(endTime time.Time) countdown {
+func (t *Timer) getTimeRemaining(endTime time.Time) countdown {
 	currentTime := time.Now()
 	difference := endTime.Sub(currentTime)
 	total := int(difference.Seconds())
@@ -95,11 +95,11 @@ func (t *timer) getTimeRemaining(endTime time.Time) countdown {
 	}
 }
 
-func (t *timer) printSession(endTime time.Time) {
+func (t *Timer) printSession(endTime time.Time) {
 	var text string
 
 	switch t.currentSession {
-	case pomodoro:
+	case Pomodoro:
 		var count int
 
 		var total int
@@ -112,11 +112,11 @@ func (t *timer) printSession(endTime time.Time) {
 			total = t.longBreakInterval
 		}
 
-		text = fmt.Sprintf(printColor(green, "[Pomodoro %d/%d]"), count, total) + ": " + t.msg[pomodoro]
-	case shortBreak:
-		text = printColor(yellow, "[Short break]") + ": " + t.msg[shortBreak]
-	case longBreak:
-		text = printColor(blue, "[Long break]") + ": " + t.msg[longBreak]
+		text = fmt.Sprintf(PrintColor(green, "[Pomodoro %d/%d]"), count, total) + ": " + t.msg[Pomodoro]
+	case ShortBreak:
+		text = PrintColor(yellow, "[Short break]") + ": " + t.msg[ShortBreak]
+	case LongBreak:
+		text = PrintColor(blue, "[Long break]") + ": " + t.msg[LongBreak]
 	}
 
 	var tf string
@@ -129,13 +129,13 @@ func (t *timer) printSession(endTime time.Time) {
 	fmt.Printf("%s (until %s)\n", text, endTime.Format(tf))
 }
 
-func (t *timer) notify() {
+func (t *Timer) notify() {
 	fmt.Printf("Session completed!\n\n")
 
 	m := map[sessionType]string{
-		pomodoro:   "Pomodoro",
-		shortBreak: "Short break",
-		longBreak:  "Long break",
+		Pomodoro:   "Pomodoro",
+		ShortBreak: "Short break",
+		LongBreak:  "Long break",
 	}
 
 	if t.showNotification {
@@ -146,13 +146,13 @@ func (t *timer) notify() {
 	}
 }
 
-// start begins a new session.
-func (t *timer) start(session sessionType) {
+// Start begins a new session.
+func (t *Timer) Start(session sessionType) {
 	t.currentSession = session
 
 	t.counter++
 
-	if session == pomodoro {
+	if session == Pomodoro {
 		if t.iteration == t.longBreakInterval {
 			t.iteration = 1
 		} else {
@@ -188,7 +188,7 @@ func (t *timer) start(session sessionType) {
 		return
 	}
 
-	if t.currentSession != pomodoro && !t.autoStartPomodoro || t.currentSession == pomodoro && !t.autoStartBreak {
+	if t.currentSession != Pomodoro && !t.autoStartPomodoro || t.currentSession == Pomodoro && !t.autoStartBreak {
 		// Block until user input before beginning next session
 		reader := bufio.NewReader(os.Stdin)
 
@@ -197,28 +197,28 @@ func (t *timer) start(session sessionType) {
 		_, _ = reader.ReadString('\n')
 	}
 
-	t.start(t.nextSession())
+	t.Start(t.nextSession())
 }
 
 // countdown prints.
-func (t *timer) countdown(timeRemaining countdown) {
+func (t *Timer) countdown(timeRemaining countdown) {
 	fmt.Printf("Minutes: %02d Seconds: %02d", timeRemaining.m, timeRemaining.s)
 }
 
-// newTimer returns a new timer constructed from
+// NewTimer returns a new timer constructed from
 // command line arguments.
-func newTimer(ctx *cli.Context, c *config) *timer {
-	t := &timer{
+func NewTimer(ctx *cli.Context, c *Config) *Timer {
+	t := &Timer{
 		kind: kind{
-			pomodoro:   c.PomodoroMinutes,
-			shortBreak: c.ShortBreakMinutes,
-			longBreak:  c.LongBreakMinutes,
+			Pomodoro:   c.PomodoroMinutes,
+			ShortBreak: c.ShortBreakMinutes,
+			LongBreak:  c.LongBreakMinutes,
 		},
 		longBreakInterval: c.LongBreakInterval,
 		msg: message{
-			pomodoro:   c.PomodoroMessage,
-			shortBreak: c.ShortBreakMessage,
-			longBreak:  c.LongBreakMessage,
+			Pomodoro:   c.PomodoroMessage,
+			ShortBreak: c.ShortBreakMessage,
+			LongBreak:  c.LongBreakMessage,
 		},
 		showNotification:    c.Notify,
 		autoStartPomodoro:   c.AutoStartPomorodo,
@@ -229,15 +229,15 @@ func newTimer(ctx *cli.Context, c *config) *timer {
 	// Command-line flags will override the configuration
 	// file
 	if ctx.Uint("pomodoro") > 0 {
-		t.kind[pomodoro] = int(ctx.Uint("pomodoro"))
+		t.kind[Pomodoro] = int(ctx.Uint("pomodoro"))
 	}
 
 	if ctx.Uint("short-break") > 0 {
-		t.kind[shortBreak] = int(ctx.Uint("short-break"))
+		t.kind[ShortBreak] = int(ctx.Uint("short-break"))
 	}
 
 	if ctx.Uint("long-break") > 0 {
-		t.kind[longBreak] = int(ctx.Uint("long-break"))
+		t.kind[LongBreak] = int(ctx.Uint("long-break"))
 	}
 
 	if ctx.Uint("long-break-interval") > 0 {

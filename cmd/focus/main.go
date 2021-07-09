@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	focus "github.com/ayoisaiah/focus/src"
+	cmd "github.com/ayoisaiah/focus/src"
 )
 
 func run(args []string) error {
-	return focus.GetApp().Run(args)
+	return cmd.GetApp().Run(args)
 }
 
 func main() {

@@ -15,7 +15,7 @@ const (
 	blue   colorString = "blue"
 )
 
-func printColor(c colorString, text string) string {
+func PrintColor(c colorString, text string) string {
 	if _, ok := os.LookupEnv("NO_COLOR"); ok {
 		return text
 	}

@@ -21,8 +21,8 @@ const ascii = `
 ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝
 `
 
-// config represents the user's preferences.
-type config struct {
+// Config represents the user's preferences.
+type Config struct {
 	PomodoroMinutes     int    `yaml:"pomodoro_mins"`
 	PomodoroMessage     string `yaml:"pomodoro_msg"`
 	ShortBreakMinutes   int    `yaml:"short_break_mins"`
@@ -72,7 +72,7 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 
 // configPrompt is the prompt for the app's
 // initial configuration.
-func (c *config) prompt(path string) {
+func (c *Config) prompt(path string) {
 	fmt.Println(ascii)
 
 	fmt.Printf("Your preferences will be saved to: %s\n", path)
@@ -143,7 +143,7 @@ func (c *config) prompt(path string) {
 }
 
 // save stores the current configuration to disk.
-func (c *config) save(path string) error {
+func (c *Config) save(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -171,9 +171,11 @@ func (c *config) save(path string) error {
 	return writer.Flush()
 }
 
-// check retrieves the path to the configuration file,
-// and checks if it exists or not.
-func (c *config) init() error {
+// Init initialises the app configuration.
+// If the config file does not exist,.it prompts
+// and saves the inputted preferences in a config
+// file.
+func (c *Config) Init() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -192,7 +194,7 @@ func (c *config) init() error {
 
 // get retrieves an already existing configuration from
 // the filesystem.
-func (c *config) get(pathToConfig string) error {
+func (c *Config) get(pathToConfig string) error {
 	c.defaults(false)
 
 	b, err := os.ReadFile(pathToConfig)
@@ -212,7 +214,7 @@ func (c *config) get(pathToConfig string) error {
 // The `willPrompt` flag is used to control
 // if default values should be set for the
 // values that.are requested in the prompt.
-func (c *config) defaults(willPrompt bool) {
+func (c *Config) defaults(willPrompt bool) {
 	if !willPrompt {
 		c.PomodoroMinutes = pomodoroMinutes
 		c.ShortBreakMinutes = shortBreakMinutes
@@ -232,7 +234,7 @@ func (c *config) defaults(willPrompt bool) {
 // new prompts the user to set a configuration
 // for the application. The resulting values are saved
 // to the filesystem.
-func (c *config) new(pathToConfig string) error {
+func (c *Config) new(pathToConfig string) error {
 	c.defaults(true)
 
 	configRoot := filepath.Dir(pathToConfig)

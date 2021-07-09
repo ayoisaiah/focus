@@ -1,10 +1,11 @@
-package focus
+package cmd
 
 import (
 	"fmt"
 	"net/http"
 	"time"
 
+	focus "github.com/ayoisaiah/focus/src/internal"
 	"github.com/urfave/cli/v2"
 )
 
@@ -76,7 +77,7 @@ func checkForUpdates(app *cli.App) {
 			app.Name,
 		)
 	} else {
-		fmt.Printf("%s: %s at %s\n", printColor("green", "Update available"), version, resp.Request.URL.String())
+		fmt.Printf("%s: %s at %s\n", focus.PrintColor("green", "Update available"), version, resp.Request.URL.String())
 	}
 }
 
@@ -141,15 +142,15 @@ func GetApp() *cli.App {
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			c := &config{}
+			c := &focus.Config{}
 
-			err := c.init()
+			err := c.Init()
 			if err != nil {
 				fmt.Println(fmt.Errorf("Unable to initialise Focus from configuration file: %w\n", err))
 			}
 
-			t := newTimer(ctx, c)
-			t.start(pomodoro)
+			t := focus.NewTimer(ctx, c)
+			t.Start(focus.Pomodoro)
 
 			return nil
 		},
