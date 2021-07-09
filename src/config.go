@@ -23,16 +23,17 @@ const ascii = `
 
 // config represents the user's preferences.
 type config struct {
-	PomodoroMinutes   int    `yaml:"pomodoro_mins"`
-	PomodoroMessage   string `yaml:"pomodoro_msg"`
-	ShortBreakMinutes int    `yaml:"short_break_mins"`
-	ShortBreakMessage string `yaml:"short_break_msg"`
-	LongBreakMinutes  int    `yaml:"long_break_mins"`
-	LongBreakMessage  string `yaml:"long_break_msg"`
-	LongBreakInterval int    `yaml:"long_break_interval"`
-	Notify            bool   `yaml:"notify"`
-	AutoStartPomorodo bool   `yaml:"auto_start_pomodoro"`
-	AutoStartBreak    bool   `yaml:"auto_start_break"`
+	PomodoroMinutes     int    `yaml:"pomodoro_mins"`
+	PomodoroMessage     string `yaml:"pomodoro_msg"`
+	ShortBreakMinutes   int    `yaml:"short_break_mins"`
+	ShortBreakMessage   string `yaml:"short_break_msg"`
+	LongBreakMinutes    int    `yaml:"long_break_mins"`
+	LongBreakMessage    string `yaml:"long_break_msg"`
+	LongBreakInterval   int    `yaml:"long_break_interval"`
+	Notify              bool   `yaml:"notify"`
+	AutoStartPomorodo   bool   `yaml:"auto_start_pomodoro"`
+	AutoStartBreak      bool   `yaml:"auto_start_break"`
+	TwentyFourHourClock bool   `yaml:"24hr_clock"`
 }
 
 const (
@@ -225,6 +226,7 @@ func (c *config) defaults(willPrompt bool) {
 	c.PomodoroMessage = "Focus on your task"
 	c.ShortBreakMessage = "Take a breather"
 	c.LongBreakMessage = "Take a long break"
+	c.TwentyFourHourClock = false
 }
 
 // new prompts the user to set a configuration

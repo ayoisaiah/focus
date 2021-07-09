@@ -116,6 +116,10 @@ func GetApp() *cli.App {
 				Usage: "Set the number of pomodoro sessions before a long break (default: 4)",
 			},
 			&cli.BoolFlag{
+				Name:  "24-hour",
+				Usage: "Switch from 12-hour clock to 24-hour clock",
+			},
+			&cli.BoolFlag{
 				Name:    "auto-pomodoro",
 				Aliases: []string{"ap"},
 				Usage:   "Start pomodoro sessions automatically without user interaction",

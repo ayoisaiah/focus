@@ -10,13 +10,13 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-type sessionType int
-
 type countdown struct {
 	t int
 	m int
 	s int
 }
+
+type sessionType int
 
 const (
 	pomodoro sessionType = iota
@@ -47,15 +47,16 @@ type kind map[sessionType]int
 type message map[sessionType]string
 
 type timer struct {
-	currentSession    sessionType
-	kind              kind
-	autoStartPomodoro bool
-	autoStartBreak    bool
-	longBreakInterval int
-	maxPomodoros      int
-	iteration         int
-	msg               message
-	showNotification  bool
+	currentSession      sessionType
+	kind                kind
+	autoStartPomodoro   bool
+	autoStartBreak      bool
+	longBreakInterval   int
+	maxPomodoros        int
+	iteration           int
+	msg                 message
+	showNotification    bool
+	twentyFourHourClock bool
 }
 
 // nextSession retrieves the next session.
@@ -105,7 +106,14 @@ func (t *timer) printSession(endTime time.Time) {
 		text = printColor(blue, "[Long break]") + ": " + t.msg[longBreak]
 	}
 
-	fmt.Printf("%s (until %s)\n", text, endTime.Format("03:04:05 PM"))
+	var tf string
+	if t.twentyFourHourClock {
+		tf = "15:04:05"
+	} else {
+		tf = "03:04:05 PM"
+	}
+
+	fmt.Printf("%s (until %s)\n", text, endTime.Format(tf))
 }
 
 func (t *timer) notify() {
@@ -193,9 +201,10 @@ func newTimer(ctx *cli.Context, c *config) *timer {
 			shortBreak: c.ShortBreakMessage,
 			longBreak:  c.LongBreakMessage,
 		},
-		showNotification:  c.Notify,
-		autoStartPomodoro: c.AutoStartPomorodo,
-		autoStartBreak:    c.AutoStartBreak,
+		showNotification:    c.Notify,
+		autoStartPomodoro:   c.AutoStartPomorodo,
+		autoStartBreak:      c.AutoStartBreak,
+		twentyFourHourClock: c.TwentyFourHourClock,
 	}
 
 	// Command-line flags will override the configuration
@@ -230,6 +239,10 @@ func newTimer(ctx *cli.Context, c *config) *timer {
 
 	if t.longBreakInterval <= 0 {
 		t.longBreakInterval = 4
+	}
+
+	if ctx.Bool("24-hour") {
+		t.twentyFourHourClock = ctx.Bool("24-hour")
 	}
 
 	return t
