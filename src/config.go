@@ -21,9 +21,8 @@ const ascii = `
 ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝
 `
 
-// Config represents the all the environmental variables that should be present
-// on start up.
-type Config struct {
+// config represents the application configuration.
+type config struct {
 	PomodoroMinutes   int    `yaml:"pomodoro_mins"`
 	PomodoroMessage   string `yaml:"pomodoro_msg"`
 	ShortBreakMinutes int    `yaml:"short_break_mins"`
@@ -32,9 +31,6 @@ type Config struct {
 	LongBreakMessage  string `yaml:"long_break_msg"`
 	LongBreakInterval int    `yaml:"long_break_interval"`
 }
-
-// Conf represents the application configuration.
-var Conf *Config
 
 const (
 	pomodoroMinutes   = 25
@@ -91,7 +87,7 @@ func stringPrompt(reader *bufio.Reader, defaultVal string) (string, error) {
 
 // configPrompt is the prompt for the app's
 // initial configuration.
-func (c *Config) prompt(path string) {
+func (c *config) prompt(path string) {
 	fmt.Println(ascii)
 
 	fmt.Printf("Your preferences will be saved to: %s\n", path)
@@ -207,7 +203,7 @@ func (c *Config) prompt(path string) {
 }
 
 // save stores the current configuration to disk.
-func (c *Config) save(path string) error {
+func (c *config) save(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -237,7 +233,7 @@ func (c *Config) save(path string) error {
 
 // get retrieves an already existing configuration from
 // the filesystem.
-func (c *Config) get() error {
+func (c *config) get() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -262,7 +258,7 @@ func (c *Config) get() error {
 // new prompts the user to set a configuration
 // for the application. The resulting values are saved
 // to the filesystem.
-func (c *Config) new() error {
+func (c *config) new() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err

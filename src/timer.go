@@ -154,33 +154,33 @@ func (t *Timer) start(session sessionType) {
 
 // newTimer returns a new timer constructed from
 // command line arguments.
-func newTimer(c *cli.Context, config *Config) *Timer {
+func newTimer(ctx *cli.Context, c *config) *Timer {
 	t := &Timer{
 		kind: kind{
-			pomodoro:   config.PomodoroMinutes,
-			shortBreak: config.ShortBreakMinutes,
-			longBreak:  config.LongBreakMinutes,
+			pomodoro:   c.PomodoroMinutes,
+			shortBreak: c.ShortBreakMinutes,
+			longBreak:  c.LongBreakMinutes,
 		},
-		longBreakInterval: config.LongBreakInterval,
-		pomodoroMessage:   config.PomodoroMessage,
-		shortBreakMessage: config.ShortBreakMessage,
-		longBreakMessage:  config.LongBreakMessage,
+		longBreakInterval: c.LongBreakInterval,
+		pomodoroMessage:   c.PomodoroMessage,
+		shortBreakMessage: c.ShortBreakMessage,
+		longBreakMessage:  c.LongBreakMessage,
 	}
 
-	if c.Uint("pomodoro") > 0 {
-		t.kind[pomodoro] = int(c.Uint("pomodoro"))
+	if ctx.Uint("pomodoro") > 0 {
+		t.kind[pomodoro] = int(ctx.Uint("pomodoro"))
 	}
 
-	if c.Uint("shortBreak") > 0 {
-		t.kind[shortBreak] = int(c.Uint("shortBreak"))
+	if ctx.Uint("shortBreak") > 0 {
+		t.kind[shortBreak] = int(ctx.Uint("shortBreak"))
 	}
 
-	if c.Uint("longBreak") > 0 {
-		t.kind[longBreak] = int(c.Uint("longBreak"))
+	if ctx.Uint("longBreak") > 0 {
+		t.kind[longBreak] = int(ctx.Uint("longBreak"))
 	}
 
-	if c.Uint("long-break-interval") > 0 {
-		t.longBreakInterval = int(c.Uint("long-break-interval"))
+	if ctx.Uint("long-break-interval") > 0 {
+		t.longBreakInterval = int(ctx.Uint("long-break-interval"))
 	}
 
 	if t.longBreakInterval <= 0 {

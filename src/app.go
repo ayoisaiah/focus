@@ -79,7 +79,7 @@ func checkForUpdates(app *cli.App) {
 }
 
 func newConfig() error {
-	c := &Config{}
+	c := &config{}
 
 	return c.new()
 }
@@ -102,7 +102,7 @@ func GetApp() *cli.App {
 			{
 				Name:  "config",
 				Usage: "Change the configuration",
-				Action: func(c *cli.Context) error {
+				Action: func(ctx *cli.Context) error {
 					return newConfig()
 				},
 			},
@@ -128,14 +128,14 @@ func GetApp() *cli.App {
 				Usage: "Set the number of pomodoro sessions before a long break (default: 4)",
 			},
 		},
-		Action: func(c *cli.Context) error {
-			config := &Config{}
-			err := config.get()
+		Action: func(ctx *cli.Context) error {
+			c := &config{}
+			err := c.get()
 			if err != nil {
 				return newConfig()
 			}
 
-			t := newTimer(c, config)
+			t := newTimer(ctx, c)
 			t.start(pomodoro)
 
 			return nil
