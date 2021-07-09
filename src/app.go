@@ -49,6 +49,7 @@ func checkForUpdates(app *cli.App) {
 	fmt.Println("Checking for updates...")
 
 	c := http.Client{Timeout: 20 * time.Second}
+
 	resp, err := c.Get("https://github.com/ayoisaiah/f2/releases/latest")
 	if err != nil {
 		fmt.Println("HTTP Error: Failed to check for update")
@@ -58,6 +59,7 @@ func checkForUpdates(app *cli.App) {
 	defer resp.Body.Close()
 
 	var version string
+
 	_, err = fmt.Sscanf(
 		resp.Request.URL.String(),
 		"https://github.com/ayoisaiah/f2/releases/tag/%s",
@@ -78,12 +80,6 @@ func checkForUpdates(app *cli.App) {
 	}
 }
 
-func newConfig() error {
-	c := &config{}
-
-	return c.new()
-}
-
 // GetApp retrieves the focus app instance.
 func GetApp() *cli.App {
 	return &cli.App{
@@ -98,15 +94,7 @@ func GetApp() *cli.App {
 		UsageText:            "FLAGS [OPTIONS] [PATHS...]",
 		Version:              "v0.1.0",
 		EnableBashCompletion: true,
-		Commands: []*cli.Command{
-			{
-				Name:  "config",
-				Usage: "Change the configuration",
-				Action: func(ctx *cli.Context) error {
-					return newConfig()
-				},
-			},
-		},
+		Commands:             []*cli.Command{},
 		Flags: []cli.Flag{
 			&cli.UintFlag{
 				Name:    "long-break",
@@ -127,12 +115,28 @@ func GetApp() *cli.App {
 				Name:  "long-break-interval",
 				Usage: "Set the number of pomodoro sessions before a long break (default: 4)",
 			},
+			&cli.BoolFlag{
+				Name:    "auto-pomodoro",
+				Aliases: []string{"ap"},
+				Usage:   "Start pomodoro sessions automatically without user interaction",
+			},
+			&cli.BoolFlag{
+				Name:    "auto-break",
+				Aliases: []string{"ab"},
+				Usage:   "Start break sessions automatically without user interaction",
+			},
+			&cli.BoolFlag{
+				Name:    "disable-notifications",
+				Aliases: []string{"d"},
+				Usage:   "Disable notification alerts after a session is completed",
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			c := &config{}
-			err := c.get()
+
+			err := c.init()
 			if err != nil {
-				return newConfig()
+				fmt.Println(fmt.Errorf("Unable to initialise Focus from configuration file: %w\n", err))
 			}
 
 			t := newTimer(ctx, c)

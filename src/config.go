@@ -21,7 +21,7 @@ const ascii = `
 ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝
 `
 
-// config represents the application configuration.
+// config represents the user's preferences.
 type config struct {
 	PomodoroMinutes   int    `yaml:"pomodoro_mins"`
 	PomodoroMessage   string `yaml:"pomodoro_msg"`
@@ -31,6 +31,8 @@ type config struct {
 	LongBreakMessage  string `yaml:"long_break_msg"`
 	LongBreakInterval int    `yaml:"long_break_interval"`
 	Notify            bool   `yaml:"notify"`
+	AutoStartPomorodo bool   `yaml:"auto_start_pomodoro"`
+	AutoStartBreak    bool   `yaml:"auto_start_break"`
 }
 
 const (
@@ -38,10 +40,6 @@ const (
 	shortBreakMinutes = 5
 	longBreakMinutes  = 15
 	longBreakInterval = 4
-	pomodoroMessage   = "Focus on your task"
-	shortBreakMessage = "Take a breather"
-	longBreakMessage  = "Take a long break"
-	notify            = true
 	configPath        = ".config/focus"
 	configFileName    = "config.yml"
 )
@@ -71,43 +69,6 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 	return num, nil
 }
 
-func boolPrompt(reader *bufio.Reader, defaultVal bool) (bool, error) {
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return false, errors.New(errReadingInput)
-	}
-
-	reader.Reset(os.Stdin)
-
-	input = strings.TrimSpace(strings.TrimSuffix(input, "\n"))
-	if input == "" {
-		return defaultVal, nil
-	}
-
-	s, err := strconv.ParseBool(input)
-	if err != nil {
-		return false, errors.New("input must be true or false")
-	}
-
-	return s, nil
-}
-
-func stringPrompt(reader *bufio.Reader, defaultVal string) (string, error) {
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return "", errors.New(errReadingInput)
-	}
-
-	reader.Reset(os.Stdin)
-
-	input = strings.TrimSpace(strings.TrimSuffix(input, "\n"))
-	if input == "" {
-		input = defaultVal
-	}
-
-	return input, nil
-}
-
 // configPrompt is the prompt for the app's
 // initial configuration.
 func (c *config) prompt(path string) {
@@ -118,7 +79,7 @@ func (c *config) prompt(path string) {
 	fmt.Printf(`
 - Follow the prompts below to configure Focus for the first time.
 - Type your preferred value, or press ENTER to accept the defaults.
-- Run 'focus config' to change your settings at any time.
+- Edit the configuration file to change any settings, or use command-line arguments (see the --help flag)
 `)
 
 	reader := bufio.NewReader(os.Stdin)
@@ -176,66 +137,6 @@ func (c *config) prompt(path string) {
 			c.LongBreakInterval = num
 		}
 
-		if c.PomodoroMessage == "" {
-			fmt.Printf(
-				"Pomodoro message (default: '%s'): ",
-				pomodoroMessage,
-			)
-
-			input, err := stringPrompt(reader, pomodoroMessage)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-
-			c.PomodoroMessage = input
-		}
-
-		if c.ShortBreakMessage == "" {
-			fmt.Printf(
-				"Short break message (default: '%s'): ",
-				shortBreakMessage,
-			)
-
-			input, err := stringPrompt(reader, shortBreakMessage)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-
-			c.ShortBreakMessage = input
-		}
-
-		if c.LongBreakMessage == "" {
-			fmt.Printf(
-				"Long break message (default: '%s'): ",
-				longBreakMessage,
-			)
-
-			input, err := stringPrompt(reader, longBreakMessage)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-
-			c.LongBreakMessage = input
-		}
-
-		if !c.Notify {
-			fmt.Printf(
-				"Show notifications (default: '%t'): ",
-				notify,
-			)
-
-			input, err := boolPrompt(reader, notify)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-
-			c.Notify = input
-		}
-
 		break
 	}
 }
@@ -269,9 +170,9 @@ func (c *config) save(path string) error {
 	return writer.Flush()
 }
 
-// get retrieves an already existing configuration from
-// the filesystem.
-func (c *config) get() error {
+// check retrieves the path to the configuration file,
+// and checks if it exists or not.
+func (c *config) init() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -279,6 +180,19 @@ func (c *config) get() error {
 
 	configRoot := filepath.Join(homeDir, configPath)
 	pathToConfig := filepath.Join(configRoot, configFileName)
+
+	_, err = os.Stat(pathToConfig)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return c.new(pathToConfig)
+	}
+
+	return c.get(pathToConfig)
+}
+
+// get retrieves an already existing configuration from
+// the filesystem.
+func (c *config) get(pathToConfig string) error {
+	c.defaults(false)
 
 	b, err := os.ReadFile(pathToConfig)
 	if err != nil {
@@ -293,20 +207,36 @@ func (c *config) get() error {
 	return nil
 }
 
+// defaults sets default values for the config.
+// The `willPrompt` flag is used to control
+// if default values should be set for the
+// values that.are requested in the prompt.
+func (c *config) defaults(willPrompt bool) {
+	if !willPrompt {
+		c.PomodoroMinutes = pomodoroMinutes
+		c.ShortBreakMinutes = shortBreakMinutes
+		c.LongBreakMinutes = longBreakMinutes
+		c.LongBreakInterval = longBreakInterval
+	}
+
+	c.AutoStartBreak = false
+	c.AutoStartPomorodo = false
+	c.Notify = true
+	c.PomodoroMessage = "Focus on your task"
+	c.ShortBreakMessage = "Take a breather"
+	c.LongBreakMessage = "Take a long break"
+}
+
 // new prompts the user to set a configuration
 // for the application. The resulting values are saved
 // to the filesystem.
-func (c *config) new() error {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
+func (c *config) new(pathToConfig string) error {
+	c.defaults(true)
 
-	configRoot := filepath.Join(homeDir, configPath)
-	pathToConfig := filepath.Join(configRoot, configFileName)
+	configRoot := filepath.Dir(pathToConfig)
 
 	// Ensure the config directory exists
-	err = os.MkdirAll(configRoot, 0750)
+	err := os.MkdirAll(configRoot, 0750)
 	if err != nil {
 		return err
 	}
@@ -318,7 +248,7 @@ func (c *config) new() error {
 		return err
 	}
 
-	fmt.Printf("\nYour settings have been saved. Thanks for using Focus!")
+	fmt.Printf("\nYour settings have been saved. Thanks for using Focus!\n\n")
 
 	return nil
 }

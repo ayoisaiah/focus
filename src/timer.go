@@ -1,7 +1,9 @@
 package focus
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/gen2brain/beeep"
@@ -47,9 +49,9 @@ type message map[sessionType]string
 type timer struct {
 	currentSession    sessionType
 	kind              kind
-	autoStart         bool
+	autoStartPomodoro bool
+	autoStartBreak    bool
 	longBreakInterval int
-	Events            []event
 	maxPomodoros      int
 	iteration         int
 	msg               message
@@ -118,10 +120,8 @@ func (t *timer) notify() {
 	if t.showNotification {
 		msg := m[t.currentSession] + " is finished"
 
-		err := beeep.Notify(msg, t.msg[t.nextSession()], "")
-		if err != nil {
-			fmt.Println(fmt.Errorf("unable to display notification: %w", err))
-		}
+		// TODO: Handle error
+		_ = beeep.Notify(msg, t.msg[t.nextSession()], "")
 	}
 }
 
@@ -141,16 +141,6 @@ func (t *timer) start(session sessionType) {
 
 	t.printSession(endTime)
 
-	ev := event{
-		session:         session,
-		status:          STARTED,
-		duration:        t.kind[session],
-		startTime:       time.Now(),
-		expectedEndTime: endTime,
-	}
-
-	t.Events = append(t.Events, ev)
-
 	fmt.Print("\033[s")
 
 	timeRemaining := t.getTimeRemaining(endTime)
@@ -169,6 +159,15 @@ func (t *timer) start(session sessionType) {
 		}
 
 		t.countdown(timeRemaining)
+	}
+
+	if t.currentSession != pomodoro && !t.autoStartPomodoro || t.currentSession == pomodoro && !t.autoStartBreak {
+		// Block until user input before beginning next session
+		reader := bufio.NewReader(os.Stdin)
+
+		fmt.Print("Press ENTER to start the next session\n")
+
+		_, _ = reader.ReadString('\n')
 	}
 
 	t.start(t.nextSession())
@@ -194,9 +193,13 @@ func newTimer(ctx *cli.Context, c *config) *timer {
 			shortBreak: c.ShortBreakMessage,
 			longBreak:  c.LongBreakMessage,
 		},
-		showNotification: c.Notify,
+		showNotification:  c.Notify,
+		autoStartPomodoro: c.AutoStartPomorodo,
+		autoStartBreak:    c.AutoStartBreak,
 	}
 
+	// Command-line flags will override the configuration
+	// file
 	if ctx.Uint("pomodoro") > 0 {
 		t.kind[pomodoro] = int(ctx.Uint("pomodoro"))
 	}
@@ -211,6 +214,18 @@ func newTimer(ctx *cli.Context, c *config) *timer {
 
 	if ctx.Uint("long-break-interval") > 0 {
 		t.longBreakInterval = int(ctx.Uint("long-break-interval"))
+	}
+
+	if ctx.Bool("auto-pomodoro") {
+		t.autoStartPomodoro = true
+	}
+
+	if ctx.Bool("auto-break") {
+		t.autoStartBreak = true
+	}
+
+	if ctx.Bool("disable-notifications") {
+		t.showNotification = false
 	}
 
 	if t.longBreakInterval <= 0 {
