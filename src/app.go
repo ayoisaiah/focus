@@ -78,20 +78,35 @@ func checkForUpdates(app *cli.App) {
 	}
 }
 
-// GetApp retrieves the werk app instance.
+func newConfig() error {
+	c := &Config{}
+
+	return c.new()
+}
+
+// GetApp retrieves the focus app instance.
 func GetApp() *cli.App {
 	return &cli.App{
-		Name: "Pomodoro",
+		Name: "Focus",
 		Authors: []*cli.Author{
 			{
 				Name:  "Ayooluwa Isaiah",
 				Email: "ayo@freshman.tech",
 			},
 		},
-		Usage:                "Pomodoro is a cross-platform pomodoro app for the command line",
+		Usage:                "Focus is a cross-platform pomodoro app for the command line",
 		UsageText:            "FLAGS [OPTIONS] [PATHS...]",
 		Version:              "v0.1.0",
 		EnableBashCompletion: true,
+		Commands: []*cli.Command{
+			{
+				Name:  "config",
+				Usage: "Change the configuration",
+				Action: func(c *cli.Context) error {
+					return newConfig()
+				},
+			},
+		},
 		Flags: []cli.Flag{
 			&cli.UintFlag{
 				Name:    "long",
@@ -114,12 +129,15 @@ func GetApp() *cli.App {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			t, err := newTimer(c)
+			config := &Config{}
+			err := config.get()
 			if err != nil {
-				return err
+				return newConfig()
 			}
 
+			t := newTimer(c, config)
 			t.start(pomodoro)
+
 			return nil
 		},
 	}

@@ -2,10 +2,14 @@ package focus
 
 import (
 	"bufio"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 const ascii = `
@@ -20,13 +24,13 @@ const ascii = `
 // Config represents the all the environmental variables that should be present
 // on start up.
 type Config struct {
-	PomodoroMinutes   int    `json:"pomodoro_mins"`
-	PomodoroMessage   string `json:"pomodoro_msg"`
-	ShortBreakMinutes int    `json:"short_break_mins"`
-	ShortBreakMessage string `json:"short_break_msg"`
-	LongBreakMinutes  int    `json:"long_break_mins"`
-	LongBreakMessage  string `json:"long_break_msg"`
-	LongBreakInterval int    `json:"long_break_interval"`
+	PomodoroMinutes   int    `yaml:"pomodoro_mins"`
+	PomodoroMessage   string `yaml:"pomodoro_msg"`
+	ShortBreakMinutes int    `yaml:"short_break_mins"`
+	ShortBreakMessage string `yaml:"short_break_msg"`
+	LongBreakMinutes  int    `yaml:"long_break_mins"`
+	LongBreakMessage  string `yaml:"long_break_msg"`
+	LongBreakInterval int    `yaml:"long_break_interval"`
 }
 
 // Conf represents the application configuration.
@@ -40,9 +44,50 @@ const (
 	pomodoroMessage   = "Focus on your task"
 	shortBreakMessage = "Take a breather"
 	longBreakMessage  = "Take a long break"
-	configFolder      = ".focus"
-	configFileName    = "config.json"
+	configPath        = ".config/focus"
+	configFileName    = "config.yml"
 )
+
+func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return 0, errors.New(errReadingInput)
+	}
+
+	reader.Reset(os.Stdin)
+
+	input = strings.TrimSpace(strings.TrimSuffix(input, "\n"))
+	if input == "" {
+		return defaultVal, nil
+	}
+
+	num, err := strconv.Atoi(input)
+	if err != nil {
+		return 0, errors.New(errExpectedNumber)
+	}
+
+	if num <= 0 {
+		return 0, errors.New(errExpectPositiveInteger)
+	}
+
+	return num, nil
+}
+
+func stringPrompt(reader *bufio.Reader, defaultVal string) (string, error) {
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return "", errors.New(errReadingInput)
+	}
+
+	reader.Reset(os.Stdin)
+
+	input = strings.TrimSpace(strings.TrimSuffix(input, "\n"))
+	if input == "" {
+		input = defaultVal
+	}
+
+	return input, nil
+}
 
 // configPrompt is the prompt for the app's
 // initial configuration.
@@ -52,10 +97,9 @@ func (c *Config) prompt(path string) {
 	fmt.Printf("Your preferences will be saved to: %s\n", path)
 
 	fmt.Printf(`
-Follow the prompts below to configure Focus for the first time:
-  1. Enter your preferred time lengths in minutes for each session.
-  2. Enter your messages.
-  3. Run 'focus config' to change your settings at any time.
+- Follow the prompts below to configure Focus for the first time.
+- Type your preferred value, or press ENTER to accept the defaults.
+- Run 'focus config' to change your settings at any time.
 `)
 
 	reader := bufio.NewReader(os.Stdin)
@@ -78,7 +122,7 @@ Follow the prompts below to configure Focus for the first time:
 		}
 
 		if c.ShortBreakMinutes == 0 {
-			fmt.Printf("Short Break in minutes (default: %d): ", shortBreakMinutes)
+			fmt.Printf("Short break length in minutes (default: %d): ", shortBreakMinutes)
 
 			num, err := numberPrompt(reader, shortBreakMinutes)
 			if err != nil {
@@ -90,7 +134,7 @@ Follow the prompts below to configure Focus for the first time:
 		}
 
 		if c.LongBreakMinutes == 0 {
-			fmt.Printf("Long Break in minutes (default: %d): ", longBreakMinutes)
+			fmt.Printf("Long break length in minutes (default: %d): ", longBreakMinutes)
 
 			num, err := numberPrompt(reader, longBreakMinutes)
 			if err != nil {
@@ -130,7 +174,7 @@ Follow the prompts below to configure Focus for the first time:
 
 		if c.ShortBreakMessage == "" {
 			fmt.Printf(
-				"Short Break message (default: '%s'): ",
+				"Short break message (default: '%s'): ",
 				shortBreakMessage,
 			)
 
@@ -145,7 +189,7 @@ Follow the prompts below to configure Focus for the first time:
 
 		if c.LongBreakMessage == "" {
 			fmt.Printf(
-				"Long Break message (default: '%s'): ",
+				"Long break message (default: '%s'): ",
 				longBreakMessage,
 			)
 
@@ -164,38 +208,83 @@ Follow the prompts below to configure Focus for the first time:
 
 // save stores the current configuration to disk.
 func (c *Config) save(path string) error {
-	return saveToDisk(c, path)
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		ferr := file.Close()
+		if ferr != nil {
+			err = ferr
+		}
+	}()
+
+	writer := bufio.NewWriter(file)
+
+	b, err := yaml.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	_, err = writer.Write(b)
+	if err != nil {
+		return err
+	}
+
+	return writer.Flush()
 }
 
-// newConfig returns a stored config from the filesystem.
-// If an existing configuation is not found, it prompts the user
-// to set the configuation for the application.
-func newConfig() (*Config, error) {
-	c := &Config{}
-
-	dir, err := os.UserHomeDir()
+// get retrieves an already existing configuration from
+// the filesystem.
+func (c *Config) get() error {
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	path := filepath.Join(dir, configFolder, configFileName)
+	configRoot := filepath.Join(homeDir, configPath)
+	pathToConfig := filepath.Join(configRoot, configFileName)
 
-	b, err := retrieveFromDisk(configFileName)
+	b, err := os.ReadFile(pathToConfig)
 	if err != nil {
-		c.prompt(path)
-
-		err = c.save(path)
-		if err != nil {
-			return nil, err
-		}
-
-		fmt.Printf("\nThanks for using Focus! You can run '%s' to change your settings anytime.\n\n", printColor(yellow, "focus config"))
-	} else {
-		err = json.Unmarshal(b, c)
-		if err != nil {
-			return c, err
-		}
+		return err
 	}
 
-	return c, nil
+	err = yaml.Unmarshal(b, c)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// new prompts the user to set a configuration
+// for the application. The resulting values are saved
+// to the filesystem.
+func (c *Config) new() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	configRoot := filepath.Join(homeDir, configPath)
+	pathToConfig := filepath.Join(configRoot, configFileName)
+
+	// Ensure the config directory exists
+	err = os.MkdirAll(configRoot, 0750)
+	if err != nil {
+		return err
+	}
+
+	c.prompt(pathToConfig)
+
+	err = c.save(pathToConfig)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\nYour settings have been saved. Thanks for using Focus!")
+
+	return nil
 }

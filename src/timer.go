@@ -154,12 +154,7 @@ func (t *Timer) start(session sessionType) {
 
 // newTimer returns a new timer constructed from
 // command line arguments.
-func newTimer(c *cli.Context) (*Timer, error) {
-	config, err := newConfig()
-	if err != nil {
-		return nil, err
-	}
-
+func newTimer(c *cli.Context, config *Config) *Timer {
 	t := &Timer{
 		kind: kind{
 			pomodoro:   config.PomodoroMinutes,
@@ -192,5 +187,5 @@ func newTimer(c *cli.Context) (*Timer, error) {
 		t.longBreakInterval = 4
 	}
 
-	return t, nil
+	return t
 }
