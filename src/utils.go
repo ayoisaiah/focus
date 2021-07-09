@@ -12,6 +12,7 @@ const (
 	red    colorString = "red"
 	green  colorString = "green"
 	yellow colorString = "yellow"
+	blue   colorString = "blue"
 )
 
 func printColor(c colorString, text string) string {
@@ -26,6 +27,8 @@ func printColor(c colorString, text string) string {
 		return color.HEX("#23D160").Sprint(text)
 	case red:
 		return color.HEX("#FF2F2F").Sprint(text)
+	case blue:
+		return color.HEX("#37A6E6").Sprint(text)
 	}
 
 	return text

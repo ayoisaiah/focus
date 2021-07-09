@@ -109,12 +109,12 @@ func GetApp() *cli.App {
 		},
 		Flags: []cli.Flag{
 			&cli.UintFlag{
-				Name:    "long",
+				Name:    "long-break",
 				Usage:   "Long break duration in minutes (default: 15)",
 				Aliases: []string{"l"},
 			},
 			&cli.UintFlag{
-				Name:    "short",
+				Name:    "short-break",
 				Usage:   "Short break duration in minutes (default: 5)",
 				Aliases: []string{"s"},
 			},
