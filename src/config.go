@@ -74,7 +74,7 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 func boolPrompt(reader *bufio.Reader, defaultVal bool) (bool, error) {
 	input, err := reader.ReadString('\n')
 	if err != nil {
-		return "", errors.New(errReadingInput)
+		return false, errors.New(errReadingInput)
 	}
 
 	reader.Reset(os.Stdin)
@@ -86,7 +86,7 @@ func boolPrompt(reader *bufio.Reader, defaultVal bool) (bool, error) {
 
 	s, err := strconv.ParseBool(input)
 	if err != nil {
-		return false, "input must be true or false"
+		return false, errors.New("input must be true or false")
 	}
 
 	return s, nil

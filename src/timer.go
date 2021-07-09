@@ -12,7 +12,6 @@ type sessionType int
 
 type countdown struct {
 	t int
-	h int
 	m int
 	s int
 }
@@ -81,15 +80,12 @@ func (t *timer) nextSession() sessionType {
 func (t *timer) getTimeRemaining(endTime time.Time) countdown {
 	currentTime := time.Now()
 	difference := endTime.Sub(currentTime)
-
 	total := int(difference.Seconds())
-	hours := total / (60 * 60) % 24
-	minutes := total / 60 % 60
+	minutes := total / 60
 	seconds := total % 60
 
 	return countdown{
 		t: total,
-		h: hours,
 		m: minutes,
 		s: seconds,
 	}
@@ -157,21 +153,30 @@ func (t *timer) start(session sessionType) {
 
 	fmt.Print("\033[s")
 
+	timeRemaining := t.getTimeRemaining(endTime)
+
+	t.countdown(timeRemaining)
+
 	ticker := time.NewTicker(time.Second)
 	for range ticker.C {
 		fmt.Print("\033[u\033[K")
 
-		timeRemaining := t.getTimeRemaining(endTime)
+		timeRemaining = t.getTimeRemaining(endTime)
 
 		if timeRemaining.t <= 0 {
 			t.notify()
 			break
 		}
 
-		fmt.Printf("Hours: %02d Minutes: %02d Seconds: %02d", timeRemaining.h, timeRemaining.m, timeRemaining.s)
+		t.countdown(timeRemaining)
 	}
 
 	t.start(t.nextSession())
+}
+
+// countdown prints.
+func (t *timer) countdown(timeRemaining countdown) {
+	fmt.Printf("Minutes: %02d Seconds: %02d", timeRemaining.m, timeRemaining.s)
 }
 
 // newTimer returns a new timer constructed from
