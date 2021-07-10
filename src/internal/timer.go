@@ -346,30 +346,9 @@ func (t *Timer) countdown(timeRemaining countdown) {
 	fmt.Printf("Minutes: %02d Seconds: %02d", timeRemaining.m, timeRemaining.s)
 }
 
-// NewTimer returns a new timer constructed from
-// command line arguments.
-func NewTimer(ctx *cli.Context, c *Config) *Timer {
-	t := &Timer{
-		Kind: kind{
-			pomodoro:   c.PomodoroMinutes,
-			shortBreak: c.ShortBreakMinutes,
-			longBreak:  c.LongBreakMinutes,
-		},
-		LongBreakInterval: c.LongBreakInterval,
-		Msg: message{
-			pomodoro:   c.PomodoroMessage,
-			shortBreak: c.ShortBreakMessage,
-			longBreak:  c.LongBreakMessage,
-		},
-		ShowNotification:    c.Notify,
-		AutoStartPomodoro:   c.AutoStartPomorodo,
-		AutoStartBreak:      c.AutoStartBreak,
-		TwentyFourHourClock: c.TwentyFourHourClock,
-		AllowPausing:        c.AllowPausing,
-	}
-
-	// Command-line flags will override the configuration
-	// file
+// setOptions configures the Timer instance based
+// on command line options.
+func (t *Timer) setOptions(ctx *cli.Context) {
 	if ctx.Uint("pomodoro") > 0 {
 		t.Kind[pomodoro] = int(ctx.Uint("pomodoro"))
 	}
@@ -413,6 +392,33 @@ func NewTimer(ctx *cli.Context, c *Config) *Timer {
 	if ctx.Bool("24-hour") {
 		t.TwentyFourHourClock = ctx.Bool("24-hour")
 	}
+}
+
+// NewTimer returns a new timer constructed from
+// command line arguments.
+func NewTimer(ctx *cli.Context, c *Config) *Timer {
+	t := &Timer{
+		Kind: kind{
+			pomodoro:   c.PomodoroMinutes,
+			shortBreak: c.ShortBreakMinutes,
+			longBreak:  c.LongBreakMinutes,
+		},
+		LongBreakInterval: c.LongBreakInterval,
+		Msg: message{
+			pomodoro:   c.PomodoroMessage,
+			shortBreak: c.ShortBreakMessage,
+			longBreak:  c.LongBreakMessage,
+		},
+		ShowNotification:    c.Notify,
+		AutoStartPomodoro:   c.AutoStartPomorodo,
+		AutoStartBreak:      c.AutoStartBreak,
+		TwentyFourHourClock: c.TwentyFourHourClock,
+		AllowPausing:        c.AllowPausing,
+	}
+
+	// Command-line flags will override the configuration
+	// file
+	t.setOptions(ctx)
 
 	return t
 }
