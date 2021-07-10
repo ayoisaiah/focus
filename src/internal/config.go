@@ -34,6 +34,7 @@ type Config struct {
 	AutoStartPomorodo   bool   `yaml:"auto_start_pomodoro"`
 	AutoStartBreak      bool   `yaml:"auto_start_break"`
 	TwentyFourHourClock bool   `yaml:"24hr_clock"`
+	AllowPausing        bool   `yaml:"allow_pausing"`
 }
 
 const (
@@ -228,6 +229,7 @@ func (c *Config) defaults(willPrompt bool) {
 	c.ShortBreakMessage = "Take a breather"
 	c.LongBreakMessage = "Take a long break"
 	c.TwentyFourHourClock = false
+	c.AllowPausing = false
 }
 
 // new prompts the user to set a configuration

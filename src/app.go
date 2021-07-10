@@ -95,7 +95,16 @@ func GetApp() *cli.App {
 		UsageText:            "FLAGS [OPTIONS] [PATHS...]",
 		Version:              "v0.1.0",
 		EnableBashCompletion: true,
-		Commands:             []*cli.Command{},
+		Commands: []*cli.Command{
+			{
+				Name: "resume",
+				Action: func(c *cli.Context) error {
+					t := &focus.Timer{}
+
+					return t.Resume()
+				},
+			},
+		},
 		Flags: []cli.Flag{
 			&cli.UintFlag{
 				Name:    "long-break",
@@ -113,8 +122,9 @@ func GetApp() *cli.App {
 				Aliases: []string{"p"},
 			},
 			&cli.UintFlag{
-				Name:  "long-break-interval",
-				Usage: "The number of pomodoro sessions before a long break (default: 4)",
+				Name:    "long-break-interval",
+				Aliases: []string{"int"},
+				Usage:   "The number of pomodoro sessions before a long break (default: 4)",
 			},
 			&cli.UintFlag{
 				Name:    "max-pomodoros",
@@ -140,6 +150,10 @@ func GetApp() *cli.App {
 				Aliases: []string{"d"},
 				Usage:   "Disable notification alerts after a session is completed",
 			},
+			&cli.BoolFlag{
+				Name:  "allow-pausing",
+				Usage: "Enable interrupted pomodoro sessions to be resumed",
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			c := &focus.Config{}
@@ -152,7 +166,7 @@ func GetApp() *cli.App {
 			}
 
 			t := focus.NewTimer(ctx, c)
-			t.Start(focus.Pomodoro)
+			t.Run()
 
 			return nil
 		},

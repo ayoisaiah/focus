@@ -3,23 +3,16 @@ package focus
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gen2brain/beeep"
 	"github.com/urfave/cli/v2"
 )
-
-var store Store
-
-func init() {
-	err := store.init()
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
 type countdown struct {
 	t int
@@ -30,13 +23,13 @@ type countdown struct {
 type sessionType string
 
 const (
-	Pomodoro   sessionType = "pomodoro"
-	ShortBreak sessionType = "short_break"
-	LongBreak  sessionType = "long_break"
+	pomodoro   sessionType = "pomodoro"
+	shortBreak sessionType = "short_break"
+	longBreak  sessionType = "long_break"
 )
 
-type event struct {
-	Session   sessionType `json:"session"`
+type session struct {
+	Name      sessionType `json:"name"`
 	Duration  int         `json:"duration"`
 	StartTime time.Time   `json:"start_time"`
 	EndTime   time.Time   `json:"end_time"`
@@ -48,32 +41,34 @@ type kind map[sessionType]int
 type message map[sessionType]string
 
 type Timer struct {
-	currentSession      sessionType
-	kind                kind
-	autoStartPomodoro   bool
-	autoStartBreak      bool
-	longBreakInterval   int
-	maxPomodoros        int
-	counter             int
-	iteration           int
-	msg                 message
-	showNotification    bool
-	twentyFourHourClock bool
+	SessionType         sessionType `json:"session_type"`
+	Session             session     `json:"-"`
+	Kind                kind        `json:"kind"`
+	AutoStartPomodoro   bool        `json:"auto_start_pomodoro"`
+	AutoStartBreak      bool        `json:"auto_start_break"`
+	LongBreakInterval   int         `json:"long_break_interval"`
+	MaxPomodoros        int         `json:"max_pomodoros"`
+	Counter             int         `json:"counter"`
+	Iteration           int         `json:"iteration"`
+	Msg                 message     `json:"msg"`
+	ShowNotification    bool        `json:"show_notification"`
+	TwentyFourHourClock bool        `json:"24_hour_clock"`
+	AllowPausing        bool        `json:"allow_pausing"`
 }
 
 // nextSession retrieves the next session.
 func (t *Timer) nextSession() sessionType {
 	var next sessionType
 
-	switch t.currentSession {
-	case Pomodoro:
-		if t.iteration == t.longBreakInterval {
-			next = LongBreak
+	switch t.SessionType {
+	case pomodoro:
+		if t.Iteration == t.LongBreakInterval {
+			next = longBreak
 		} else {
-			next = ShortBreak
+			next = shortBreak
 		}
-	case ShortBreak, LongBreak:
-		next = Pomodoro
+	case shortBreak, longBreak:
+		next = pomodoro
 	}
 
 	return next
@@ -96,7 +91,13 @@ func (t *Timer) getTimeRemaining(endTime time.Time) countdown {
 	}
 }
 
-func (t *Timer) log(ev event) error {
+// saveSession adds or updates the current session in the database.
+func (t *Timer) saveSession() error {
+	if t.SessionType != pomodoro {
+		return nil
+	}
+
+	ev := t.Session
 	key := []byte(ev.StartTime.Format(time.RFC3339))
 
 	value, err := json.Marshal(ev)
@@ -104,39 +105,39 @@ func (t *Timer) log(ev event) error {
 		return err
 	}
 
-	return store.updateEvent(key, value)
+	return store.updateSession(key, value)
 }
 
 func (t *Timer) printSession(endTime time.Time) {
 	var text string
 
-	switch t.currentSession {
-	case Pomodoro:
+	switch t.SessionType {
+	case pomodoro:
 		var count int
 
 		var total int
 
-		if t.maxPomodoros != 0 {
-			count = t.counter
-			total = t.maxPomodoros
+		if t.MaxPomodoros != 0 {
+			count = t.Counter
+			total = t.MaxPomodoros
 		} else {
-			count = t.iteration
-			total = t.longBreakInterval
+			count = t.Iteration
+			total = t.LongBreakInterval
 		}
 
 		text = fmt.Sprintf(
 			PrintColor(green, "[Pomodoro %d/%d]"),
 			count,
 			total,
-		) + ": " + t.msg[Pomodoro]
-	case ShortBreak:
-		text = PrintColor(yellow, "[Short break]") + ": " + t.msg[ShortBreak]
-	case LongBreak:
-		text = PrintColor(blue, "[Long break]") + ": " + t.msg[LongBreak]
+		) + ": " + t.Msg[pomodoro]
+	case shortBreak:
+		text = PrintColor(yellow, "[Short break]") + ": " + t.Msg[shortBreak]
+	case longBreak:
+		text = PrintColor(blue, "[Long break]") + ": " + t.Msg[longBreak]
 	}
 
 	var tf string
-	if t.twentyFourHourClock {
+	if t.TwentyFourHourClock {
 		tf = "15:04:05"
 	} else {
 		tf = "03:04:05 PM"
@@ -151,44 +152,144 @@ func (t *Timer) notify() {
 	fmt.Printf("Session completed!\n\n")
 
 	m := map[sessionType]string{
-		Pomodoro:   "Pomodoro",
-		ShortBreak: "Short break",
-		LongBreak:  "Long break",
+		pomodoro:   "Pomodoro",
+		shortBreak: "Short break",
+		longBreak:  "Long break",
 	}
 
-	if t.showNotification {
-		msg := m[t.currentSession] + " is finished"
+	if t.ShowNotification {
+		msg := m[t.SessionType] + " is finished"
 
 		// TODO: Handle error
-		_ = beeep.Notify(msg, t.msg[t.nextSession()], "")
+		_ = beeep.Notify(msg, t.Msg[t.nextSession()], "")
 	}
 }
 
-// Start begins a new session.
-func (t *Timer) Start(session sessionType) {
-	t.currentSession = session
+func (t *Timer) handleInterruption() {
+	c := make(chan os.Signal, 1)
 
-	t.counter++
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	if session == Pomodoro {
-		if t.iteration == t.longBreakInterval {
-			t.iteration = 1
+	errUnableToSave := errors.New("unable to pause session")
+
+	go func() {
+		<-c
+
+		if t.SessionType == pomodoro {
+			t.Session.EndTime = time.Now()
+
+			err := t.saveSession()
+			if err != nil {
+				fmt.Printf("\n\n%s", fmt.Errorf("%s: %w", errUnableToSave, err))
+				return
+			}
+
+			timerBytes, err := json.Marshal(t)
+			if err != nil {
+				fmt.Printf("\n\n%s", fmt.Errorf("%s: %w", errUnableToSave, err))
+				return
+			}
+
+			sessionKey := []byte(t.Session.StartTime.Format(time.RFC3339))
+
+			err = store.saveTimerState(timerBytes, sessionKey)
+			if err != nil {
+				fmt.Printf("\n\n%s", fmt.Errorf("%s: %w", errUnableToSave, err))
+				return
+			}
+
+			fmt.Printf("\n\nPomodoro session is paused. Use %s to continue later", PrintColor(yellow, "focus resume"))
+		}
+
+		os.Exit(1)
+	}()
+}
+
+func (t *Timer) Run() {
+	if t.AllowPausing {
+		t.handleInterruption()
+	}
+
+	if t.SessionType == "" {
+		t.SessionType = pomodoro
+	}
+
+	var endTime time.Time
+
+	if t.Session.EndTime.IsZero() {
+		endTime = t.initSession()
+	} else {
+		endTime = t.Session.EndTime
+	}
+
+	t.start(endTime)
+}
+
+// Resume attempts to retrieve a paused pomodoro session
+// and continue from where they left of.
+func (t *Timer) Resume() error {
+	timerBytes, sessionBytes, err := store.getTimerState()
+	if err != nil {
+		return err
+	}
+
+	if len(timerBytes) == 0 || len(sessionBytes) == 0 {
+		return fmt.Errorf("No existing paused session was found. Please start a new session")
+	}
+
+	err = json.Unmarshal(timerBytes, t)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(sessionBytes, &t.Session)
+	if err != nil {
+		return err
+	}
+
+	elapsedTimeInSeconds := int(t.Session.EndTime.Sub(t.Session.StartTime).Seconds())
+	newEndTime := time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute).Add(-time.Second * time.Duration(elapsedTimeInSeconds))
+
+	t.Session.EndTime = newEndTime
+
+	err = store.deleteTimerState()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	t.Run()
+
+	return nil
+}
+
+// initSession initialises a new session
+// and returns the end time for the session.
+func (t *Timer) initSession() time.Time {
+	t.Counter++
+
+	if t.SessionType == pomodoro {
+		if t.Iteration == t.LongBreakInterval {
+			t.Iteration = 1
 		} else {
-			t.iteration++
+			t.Iteration++
 		}
 	}
 
-	endTime := time.Now().Add(time.Duration(t.kind[session]) * time.Minute)
-
-	ev := event{
-		Session:   t.currentSession,
-		Duration:  t.kind[session],
+	t.Session = session{
+		Name:      t.SessionType,
+		Duration:  t.Kind[t.SessionType],
 		Completed: false,
 		StartTime: time.Now(),
 	}
 
-	_ = t.log(ev)
+	// TODO: Handle error
+	_ = t.saveSession()
 
+	return time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute)
+}
+
+// start begins a new session.
+func (t *Timer) start(endTime time.Time) {
 	t.printSession(endTime)
 
 	fmt.Print("\033[s")
@@ -204,10 +305,10 @@ func (t *Timer) Start(session sessionType) {
 		timeRemaining = t.getTimeRemaining(endTime)
 
 		if timeRemaining.t <= 0 {
-			ev.Completed = true
-			ev.EndTime = time.Now()
+			t.Session.Completed = true
+			t.Session.EndTime = time.Now()
 
-			_ = t.log(ev)
+			_ = t.saveSession()
 
 			t.notify()
 
@@ -217,21 +318,26 @@ func (t *Timer) Start(session sessionType) {
 		t.countdown(timeRemaining)
 	}
 
-	if t.counter == t.maxPomodoros {
+	if t.Counter == t.MaxPomodoros {
 		return
 	}
 
-	if t.currentSession != Pomodoro && !t.autoStartPomodoro ||
-		t.currentSession == Pomodoro && !t.autoStartBreak {
+	if t.SessionType != pomodoro && !t.AutoStartPomodoro ||
+		t.SessionType == pomodoro && !t.AutoStartBreak {
 		// Block until user input before beginning next session
 		reader := bufio.NewReader(os.Stdin)
 
-		fmt.Print("Press ENTER to start the next session\n")
+		fmt.Print("\033[s")
+		fmt.Print("Press ENTER to start the next session")
 
 		_, _ = reader.ReadString('\n')
+
+		fmt.Print("\033[u\033[K")
 	}
 
-	t.Start(t.nextSession())
+	t.SessionType = t.nextSession()
+
+	t.start(t.initSession())
 }
 
 // countdown prints the time remaining until the end of
@@ -244,63 +350,68 @@ func (t *Timer) countdown(timeRemaining countdown) {
 // command line arguments.
 func NewTimer(ctx *cli.Context, c *Config) *Timer {
 	t := &Timer{
-		kind: kind{
-			Pomodoro:   c.PomodoroMinutes,
-			ShortBreak: c.ShortBreakMinutes,
-			LongBreak:  c.LongBreakMinutes,
+		Kind: kind{
+			pomodoro:   c.PomodoroMinutes,
+			shortBreak: c.ShortBreakMinutes,
+			longBreak:  c.LongBreakMinutes,
 		},
-		longBreakInterval: c.LongBreakInterval,
-		msg: message{
-			Pomodoro:   c.PomodoroMessage,
-			ShortBreak: c.ShortBreakMessage,
-			LongBreak:  c.LongBreakMessage,
+		LongBreakInterval: c.LongBreakInterval,
+		Msg: message{
+			pomodoro:   c.PomodoroMessage,
+			shortBreak: c.ShortBreakMessage,
+			longBreak:  c.LongBreakMessage,
 		},
-		showNotification:    c.Notify,
-		autoStartPomodoro:   c.AutoStartPomorodo,
-		autoStartBreak:      c.AutoStartBreak,
-		twentyFourHourClock: c.TwentyFourHourClock,
+		ShowNotification:    c.Notify,
+		AutoStartPomodoro:   c.AutoStartPomorodo,
+		AutoStartBreak:      c.AutoStartBreak,
+		TwentyFourHourClock: c.TwentyFourHourClock,
+		AllowPausing:        c.AllowPausing,
 	}
 
 	// Command-line flags will override the configuration
 	// file
 	if ctx.Uint("pomodoro") > 0 {
-		t.kind[Pomodoro] = int(ctx.Uint("pomodoro"))
+		t.Kind[pomodoro] = int(ctx.Uint("pomodoro"))
 	}
 
 	if ctx.Uint("short-break") > 0 {
-		t.kind[ShortBreak] = int(ctx.Uint("short-break"))
+		t.Kind[shortBreak] = int(ctx.Uint("short-break"))
 	}
 
 	if ctx.Uint("long-break") > 0 {
-		t.kind[LongBreak] = int(ctx.Uint("long-break"))
+		t.Kind[longBreak] = int(ctx.Uint("long-break"))
 	}
 
 	if ctx.Uint("long-break-interval") > 0 {
-		t.longBreakInterval = int(ctx.Uint("long-break-interval"))
+		t.LongBreakInterval = int(ctx.Uint("long-break-interval"))
 	}
 
 	if ctx.Uint("max-pomodoros") > 0 {
-		t.maxPomodoros = int(ctx.Uint("max-pomodoros"))
+		t.MaxPomodoros = int(ctx.Uint("max-pomodoros"))
 	}
 
 	if ctx.Bool("auto-pomodoro") {
-		t.autoStartPomodoro = true
+		t.AutoStartPomodoro = true
 	}
 
 	if ctx.Bool("auto-break") {
-		t.autoStartBreak = true
+		t.AutoStartBreak = true
 	}
 
 	if ctx.Bool("disable-notifications") {
-		t.showNotification = false
+		t.ShowNotification = false
 	}
 
-	if t.longBreakInterval <= 0 {
-		t.longBreakInterval = 4
+	if ctx.Bool("allow-pausing") {
+		t.AllowPausing = true
+	}
+
+	if t.LongBreakInterval <= 0 {
+		t.LongBreakInterval = 4
 	}
 
 	if ctx.Bool("24-hour") {
-		t.twentyFourHourClock = ctx.Bool("24-hour")
+		t.TwentyFourHourClock = ctx.Bool("24-hour")
 	}
 
 	return t
