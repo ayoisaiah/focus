@@ -2,7 +2,9 @@ package focus
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -10,36 +12,35 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+var store Store
+
+func init() {
+	err := store.init()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 type countdown struct {
 	t int
 	m int
 	s int
 }
 
-type sessionType int
+type sessionType string
 
 const (
-	Pomodoro sessionType = iota
-	ShortBreak
-	LongBreak
-)
-
-type sessionStatus string
-
-const (
-	STARTED   sessionStatus = "STARTED"
-	STOPPED   sessionStatus = "STOPPED"
-	COMPLETED sessionStatus = "COMPLETED"
-	SKIPPED   sessionStatus = "SKIPPED"
+	Pomodoro   sessionType = "pomodoro"
+	ShortBreak sessionType = "short_break"
+	LongBreak  sessionType = "long_break"
 )
 
 type event struct {
-	session         sessionType
-	status          sessionStatus
-	duration        int
-	startTime       time.Time
-	expectedEndTime time.Time
-	actualEndTime   time.Time
+	Session   sessionType `json:"session"`
+	Duration  int         `json:"duration"`
+	StartTime time.Time   `json:"start_time"`
+	EndTime   time.Time   `json:"end_time"`
+	Completed bool        `json:"completed"`
 }
 
 type kind map[sessionType]int
@@ -95,6 +96,17 @@ func (t *Timer) getTimeRemaining(endTime time.Time) countdown {
 	}
 }
 
+func (t *Timer) log(ev event) error {
+	key := []byte(ev.StartTime.Format(time.RFC3339))
+
+	value, err := json.Marshal(ev)
+	if err != nil {
+		return err
+	}
+
+	return store.updateEvent(key, value)
+}
+
 func (t *Timer) printSession(endTime time.Time) {
 	var text string
 
@@ -112,7 +124,11 @@ func (t *Timer) printSession(endTime time.Time) {
 			total = t.longBreakInterval
 		}
 
-		text = fmt.Sprintf(PrintColor(green, "[Pomodoro %d/%d]"), count, total) + ": " + t.msg[Pomodoro]
+		text = fmt.Sprintf(
+			PrintColor(green, "[Pomodoro %d/%d]"),
+			count,
+			total,
+		) + ": " + t.msg[Pomodoro]
 	case ShortBreak:
 		text = PrintColor(yellow, "[Short break]") + ": " + t.msg[ShortBreak]
 	case LongBreak:
@@ -129,6 +145,8 @@ func (t *Timer) printSession(endTime time.Time) {
 	fmt.Printf("%s (until %s)\n", text, endTime.Format(tf))
 }
 
+// notify indicates the completion of the session
+// and sends a desktop notification if enabled.
 func (t *Timer) notify() {
 	fmt.Printf("Session completed!\n\n")
 
@@ -162,6 +180,15 @@ func (t *Timer) Start(session sessionType) {
 
 	endTime := time.Now().Add(time.Duration(t.kind[session]) * time.Minute)
 
+	ev := event{
+		Session:   t.currentSession,
+		Duration:  t.kind[session],
+		Completed: false,
+		StartTime: time.Now(),
+	}
+
+	_ = t.log(ev)
+
 	t.printSession(endTime)
 
 	fmt.Print("\033[s")
@@ -177,7 +204,13 @@ func (t *Timer) Start(session sessionType) {
 		timeRemaining = t.getTimeRemaining(endTime)
 
 		if timeRemaining.t <= 0 {
+			ev.Completed = true
+			ev.EndTime = time.Now()
+
+			_ = t.log(ev)
+
 			t.notify()
+
 			break
 		}
 
@@ -188,7 +221,8 @@ func (t *Timer) Start(session sessionType) {
 		return
 	}
 
-	if t.currentSession != Pomodoro && !t.autoStartPomodoro || t.currentSession == Pomodoro && !t.autoStartBreak {
+	if t.currentSession != Pomodoro && !t.autoStartPomodoro ||
+		t.currentSession == Pomodoro && !t.autoStartBreak {
 		// Block until user input before beginning next session
 		reader := bufio.NewReader(os.Stdin)
 
@@ -200,7 +234,8 @@ func (t *Timer) Start(session sessionType) {
 	t.Start(t.nextSession())
 }
 
-// countdown prints.
+// countdown prints the time remaining until the end of
+// the session.
 func (t *Timer) countdown(timeRemaining countdown) {
 	fmt.Printf("Minutes: %02d Seconds: %02d", timeRemaining.m, timeRemaining.s)
 }

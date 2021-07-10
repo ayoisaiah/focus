@@ -146,7 +146,9 @@ func GetApp() *cli.App {
 
 			err := c.Init()
 			if err != nil {
-				fmt.Println(fmt.Errorf("Unable to initialise Focus from configuration file: %w\n", err))
+				fmt.Println(
+					fmt.Errorf("Unable to initialise Focus from configuration file: %w\n", err),
+				)
 			}
 
 			t := focus.NewTimer(ctx, c)

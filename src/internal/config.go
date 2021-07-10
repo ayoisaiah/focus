@@ -172,17 +172,16 @@ func (c *Config) save(path string) error {
 }
 
 // Init initialises the app configuration.
-// If the config file does not exist,.it prompts
-// and saves the inputted preferences in a config
-// file.
+// If the config file does not exist,.it prompts the user
+// and saves the inputted preferences in a config file.
 func (c *Config) Init() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}
 
-	configRoot := filepath.Join(homeDir, configPath)
-	pathToConfig := filepath.Join(configRoot, configFileName)
+	appRoot := filepath.Join(homeDir, configPath)
+	pathToConfig := filepath.Join(appRoot, configFileName)
 
 	_, err = os.Stat(pathToConfig)
 	if err != nil && !errors.Is(err, os.ErrExist) {
@@ -237,10 +236,10 @@ func (c *Config) defaults(willPrompt bool) {
 func (c *Config) new(pathToConfig string) error {
 	c.defaults(true)
 
-	configRoot := filepath.Dir(pathToConfig)
+	appRoot := filepath.Dir(pathToConfig)
 
 	// Ensure the config directory exists
-	err := os.MkdirAll(configRoot, 0750)
+	err := os.MkdirAll(appRoot, 0750)
 	if err != nil {
 		return err
 	}
