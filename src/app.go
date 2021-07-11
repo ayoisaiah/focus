@@ -107,7 +107,10 @@ func GetApp() *cli.App {
 			{
 				Name: "stats",
 				Action: func(ctx *cli.Context) error {
-					stats := focus.NewStats(ctx)
+					stats, err := focus.NewStats(ctx)
+					if err != nil {
+						return err
+					}
 
 					stats.Run()
 
@@ -115,7 +118,20 @@ func GetApp() *cli.App {
 				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name: "",
+						Name:    "period",
+						Aliases: []string{"p"},
+						Usage:   "The time period for the statistics",
+						Value:   "all-time",
+					},
+					&cli.StringFlag{
+						Name:    "start",
+						Aliases: []string{"s"},
+						Usage:   "The start date",
+					},
+					&cli.StringFlag{
+						Name:    "end",
+						Aliases: []string{"e"},
+						Usage:   "The end date",
 					},
 				},
 			},
