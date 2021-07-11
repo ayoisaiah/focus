@@ -1,6 +1,7 @@
 package focus
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -112,4 +113,22 @@ func (s *Store) deleteTimerState() error {
 
 		return tx.Bucket([]byte("timer")).Delete([]byte("paused_session_key"))
 	})
+}
+
+func (s *Store) getSessions(startTime, endTime time.Time) ([][]byte, error) {
+	var b [][]byte
+
+	err := s.conn.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket([]byte("sessions")).Cursor()
+		min := []byte(startTime.Format(time.RFC3339))
+		max := []byte(endTime.Format(time.RFC3339))
+
+		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
+			b = append(b, v)
+		}
+
+		return nil
+	})
+
+	return b, err
 }

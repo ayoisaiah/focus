@@ -98,10 +98,25 @@ func GetApp() *cli.App {
 		Commands: []*cli.Command{
 			{
 				Name: "resume",
-				Action: func(c *cli.Context) error {
+				Action: func(ctx *cli.Context) error {
 					t := &focus.Timer{}
 
 					return t.Resume()
+				},
+			},
+			{
+				Name: "stats",
+				Action: func(ctx *cli.Context) error {
+					stats := focus.NewStats(ctx)
+
+					stats.Run()
+
+					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "",
+					},
 				},
 			},
 		},

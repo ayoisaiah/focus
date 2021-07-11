@@ -40,6 +40,7 @@ type kind map[sessionType]int
 
 type message map[sessionType]string
 
+// Timer represents a Focus instance.
 type Timer struct {
 	SessionType         sessionType `json:"session_type"`
 	Session             session     `json:"-"`
@@ -108,6 +109,8 @@ func (t *Timer) saveSession() error {
 	return store.updateSession(key, value)
 }
 
+// printSession writes the details of the current
+// session to the standard output.
 func (t *Timer) printSession(endTime time.Time) {
 	var text string
 
@@ -165,12 +168,14 @@ func (t *Timer) notify() {
 	}
 }
 
+// handleInterruption is used to save the current state
+// of the timer if a pomodoro session is active.
 func (t *Timer) handleInterruption() {
 	c := make(chan os.Signal, 1)
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	errUnableToSave := errors.New("unable to pause session")
+	errUnableToSave := errors.New("unable to save incomplete session")
 
 	go func() {
 		<-c
@@ -181,13 +186,17 @@ func (t *Timer) handleInterruption() {
 			err := t.saveSession()
 			if err != nil {
 				fmt.Printf("\n\n%s", fmt.Errorf("%s: %w", errUnableToSave, err))
-				return
+				goto exit
+			}
+
+			if !t.AllowPausing {
+				goto exit
 			}
 
 			timerBytes, err := json.Marshal(t)
 			if err != nil {
 				fmt.Printf("\n\n%s", fmt.Errorf("%s: %w", errUnableToSave, err))
-				return
+				goto exit
 			}
 
 			sessionKey := []byte(t.Session.StartTime.Format(time.RFC3339))
@@ -195,20 +204,20 @@ func (t *Timer) handleInterruption() {
 			err = store.saveTimerState(timerBytes, sessionKey)
 			if err != nil {
 				fmt.Printf("\n\n%s", fmt.Errorf("%s: %w", errUnableToSave, err))
-				return
+				goto exit
 			}
 
 			fmt.Printf("\n\nPomodoro session is paused. Use %s to continue later", PrintColor(yellow, "focus resume"))
 		}
 
+	exit:
 		os.Exit(1)
 	}()
 }
 
+// Run.
 func (t *Timer) Run() {
-	if t.AllowPausing {
-		t.handleInterruption()
-	}
+	t.handleInterruption()
 
 	if t.SessionType == "" {
 		t.SessionType = pomodoro
@@ -226,7 +235,7 @@ func (t *Timer) Run() {
 }
 
 // Resume attempts to retrieve a paused pomodoro session
-// and continue from where they left of.
+// and continue from where it left of.
 func (t *Timer) Resume() error {
 	timerBytes, sessionBytes, err := store.getTimerState()
 	if err != nil {
@@ -341,7 +350,7 @@ func (t *Timer) start(endTime time.Time) {
 }
 
 // countdown prints the time remaining until the end of
-// the session.
+// the current session.
 func (t *Timer) countdown(timeRemaining countdown) {
 	fmt.Printf("Minutes: %02d Seconds: %02d", timeRemaining.m, timeRemaining.s)
 }
@@ -395,7 +404,7 @@ func (t *Timer) setOptions(ctx *cli.Context) {
 }
 
 // NewTimer returns a new timer constructed from
-// command line arguments.
+// the configuration file and command line arguments.
 func NewTimer(ctx *cli.Context, c *Config) *Timer {
 	t := &Timer{
 		Kind: kind{
