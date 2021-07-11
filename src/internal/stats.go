@@ -4,38 +4,46 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
 )
 
 type statsPeriod string
 
 const (
-	periodAllTime   statsPeriod = "all-time"
-	periodToday     statsPeriod = "today"
-	periodYesterday statsPeriod = "yesterday"
-	period24Hours   statsPeriod = "24hours"
-	period7Days     statsPeriod = "7days"
-	period14Days    statsPeriod = "14days"
-	period30Days    statsPeriod = "30days"
-	period90Days    statsPeriod = "90days"
-	period180Days   statsPeriod = "180days"
-	period365Days   statsPeriod = "365days"
+	PeriodAllTime   statsPeriod = "all-time"
+	PeriodToday     statsPeriod = "today"
+	PeriodYesterday statsPeriod = "yesterday"
+	Period24Hours   statsPeriod = "24hours"
+	Period7Days     statsPeriod = "7days"
+	Period14Days    statsPeriod = "14days"
+	Period30Days    statsPeriod = "30days"
+	Period90Days    statsPeriod = "90days"
+	Period180Days   statsPeriod = "180days"
+	Period365Days   statsPeriod = "365days"
 )
 
-var period = []statsPeriod{periodAllTime, periodToday, periodYesterday, period7Days, period14Days, period30Days, period90Days, period180Days, period365Days}
+var Period = []statsPeriod{PeriodAllTime, PeriodToday, PeriodYesterday, Period7Days, Period14Days, Period30Days, Period90Days, Period180Days, Period365Days}
 
-type Stats struct {
-	StartDate          time.Time
-	EndDate            time.Time
-	Sessions           []session
+type pomo struct {
 	totalMins          int
 	completedPomodoros int
 	abandonedPomodoros int
-	Weekday            map[time.Weekday]int
-	HourofDay          map[int]int
+}
+
+type Stats struct {
+	StartDate time.Time
+	EndDate   time.Time
+	pomo
+	Sessions  []session
+	Weekday   map[time.Weekday]*pomo
+	HourofDay map[int]*pomo
 }
 
 func (s *Stats) getSessions() {
@@ -58,89 +66,148 @@ func (s *Stats) getSessions() {
 	}
 }
 
+func (s *Stats) hourly() {
+	type keyValue struct {
+		key   int
+		value *pomo
+	}
+
+	sl := make([]keyValue, 0, len(s.HourofDay))
+	for k, v := range s.HourofDay {
+		sl = append(sl, keyValue{k, v})
+	}
+
+	sort.SliceStable(sl, func(i, j int) bool {
+		return sl[i].key < sl[j].key
+	})
+
+	var data = make([][]string, len(sl))
+
+	for _, v := range sl {
+		val := s.HourofDay[v.key]
+		completed := strconv.Itoa(val.completedPomodoros)
+		abandoned := strconv.Itoa(val.abandonedPomodoros)
+		total := strconv.Itoa(val.totalMins)
+
+		data = append(data, []string{fmt.Sprintf("%02d:00", v.key), total, completed, abandoned})
+	}
+
+	printTable("hours", data)
+}
+
+func (s *Stats) weekdays() {
+	type keyValue struct {
+		key   time.Weekday
+		value *pomo
+	}
+
+	sl := make([]keyValue, 0, len(s.Weekday))
+	for k, v := range s.Weekday {
+		sl = append(sl, keyValue{k, v})
+	}
+
+	sort.SliceStable(sl, func(i, j int) bool {
+		return int(sl[i].key) < int(sl[j].key)
+	})
+
+	var data = make([][]string, len(sl))
+
+	for _, v := range sl {
+		val := s.Weekday[v.key]
+		completed := strconv.Itoa(val.completedPomodoros)
+		abandoned := strconv.Itoa(val.abandonedPomodoros)
+		total := strconv.Itoa(val.totalMins)
+
+		data = append(data, []string{v.key.String(), total, completed, abandoned})
+	}
+
+	printTable("weekday", data)
+}
+
 func (s *Stats) total() {
 	for _, v := range s.Sessions {
 		if v.EndTime.IsZero() {
 			continue
 		}
 
-		s.Weekday[v.StartTime.Weekday()]++
-		s.HourofDay[v.StartTime.Hour()]++
-
 		if v.Completed {
+			s.Weekday[v.StartTime.Weekday()].completedPomodoros++
+			s.HourofDay[v.StartTime.Hour()].completedPomodoros++
 			s.completedPomodoros++
 		} else {
+			s.Weekday[v.StartTime.Weekday()].abandonedPomodoros++
+			s.HourofDay[v.StartTime.Hour()].abandonedPomodoros++
 			s.abandonedPomodoros++
 		}
 
+		s.Weekday[v.StartTime.Weekday()].totalMins += int(math.Round(v.EndTime.Sub(v.StartTime).Minutes()))
+		s.HourofDay[v.StartTime.Hour()].totalMins += int(math.Round(v.EndTime.Sub(v.StartTime).Minutes()))
 		s.totalMins += int(math.Round(v.EndTime.Sub(v.StartTime).Minutes()))
 	}
 
 	fmt.Println("Total minutes worked: ", s.totalMins)
 	fmt.Println("Total pomodoros completed: ", s.completedPomodoros)
 	fmt.Println("Total pomodoros abandoned: ", s.abandonedPomodoros)
-	fmt.Println("Weekdays")
-
-	for k, v := range s.Weekday {
-		fmt.Println(k.String(), " -> ", v)
-	}
 }
 
 func (s *Stats) Run() {
 	s.getSessions()
 	s.total()
+	s.weekdays()
+	s.hourly()
 }
 
 func getPeriod(period statsPeriod) (startTime, endTime time.Time) {
 	switch period {
-	case periodToday:
+	case PeriodToday:
 		now := time.Now()
 		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()), now
-	case periodYesterday:
+	case PeriodYesterday:
 		yesterday := time.Now().AddDate(0, 0, -1)
 		year, month, day := yesterday.Date()
 
 		return time.Date(year, month, day, 0, 0, 0, 0, yesterday.Location()), time.Date(year, month, day, 23, 59, 59, 0, yesterday.Location())
-	case period24Hours:
+	case Period24Hours:
 		return time.Now().AddDate(0, 0, -1), time.Now()
-	case period7Days:
+	case Period7Days:
 		return time.Now().AddDate(0, 0, -7), time.Now()
-	case period14Days:
+	case Period14Days:
 		return time.Now().AddDate(0, 0, -14), time.Now()
-	case period30Days:
+	case Period30Days:
 		return time.Now().AddDate(0, 0, -30), time.Now()
-	case period90Days:
+	case Period90Days:
 		return time.Now().AddDate(0, 0, -90), time.Now()
-	case period180Days:
+	case Period180Days:
 		return time.Now().AddDate(0, 0, -180), time.Now()
-	case period365Days:
+	case Period365Days:
 		return time.Now().AddDate(0, 0, -365), time.Now()
-	case periodAllTime:
+	case PeriodAllTime:
 		return time.Time{}, time.Now()
 	}
 
 	return time.Time{}, time.Now()
 }
 
+// NewStats returns an instance of Stats.
 func NewStats(ctx *cli.Context) (*Stats, error) {
 	s := &Stats{}
 
-	s.Weekday = make(map[time.Weekday]int)
-	s.HourofDay = make(map[int]int)
+	s.Weekday = make(map[time.Weekday]*pomo)
+	s.HourofDay = make(map[int]*pomo)
 
 	for i := 0; i <= 6; i++ {
-		s.Weekday[time.Weekday(i)] = 0
+		s.Weekday[time.Weekday(i)] = &pomo{}
 	}
 
 	for i := 0; i <= 23; i++ {
-		s.HourofDay[i] = 0
+		s.HourofDay[i] = &pomo{}
 	}
 
 	p := ctx.String("period")
 
-	if !contains(period, statsPeriod(p)) {
+	if !contains(Period, statsPeriod(p)) {
 		var sl []string
-		for _, v := range period {
+		for _, v := range Period {
 			sl = append(sl, string(v))
 		}
 
@@ -187,4 +254,16 @@ func contains(s []statsPeriod, e statsPeriod) bool {
 	}
 
 	return false
+}
+
+func printTable(title string, data [][]string) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{title, "minutes", "completed", "abandoned"})
+	table.SetAutoWrapText(false)
+
+	for _, v := range data {
+		table.Append(v)
+	}
+
+	table.Render()
 }

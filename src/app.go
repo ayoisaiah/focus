@@ -121,7 +121,7 @@ func GetApp() *cli.App {
 						Name:    "period",
 						Aliases: []string{"p"},
 						Usage:   "The time period for the statistics",
-						Value:   "all-time",
+						Value:   string(focus.Period7Days),
 					},
 					&cli.StringFlag{
 						Name:    "start",
