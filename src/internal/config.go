@@ -13,6 +13,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+var (
+	errReadingInput          = errors.New("An error occurred while reading input. Please try again")
+	errExpectedNumber        = errors.New("Expected a number")
+	errExpectPositiveInteger = errors.New("Number must be greater than zero")
+)
+
 const ascii = `
 ███████╗ ██████╗  ██████╗██╗   ██╗███████╗
 ██╔════╝██╔═══██╗██╔════╝██║   ██║██╔════╝
@@ -50,7 +56,7 @@ const (
 func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 	input, err := reader.ReadString('\n')
 	if err != nil {
-		return 0, errors.New(errReadingInput)
+		return 0, errReadingInput
 	}
 
 	reader.Reset(os.Stdin)
@@ -62,11 +68,11 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 
 	num, err := strconv.Atoi(input)
 	if err != nil {
-		return 0, errors.New(errExpectedNumber)
+		return 0, errExpectedNumber
 	}
 
 	if num <= 0 {
-		return 0, errors.New(errExpectPositiveInteger)
+		return 0, errExpectPositiveInteger
 	}
 
 	return num, nil
@@ -79,7 +85,7 @@ func (c *Config) prompt(path string) {
 
 	pterm.Info.Printfln("Your preferences will be saved to: %s\n\n", path)
 
-	pterm.NewBulletListFromString(`Follow the prompts below to configure Focus for the first time.
+	_ = pterm.NewBulletListFromString(`Follow the prompts below to configure Focus for the first time.
 Type your preferred value, or press ENTER to accept the defaults.
 Edit the configuration file to change any settings, or use command-line arguments (see the --help flag)`, " ").Render()
 
@@ -95,7 +101,7 @@ Edit the configuration file to change any settings, or use command-line argument
 
 			num, err := numberPrompt(reader, pomodoroMinutes)
 			if err != nil {
-				fmt.Println(err)
+				pterm.Error.Println(err)
 				continue
 			}
 
@@ -107,7 +113,7 @@ Edit the configuration file to change any settings, or use command-line argument
 
 			num, err := numberPrompt(reader, shortBreakMinutes)
 			if err != nil {
-				fmt.Println(err)
+				pterm.Error.Println(err)
 				continue
 			}
 
@@ -119,7 +125,7 @@ Edit the configuration file to change any settings, or use command-line argument
 
 			num, err := numberPrompt(reader, longBreakMinutes)
 			if err != nil {
-				fmt.Println(err)
+				pterm.Error.Println(err)
 				continue
 			}
 
@@ -131,7 +137,7 @@ Edit the configuration file to change any settings, or use command-line argument
 
 			num, err := numberPrompt(reader, longBreakInterval)
 			if err != nil {
-				fmt.Println(err)
+				pterm.Error.Println(err)
 				continue
 			}
 

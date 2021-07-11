@@ -48,6 +48,64 @@ type pomo struct {
 	abandoned int
 }
 
+// contains checks if a string is present in
+// a string slice.
+func contains(s []timePeriod, e timePeriod) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+
+	return false
+}
+
+func printTable(title string, data [][]string) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{title, "total minutes", "total completed", "total abandoned"})
+	table.SetAutoWrapText(false)
+
+	for _, v := range data {
+		table.Append(v)
+	}
+
+	table.Render()
+}
+
+// getPeriod returns the start and end time according to the
+// specified time period.
+func getPeriod(period timePeriod) (startTime, endTime time.Time) {
+	switch period {
+	case periodToday:
+		now := time.Now()
+		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()), now
+	case periodYesterday:
+		yesterday := time.Now().AddDate(0, 0, -1)
+		year, month, day := yesterday.Date()
+
+		return time.Date(year, month, day, 0, 0, 0, 0, yesterday.Location()), time.Date(year, month, day, 23, 59, 59, 0, yesterday.Location())
+	case period24Hours:
+		return time.Now().AddDate(0, 0, -1), time.Now()
+	case period7Days:
+		return time.Now().AddDate(0, 0, -7), time.Now()
+	case period14Days:
+		return time.Now().AddDate(0, 0, -14), time.Now()
+	case period30Days:
+		return time.Now().AddDate(0, 0, -30), time.Now()
+	case period90Days:
+		return time.Now().AddDate(0, 0, -90), time.Now()
+	case period180Days:
+		return time.Now().AddDate(0, 0, -180), time.Now()
+	case period365Days:
+		return time.Now().AddDate(0, 0, -365), time.Now()
+	case periodAllTime:
+		return time.Time{}, time.Now()
+	}
+
+	return time.Time{}, time.Now()
+}
+
+// Stats represents the statistics for a time period.
 type Stats struct {
 	StartDate time.Time
 	EndDate   time.Time
@@ -58,8 +116,10 @@ type Stats struct {
 	Sort      statsSort
 }
 
-func (s *Stats) getSessions() {
-	b, err := store.getSessions(s.StartDate, s.EndDate)
+// getSessions retrieves the pomodoro sessions
+// for the specified time period.
+func (s *Stats) getSessions(start, end time.Time) {
+	b, err := store.getSessions(start, end)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -78,6 +138,8 @@ func (s *Stats) getSessions() {
 	}
 }
 
+// hourly prints the hourly breakdown
+// for the current time period.
 func (s *Stats) hourly() {
 	fmt.Printf("\n%s\n", pterm.Blue("Hourly breakdown"))
 
@@ -125,6 +187,8 @@ func (s *Stats) hourly() {
 	printTable("hours", data)
 }
 
+// weekdays prints the weekdays breakdown
+// for the current time period.
 func (s *Stats) weekdays() {
 	fmt.Printf("\n%s\n", pterm.Blue("Weekly breakdown"))
 
@@ -171,6 +235,32 @@ func (s *Stats) weekdays() {
 	printTable("weekday", data)
 }
 
+// average prints out the average minutes, completed pomodoros,
+// and abandoned pomodoros per day for the current time period.
+func (s *Stats) average() {
+	hoursDiff := int(math.Round(s.EndDate.Sub(s.StartDate).Hours()))
+	hoursInADay := 24
+
+	if hoursDiff > hoursInADay {
+		fmt.Printf("\n%s\n", pterm.Blue("Averages"))
+
+		numberOfDays := hoursDiff / hoursInADay
+		avgMins := math.Round(float64(s.minutes) / float64(numberOfDays))
+		avgCompleted := math.Round(float64(s.completed) / float64(numberOfDays))
+		avgAbandoned := math.Round(float64(s.abandoned) / float64(numberOfDays))
+
+		hourMins := 60
+		hours := int(math.Floor(avgMins / float64(hourMins)))
+		minutes := int(avgMins) % hourMins
+
+		fmt.Println("Averaged time logged:", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
+		fmt.Println("Completed pomodoros per day:", pterm.Green(int(avgCompleted)))
+		fmt.Println("Abandoned pomodoros per day:", pterm.Green(int(avgAbandoned)))
+	}
+}
+
+// total prints out the total minutes, completed pomodoros,
+// and abandoned pomodoros per day for the current time period.
 func (s *Stats) total() {
 	fmt.Printf("%s\n", pterm.Blue("Totals"))
 
@@ -227,7 +317,7 @@ func (s *Stats) total() {
 // Show displays the relevant statistics for the
 // set time period.
 func (s *Stats) Show() {
-	s.getSessions()
+	s.getSessions(s.StartDate, s.EndDate)
 
 	startDate := s.StartDate.Format("January 02, 2006")
 	endDate := s.EndDate.Format("January 02, 2006")
@@ -241,62 +331,8 @@ func (s *Stats) Show() {
 	s.hourly()
 }
 
-// getPeriod returns the start and end time according to the
-// specified time period.
-func getPeriod(period timePeriod) (startTime, endTime time.Time) {
-	switch period {
-	case periodToday:
-		now := time.Now()
-		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()), now
-	case periodYesterday:
-		yesterday := time.Now().AddDate(0, 0, -1)
-		year, month, day := yesterday.Date()
-
-		return time.Date(year, month, day, 0, 0, 0, 0, yesterday.Location()), time.Date(year, month, day, 23, 59, 59, 0, yesterday.Location())
-	case period24Hours:
-		return time.Now().AddDate(0, 0, -1), time.Now()
-	case period7Days:
-		return time.Now().AddDate(0, 0, -7), time.Now()
-	case period14Days:
-		return time.Now().AddDate(0, 0, -14), time.Now()
-	case period30Days:
-		return time.Now().AddDate(0, 0, -30), time.Now()
-	case period90Days:
-		return time.Now().AddDate(0, 0, -90), time.Now()
-	case period180Days:
-		return time.Now().AddDate(0, 0, -180), time.Now()
-	case period365Days:
-		return time.Now().AddDate(0, 0, -365), time.Now()
-	case periodAllTime:
-		return time.Time{}, time.Now()
-	}
-
-	return time.Time{}, time.Now()
-}
-
-func (s *Stats) average() {
-	hoursDiff := int(math.Round(s.EndDate.Sub(s.StartDate).Hours()))
-	hoursInADay := 24
-
-	if hoursDiff > hoursInADay {
-		fmt.Printf("\n%s\n", pterm.Blue("Averages"))
-
-		numberOfDays := hoursDiff / hoursInADay
-		avgMins := math.Round(float64(s.minutes) / float64(numberOfDays))
-		avgCompleted := math.Round(float64(s.completed) / float64(numberOfDays))
-		avgAbandoned := math.Round(float64(s.abandoned) / float64(numberOfDays))
-
-		hourMins := 60
-		hours := int(math.Floor(avgMins / float64(hourMins)))
-		minutes := int(avgMins) % hourMins
-
-		fmt.Println("Averaged time logged:", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
-		fmt.Println("Completed pomodoros per day:", pterm.Green(int(avgCompleted)))
-		fmt.Println("Abandoned pomodoros per day:", pterm.Green(int(avgAbandoned)))
-	}
-}
-
-// NewStats returns an instance of Stats.
+// NewStats returns an instance of Stats constructed
+// from command-line arguments.
 func NewStats(ctx *cli.Context) (*Stats, error) {
 	s := &Stats{}
 
@@ -352,28 +388,4 @@ func NewStats(ctx *cli.Context) (*Stats, error) {
 	}
 
 	return s, nil
-}
-
-// contains checks if a string is present in
-// a string slice.
-func contains(s []timePeriod, e timePeriod) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-
-	return false
-}
-
-func printTable(title string, data [][]string) {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{title, "total minutes", "total completed", "total abandoned"})
-	table.SetAutoWrapText(false)
-
-	for _, v := range data {
-		table.Append(v)
-	}
-
-	table.Render()
 }

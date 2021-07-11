@@ -89,6 +89,7 @@ func (s *Store) saveTimerState(timer, sessionKey []byte) error {
 	return err
 }
 
+// getTimerState retrieves the stored timer and session key.
 func (s *Store) getTimerState() (timer, session []byte, err error) {
 	err = s.conn.View(func(tx *bolt.Tx) error {
 		timer = tx.Bucket([]byte("timer")).Get([]byte("timer"))
@@ -115,6 +116,8 @@ func (s *Store) deleteTimerState() error {
 	})
 }
 
+// getSessions retrieves the saved pomodoro sessions
+// within the specified time period.
 func (s *Store) getSessions(startTime, endTime time.Time) ([][]byte, error) {
 	var b [][]byte
 

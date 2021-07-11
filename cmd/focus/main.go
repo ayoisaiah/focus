@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	cmd "github.com/ayoisaiah/focus/src"
+	"github.com/pterm/pterm"
 )
 
 func run(args []string) error {
@@ -14,7 +14,7 @@ func run(args []string) error {
 func main() {
 	err := run(os.Args)
 	if err != nil {
-		fmt.Println(err)
+		pterm.Error.Println(err)
 		os.Exit(1)
 	}
 }

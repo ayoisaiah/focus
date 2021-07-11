@@ -11,7 +11,13 @@ import (
 	"time"
 
 	"github.com/gen2brain/beeep"
+	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
+)
+
+var (
+	errUnableToSaveSession = errors.New("Unable to save incomplete session")
+	errNoPausedSession     = errors.New("Paused session not found. Please start a new session")
 )
 
 type countdown struct {
@@ -50,7 +56,7 @@ type Timer struct {
 	LongBreakInterval   int         `json:"long_break_interval"`
 	MaxPomodoros        int         `json:"max_pomodoros"`
 	Counter             int         `json:"counter"`
-	Iteration           int         `json:"iteration"`
+	PomodoroCycle       int         `json:"iteration"`
 	Msg                 message     `json:"msg"`
 	ShowNotification    bool        `json:"show_notification"`
 	TwentyFourHourClock bool        `json:"24_hour_clock"`
@@ -63,7 +69,7 @@ func (t *Timer) nextSession() sessionType {
 
 	switch t.SessionType {
 	case pomodoro:
-		if t.Iteration == t.LongBreakInterval {
+		if t.PomodoroCycle == t.LongBreakInterval {
 			next = longBreak
 		} else {
 			next = shortBreak
@@ -124,7 +130,7 @@ func (t *Timer) printSession(endTime time.Time) {
 			count = t.Counter
 			total = t.MaxPomodoros
 		} else {
-			count = t.Iteration
+			count = t.PomodoroCycle
 			total = t.LongBreakInterval
 		}
 
@@ -175,8 +181,6 @@ func (t *Timer) handleInterruption() {
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	errUnableToSave := errors.New("unable to save incomplete session")
-
 	go func() {
 		<-c
 
@@ -185,7 +189,7 @@ func (t *Timer) handleInterruption() {
 
 			err := t.saveSession()
 			if err != nil {
-				fmt.Printf("\n\n%s", fmt.Errorf("%s: %w", errUnableToSave, err))
+				pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
 				goto exit
 			}
 
@@ -195,7 +199,7 @@ func (t *Timer) handleInterruption() {
 
 			timerBytes, err := json.Marshal(t)
 			if err != nil {
-				fmt.Printf("\n\n%s", fmt.Errorf("%s: %w", errUnableToSave, err))
+				pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
 				goto exit
 			}
 
@@ -203,11 +207,11 @@ func (t *Timer) handleInterruption() {
 
 			err = store.saveTimerState(timerBytes, sessionKey)
 			if err != nil {
-				fmt.Printf("\n\n%s", fmt.Errorf("%s: %w", errUnableToSave, err))
+				pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
 				goto exit
 			}
 
-			fmt.Printf("\n\nPomodoro session is paused. Use %s to continue later", PrintColor(yellow, "focus resume"))
+			pterm.Success.Printfln("Pomodoro session is paused. Use %s to continue later", PrintColor(yellow, "focus resume"))
 		}
 
 	exit:
@@ -215,7 +219,7 @@ func (t *Timer) handleInterruption() {
 	}()
 }
 
-// Run.begins or continues a timer.
+// Run.begins a timer.
 func (t *Timer) Run() {
 	t.handleInterruption()
 
@@ -243,7 +247,7 @@ func (t *Timer) Resume() error {
 	}
 
 	if len(timerBytes) == 0 || len(sessionBytes) == 0 {
-		return fmt.Errorf("No existing paused session was found. Please start a new session")
+		return errNoPausedSession
 	}
 
 	err = json.Unmarshal(timerBytes, t)
@@ -277,10 +281,10 @@ func (t *Timer) initSession() time.Time {
 	t.Counter++
 
 	if t.SessionType == pomodoro {
-		if t.Iteration == t.LongBreakInterval {
-			t.Iteration = 1
+		if t.PomodoroCycle == t.LongBreakInterval {
+			t.PomodoroCycle = 1
 		} else {
-			t.Iteration++
+			t.PomodoroCycle++
 		}
 	}
 
@@ -356,7 +360,7 @@ func (t *Timer) countdown(timeRemaining countdown) {
 }
 
 // setOptions configures the Timer instance based
-// on command line options.
+// on command line arguments.
 func (t *Timer) setOptions(ctx *cli.Context) {
 	if ctx.Uint("pomodoro") > 0 {
 		t.Kind[pomodoro] = int(ctx.Uint("pomodoro"))
