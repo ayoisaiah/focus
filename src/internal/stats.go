@@ -11,25 +11,26 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 )
 
-type statsPeriod string
+type timePeriod string
 
 const (
-	PeriodAllTime   statsPeriod = "all-time"
-	PeriodToday     statsPeriod = "today"
-	PeriodYesterday statsPeriod = "yesterday"
-	Period24Hours   statsPeriod = "24hours"
-	Period7Days     statsPeriod = "7days"
-	Period14Days    statsPeriod = "14days"
-	Period30Days    statsPeriod = "30days"
-	Period90Days    statsPeriod = "90days"
-	Period180Days   statsPeriod = "180days"
-	Period365Days   statsPeriod = "365days"
+	PeriodAllTime   timePeriod = "all-time"
+	PeriodToday     timePeriod = "today"
+	PeriodYesterday timePeriod = "yesterday"
+	Period24Hours   timePeriod = "24hours"
+	Period7Days     timePeriod = "7days"
+	Period14Days    timePeriod = "14days"
+	Period30Days    timePeriod = "30days"
+	Period90Days    timePeriod = "90days"
+	Period180Days   timePeriod = "180days"
+	Period365Days   timePeriod = "365days"
 )
 
-var Period = []statsPeriod{PeriodAllTime, PeriodToday, PeriodYesterday, Period7Days, Period14Days, Period30Days, Period90Days, Period180Days, Period365Days}
+var StatsPeriod = []timePeriod{PeriodAllTime, PeriodToday, PeriodYesterday, Period7Days, Period14Days, Period30Days, Period90Days, Period180Days, Period365Days}
 
 type pomo struct {
 	totalMins          int
@@ -145,20 +146,43 @@ func (s *Stats) total() {
 		s.totalMins += int(math.Round(v.EndTime.Sub(v.StartTime).Minutes()))
 	}
 
-	fmt.Println("Total minutes worked: ", s.totalMins)
-	fmt.Println("Total pomodoros completed: ", s.completedPomodoros)
-	fmt.Println("Total pomodoros abandoned: ", s.abandonedPomodoros)
+	hours := int(math.Floor(float64(s.totalMins) / float64(60)))
+	minutes := s.totalMins % 60
+
+	fmt.Printf("Time logged: %s %s %s %s\n", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
+
+	fmt.Println("Pomodoros completed:", pterm.Green(s.completedPomodoros))
+	fmt.Println("Pomodoros abandoned:", pterm.Green(s.abandonedPomodoros))
 }
 
 func (s *Stats) Run() {
 	s.getSessions()
+
+	startDate := s.StartDate.Format("January 02, 2006")
+	endDate := s.EndDate.Format("January 02, 2006")
+	timePeriod := startDate + " — " + endDate
+
+	pterm.DefaultHeader.Printfln(timePeriod)
+
+	pterm.FgBlue.Printfln("Totals")
 	s.total()
+
+	fmt.Println()
+	pterm.FgBlue.Printfln("Averages")
 	s.average()
+
+	fmt.Println()
+	pterm.FgBlue.Printfln("Weekly breakdown")
 	s.weekdays()
+
+	fmt.Println()
+	pterm.FgBlue.Printfln("Hourly breakdown")
 	s.hourly()
 }
 
-func getPeriod(period statsPeriod) (startTime, endTime time.Time) {
+// getPeriod returns the start and end time according to the
+// specified time period.
+func getPeriod(period timePeriod) (startTime, endTime time.Time) {
 	switch period {
 	case PeriodToday:
 		now := time.Now()
@@ -199,9 +223,9 @@ func (s *Stats) average() {
 		avgCompleted := math.Round(float64(s.completedPomodoros) / float64(numberOfDays))
 		avgAbandoned := math.Round(float64(s.abandonedPomodoros) / float64(numberOfDays))
 
-		fmt.Println("Average daily minutes: ", int(avgMins))
-		fmt.Println("Average completed pomodoros per day: ", int(avgCompleted))
-		fmt.Println("Average abandoned pomodoros per day: ", int(avgAbandoned))
+		fmt.Println("Daily minutes:", pterm.Green(int(avgMins)))
+		fmt.Println("Completed pomodoros per day:", pterm.Green(int(avgCompleted)))
+		fmt.Println("Abandoned pomodoros per day:", pterm.Green(int(avgAbandoned)))
 	}
 }
 
@@ -222,16 +246,16 @@ func NewStats(ctx *cli.Context) (*Stats, error) {
 
 	p := ctx.String("period")
 
-	if !contains(Period, statsPeriod(p)) {
+	if !contains(StatsPeriod, timePeriod(p)) {
 		var sl []string
-		for _, v := range Period {
+		for _, v := range StatsPeriod {
 			sl = append(sl, string(v))
 		}
 
 		return nil, fmt.Errorf("Period must be one of: %s", strings.Join(sl, ", "))
 	}
 
-	s.StartDate, s.EndDate = getPeriod(statsPeriod(p))
+	s.StartDate, s.EndDate = getPeriod(timePeriod(p))
 
 	start := ctx.String("start")
 	end := ctx.String("end")
@@ -263,7 +287,7 @@ func NewStats(ctx *cli.Context) (*Stats, error) {
 
 // contains checks if a string is present in
 // a string slice.
-func contains(s []statsPeriod, e statsPeriod) bool {
+func contains(s []timePeriod, e timePeriod) bool {
 	for _, a := range s {
 		if a == e {
 			return true

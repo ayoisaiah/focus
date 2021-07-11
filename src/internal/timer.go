@@ -215,7 +215,7 @@ func (t *Timer) handleInterruption() {
 	}()
 }
 
-// Run.
+// Run.begins or continues a timer.
 func (t *Timer) Run() {
 	t.handleInterruption()
 

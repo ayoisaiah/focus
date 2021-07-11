@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pterm/pterm"
 	"gopkg.in/yaml.v2"
 )
 
@@ -76,23 +77,21 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 func (c *Config) prompt(path string) {
 	fmt.Println(ascii)
 
-	fmt.Printf("Your preferences will be saved to: %s\n", path)
+	pterm.Info.Printfln("Your preferences will be saved to: %s\n\n", path)
 
-	fmt.Printf(`
-- Follow the prompts below to configure Focus for the first time.
-- Type your preferred value, or press ENTER to accept the defaults.
-- Edit the configuration file to change any settings, or use command-line arguments (see the --help flag)
-`)
+	pterm.NewBulletListFromString(`Follow the prompts below to configure Focus for the first time.
+Type your preferred value, or press ENTER to accept the defaults.
+Edit the configuration file to change any settings, or use command-line arguments (see the --help flag)`, " ").Render()
 
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Print("\nPress ENTER to continue")
+	fmt.Print("Press ENTER to continue")
 
 	_, _ = reader.ReadString('\n')
 
 	for {
 		if c.PomodoroMinutes == 0 {
-			fmt.Printf("\nPomodoro length in minutes (default: %d): ", pomodoroMinutes)
+			fmt.Printf("\nPomodoro length in minutes (default: %s): ", pterm.Green(pomodoroMinutes))
 
 			num, err := numberPrompt(reader, pomodoroMinutes)
 			if err != nil {
@@ -104,7 +103,7 @@ func (c *Config) prompt(path string) {
 		}
 
 		if c.ShortBreakMinutes == 0 {
-			fmt.Printf("Short break length in minutes (default: %d): ", shortBreakMinutes)
+			fmt.Printf("Short break length in minutes (default: %s): ", pterm.Green(shortBreakMinutes))
 
 			num, err := numberPrompt(reader, shortBreakMinutes)
 			if err != nil {
@@ -116,7 +115,7 @@ func (c *Config) prompt(path string) {
 		}
 
 		if c.LongBreakMinutes == 0 {
-			fmt.Printf("Long break length in minutes (default: %d): ", longBreakMinutes)
+			fmt.Printf("Long break length in minutes (default: %s): ", pterm.Green(longBreakMinutes))
 
 			num, err := numberPrompt(reader, longBreakMinutes)
 			if err != nil {
@@ -128,7 +127,7 @@ func (c *Config) prompt(path string) {
 		}
 
 		if c.LongBreakInterval == 0 {
-			fmt.Printf("Pomodoro cycles before long break (default: %d): ", longBreakInterval)
+			fmt.Printf("Pomodoro cycles before long break (default: %s): \n", pterm.Green(longBreakInterval))
 
 			num, err := numberPrompt(reader, longBreakInterval)
 			if err != nil {
@@ -253,7 +252,7 @@ func (c *Config) new(pathToConfig string) error {
 		return err
 	}
 
-	fmt.Printf("\nYour settings have been saved. Thanks for using Focus!\n\n")
+	pterm.Success.Printfln("Your settings have been saved. Thanks for using Focus!\n\n")
 
 	return nil
 }

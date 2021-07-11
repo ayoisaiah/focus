@@ -3,12 +3,12 @@ package focus
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/pterm/pterm"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -26,9 +26,9 @@ func init() {
 	err := store.init()
 	if err != nil {
 		if errors.Is(err, bolt.ErrDatabaseOpen) || errors.Is(err, bolt.ErrTimeout) {
-			fmt.Fprintln(os.Stderr, "Only one instance of Focus can be active at a time")
+			pterm.Error.Println("Only one instance of Focus can be active at a time")
 		} else {
-			fmt.Fprintln(os.Stderr, err)
+			pterm.Error.Println(err)
 		}
 
 		os.Exit(1)
