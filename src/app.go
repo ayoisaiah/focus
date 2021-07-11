@@ -112,16 +112,21 @@ func GetApp() *cli.App {
 						return err
 					}
 
-					stats.Run()
+					stats.Show()
 
 					return nil
 				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
+						Name:  "sort",
+						Usage: "Sort the weekly and hourly results. Valid arguments include: default, minutes, completed, abandoned",
+						Value: "minutes",
+					},
+					&cli.StringFlag{
 						Name:    "period",
 						Aliases: []string{"p"},
 						Usage:   "The time period for the statistics",
-						Value:   string(focus.Period7Days),
+						Value:   "7days",
 					},
 					&cli.StringFlag{
 						Name:    "start",

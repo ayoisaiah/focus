@@ -15,27 +15,37 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const hourMins = 60
+
+type statsSort string
+
+const (
+	sortMinutes   statsSort = "minutes"
+	sortCompleted statsSort = "completed"
+	sortAbandoned statsSort = "abandoned"
+)
+
 type timePeriod string
 
 const (
-	PeriodAllTime   timePeriod = "all-time"
-	PeriodToday     timePeriod = "today"
-	PeriodYesterday timePeriod = "yesterday"
-	Period24Hours   timePeriod = "24hours"
-	Period7Days     timePeriod = "7days"
-	Period14Days    timePeriod = "14days"
-	Period30Days    timePeriod = "30days"
-	Period90Days    timePeriod = "90days"
-	Period180Days   timePeriod = "180days"
-	Period365Days   timePeriod = "365days"
+	periodAllTime   timePeriod = "all-time"
+	periodToday     timePeriod = "today"
+	periodYesterday timePeriod = "yesterday"
+	period24Hours   timePeriod = "24hours"
+	period7Days     timePeriod = "7days"
+	period14Days    timePeriod = "14days"
+	period30Days    timePeriod = "30days"
+	period90Days    timePeriod = "90days"
+	period180Days   timePeriod = "180days"
+	period365Days   timePeriod = "365days"
 )
 
-var StatsPeriod = []timePeriod{PeriodAllTime, PeriodToday, PeriodYesterday, Period7Days, Period14Days, Period30Days, Period90Days, Period180Days, Period365Days}
+var StatsPeriod = []timePeriod{periodAllTime, periodToday, periodYesterday, period7Days, period14Days, period30Days, period90Days, period180Days, period365Days}
 
 type pomo struct {
-	totalMins          int
-	completedPomodoros int
-	abandonedPomodoros int
+	minutes   int
+	completed int
+	abandoned int
 }
 
 type Stats struct {
@@ -45,6 +55,7 @@ type Stats struct {
 	Sessions  []session
 	Weekday   map[time.Weekday]*pomo
 	HourofDay map[int]*pomo
+	Sort      statsSort
 }
 
 func (s *Stats) getSessions() {
@@ -68,6 +79,8 @@ func (s *Stats) getSessions() {
 }
 
 func (s *Stats) hourly() {
+	fmt.Printf("\n%s\n", pterm.Blue("Hourly breakdown"))
+
 	type keyValue struct {
 		key   int
 		value *pomo
@@ -78,25 +91,43 @@ func (s *Stats) hourly() {
 		sl = append(sl, keyValue{k, v})
 	}
 
-	sort.SliceStable(sl, func(i, j int) bool {
-		return sl[i].key < sl[j].key
-	})
+	switch s.Sort {
+	case sortMinutes:
+		sort.SliceStable(sl, func(i, j int) bool {
+			return sl[i].value.minutes > sl[j].value.minutes
+		})
+	case sortCompleted:
+		sort.SliceStable(sl, func(i, j int) bool {
+			return sl[i].value.completed > sl[j].value.completed
+		})
+	case sortAbandoned:
+		sort.SliceStable(sl, func(i, j int) bool {
+			return sl[i].value.abandoned > sl[j].value.abandoned
+		})
+	default:
+		sort.SliceStable(sl, func(i, j int) bool {
+			return sl[i].key < sl[j].key
+		})
+	}
 
 	var data = make([][]string, len(sl))
 
 	for _, v := range sl {
 		val := s.HourofDay[v.key]
-		completed := strconv.Itoa(val.completedPomodoros)
-		abandoned := strconv.Itoa(val.abandonedPomodoros)
-		total := strconv.Itoa(val.totalMins)
+		completed := strconv.Itoa(val.completed)
+		abandoned := strconv.Itoa(val.abandoned)
+		total := strconv.Itoa(val.minutes)
 
-		data = append(data, []string{fmt.Sprintf("%02d:00", v.key), total, completed, abandoned})
+		d := time.Date(2000, 1, 1, v.key, 0, 0, 0, time.UTC)
+		data = append(data, []string{d.Format("03:04 PM"), total, completed, abandoned})
 	}
 
 	printTable("hours", data)
 }
 
 func (s *Stats) weekdays() {
+	fmt.Printf("\n%s\n", pterm.Blue("Weekly breakdown"))
+
 	type keyValue struct {
 		key   time.Weekday
 		value *pomo
@@ -107,17 +138,32 @@ func (s *Stats) weekdays() {
 		sl = append(sl, keyValue{k, v})
 	}
 
-	sort.SliceStable(sl, func(i, j int) bool {
-		return int(sl[i].key) < int(sl[j].key)
-	})
+	switch s.Sort {
+	case sortMinutes:
+		sort.SliceStable(sl, func(i, j int) bool {
+			return sl[i].value.minutes > sl[j].value.minutes
+		})
+	case sortCompleted:
+		sort.SliceStable(sl, func(i, j int) bool {
+			return sl[i].value.completed > sl[j].value.completed
+		})
+	case sortAbandoned:
+		sort.SliceStable(sl, func(i, j int) bool {
+			return sl[i].value.abandoned > sl[j].value.abandoned
+		})
+	default:
+		sort.SliceStable(sl, func(i, j int) bool {
+			return int(sl[i].key) < int(sl[j].key)
+		})
+	}
 
 	var data = make([][]string, len(sl))
 
 	for _, v := range sl {
 		val := s.Weekday[v.key]
-		completed := strconv.Itoa(val.completedPomodoros)
-		abandoned := strconv.Itoa(val.abandonedPomodoros)
-		total := strconv.Itoa(val.totalMins)
+		completed := strconv.Itoa(val.completed)
+		abandoned := strconv.Itoa(val.abandoned)
+		total := strconv.Itoa(val.minutes)
 
 		data = append(data, []string{v.key.String(), total, completed, abandoned})
 	}
@@ -126,57 +172,72 @@ func (s *Stats) weekdays() {
 }
 
 func (s *Stats) total() {
+	fmt.Printf("%s\n", pterm.Blue("Totals"))
+
 	for _, v := range s.Sessions {
 		if v.EndTime.IsZero() {
 			continue
 		}
 
 		if v.Completed {
-			s.Weekday[v.StartTime.Weekday()].completedPomodoros++
-			s.HourofDay[v.StartTime.Hour()].completedPomodoros++
-			s.completedPomodoros++
+			s.Weekday[v.StartTime.Weekday()].completed++
+			s.HourofDay[v.StartTime.Hour()].completed++
+			s.completed++
 		} else {
-			s.Weekday[v.StartTime.Weekday()].abandonedPomodoros++
-			s.HourofDay[v.StartTime.Hour()].abandonedPomodoros++
-			s.abandonedPomodoros++
+			s.Weekday[v.StartTime.Weekday()].abandoned++
+			s.HourofDay[v.StartTime.Hour()].abandoned++
+			s.abandoned++
 		}
 
-		s.Weekday[v.StartTime.Weekday()].totalMins += int(math.Round(v.EndTime.Sub(v.StartTime).Minutes()))
-		s.HourofDay[v.StartTime.Hour()].totalMins += int(math.Round(v.EndTime.Sub(v.StartTime).Minutes()))
-		s.totalMins += int(math.Round(v.EndTime.Sub(v.StartTime).Minutes()))
+		hourly := map[int]float64{}
+		weekday := map[time.Weekday]float64{}
+
+		for d := v.StartTime; !d.After(v.EndTime); d = d.Add(1 * time.Minute) {
+			var end time.Time
+			if d.Add(1 * time.Minute).After(v.EndTime) {
+				end = v.EndTime
+			} else {
+				end = d.Add(1 * time.Minute)
+			}
+
+			hourly[d.Hour()] += end.Sub(d).Seconds()
+			weekday[d.Weekday()] += end.Sub(d).Seconds()
+		}
+
+		for k, val := range weekday {
+			s.Weekday[k].minutes += int(math.Round(val / float64(hourMins)))
+		}
+
+		for k, val := range hourly {
+			s.HourofDay[k].minutes += int(math.Round(val / float64(hourMins)))
+		}
+
+		s.minutes += int(math.Round(v.EndTime.Sub(v.StartTime).Minutes()))
 	}
 
-	hours := int(math.Floor(float64(s.totalMins) / float64(60)))
-	minutes := s.totalMins % 60
+	hours := int(math.Floor(float64(s.minutes) / float64(hourMins)))
+	minutes := s.minutes % hourMins
 
-	fmt.Printf("Time logged: %s %s %s %s\n", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
+	fmt.Printf("Total time logged: %s %s %s %s\n", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
 
-	fmt.Println("Pomodoros completed:", pterm.Green(s.completedPomodoros))
-	fmt.Println("Pomodoros abandoned:", pterm.Green(s.abandonedPomodoros))
+	fmt.Println("Pomodoros completed:", pterm.Green(s.completed))
+	fmt.Println("Pomodoros abandoned:", pterm.Green(s.abandoned))
 }
 
-func (s *Stats) Run() {
+// Show displays the relevant statistics for the
+// set time period.
+func (s *Stats) Show() {
 	s.getSessions()
 
 	startDate := s.StartDate.Format("January 02, 2006")
 	endDate := s.EndDate.Format("January 02, 2006")
-	timePeriod := startDate + " — " + endDate
+	timePeriod := startDate + " - " + endDate
 
-	pterm.DefaultHeader.Printfln(timePeriod)
+	pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgYellow)).WithTextStyle(pterm.NewStyle(pterm.FgBlack)).Printfln(timePeriod)
 
-	pterm.FgBlue.Printfln("Totals")
 	s.total()
-
-	fmt.Println()
-	pterm.FgBlue.Printfln("Averages")
 	s.average()
-
-	fmt.Println()
-	pterm.FgBlue.Printfln("Weekly breakdown")
 	s.weekdays()
-
-	fmt.Println()
-	pterm.FgBlue.Printfln("Hourly breakdown")
 	s.hourly()
 }
 
@@ -184,29 +245,29 @@ func (s *Stats) Run() {
 // specified time period.
 func getPeriod(period timePeriod) (startTime, endTime time.Time) {
 	switch period {
-	case PeriodToday:
+	case periodToday:
 		now := time.Now()
 		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()), now
-	case PeriodYesterday:
+	case periodYesterday:
 		yesterday := time.Now().AddDate(0, 0, -1)
 		year, month, day := yesterday.Date()
 
 		return time.Date(year, month, day, 0, 0, 0, 0, yesterday.Location()), time.Date(year, month, day, 23, 59, 59, 0, yesterday.Location())
-	case Period24Hours:
+	case period24Hours:
 		return time.Now().AddDate(0, 0, -1), time.Now()
-	case Period7Days:
+	case period7Days:
 		return time.Now().AddDate(0, 0, -7), time.Now()
-	case Period14Days:
+	case period14Days:
 		return time.Now().AddDate(0, 0, -14), time.Now()
-	case Period30Days:
+	case period30Days:
 		return time.Now().AddDate(0, 0, -30), time.Now()
-	case Period90Days:
+	case period90Days:
 		return time.Now().AddDate(0, 0, -90), time.Now()
-	case Period180Days:
+	case period180Days:
 		return time.Now().AddDate(0, 0, -180), time.Now()
-	case Period365Days:
+	case period365Days:
 		return time.Now().AddDate(0, 0, -365), time.Now()
-	case PeriodAllTime:
+	case periodAllTime:
 		return time.Time{}, time.Now()
 	}
 
@@ -218,12 +279,18 @@ func (s *Stats) average() {
 	hoursInADay := 24
 
 	if hoursDiff > hoursInADay {
-		numberOfDays := hoursDiff / hoursInADay
-		avgMins := math.Round(float64(s.totalMins) / float64(numberOfDays))
-		avgCompleted := math.Round(float64(s.completedPomodoros) / float64(numberOfDays))
-		avgAbandoned := math.Round(float64(s.abandonedPomodoros) / float64(numberOfDays))
+		fmt.Printf("\n%s\n", pterm.Blue("Averages"))
 
-		fmt.Println("Daily minutes:", pterm.Green(int(avgMins)))
+		numberOfDays := hoursDiff / hoursInADay
+		avgMins := math.Round(float64(s.minutes) / float64(numberOfDays))
+		avgCompleted := math.Round(float64(s.completed) / float64(numberOfDays))
+		avgAbandoned := math.Round(float64(s.abandoned) / float64(numberOfDays))
+
+		hourMins := 60
+		hours := int(math.Floor(avgMins / float64(hourMins)))
+		minutes := int(avgMins) % hourMins
+
+		fmt.Println("Averaged time logged:", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
 		fmt.Println("Completed pomodoros per day:", pterm.Green(int(avgCompleted)))
 		fmt.Println("Abandoned pomodoros per day:", pterm.Green(int(avgAbandoned)))
 	}
@@ -232,6 +299,8 @@ func (s *Stats) average() {
 // NewStats returns an instance of Stats.
 func NewStats(ctx *cli.Context) (*Stats, error) {
 	s := &Stats{}
+
+	s.Sort = statsSort(ctx.String("sort"))
 
 	s.Weekday = make(map[time.Weekday]*pomo)
 	s.HourofDay = make(map[int]*pomo)
@@ -299,7 +368,7 @@ func contains(s []timePeriod, e timePeriod) bool {
 
 func printTable(title string, data [][]string) {
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{title, "minutes", "completed", "abandoned"})
+	table.SetHeader([]string{title, "total minutes", "total completed", "total abandoned"})
 	table.SetAutoWrapText(false)
 
 	for _, v := range data {
