@@ -153,6 +153,7 @@ func (s *Stats) total() {
 func (s *Stats) Run() {
 	s.getSessions()
 	s.total()
+	s.average()
 	s.weekdays()
 	s.hourly()
 }
@@ -186,6 +187,22 @@ func getPeriod(period statsPeriod) (startTime, endTime time.Time) {
 	}
 
 	return time.Time{}, time.Now()
+}
+
+func (s *Stats) average() {
+	hoursDiff := int(math.Round(s.EndDate.Sub(s.StartDate).Hours()))
+	hoursInADay := 24
+
+	if hoursDiff > hoursInADay {
+		numberOfDays := hoursDiff / hoursInADay
+		avgMins := math.Round(float64(s.totalMins) / float64(numberOfDays))
+		avgCompleted := math.Round(float64(s.completedPomodoros) / float64(numberOfDays))
+		avgAbandoned := math.Round(float64(s.abandonedPomodoros) / float64(numberOfDays))
+
+		fmt.Println("Average daily minutes: ", int(avgMins))
+		fmt.Println("Average completed pomodoros per day: ", int(avgCompleted))
+		fmt.Println("Average abandoned pomodoros per day: ", int(avgAbandoned))
+	}
 }
 
 // NewStats returns an instance of Stats.
