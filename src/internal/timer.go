@@ -184,6 +184,8 @@ func (t *Timer) handleInterruption() {
 	go func() {
 		<-c
 
+		fmt.Printf("\n\n")
+
 		if t.SessionType == pomodoro {
 			t.Session.EndTime = time.Now()
 
@@ -296,7 +298,10 @@ func (t *Timer) initSession() time.Time {
 	}
 
 	// TODO: Handle error
-	_ = t.saveSession()
+	err := t.saveSession()
+	if err != nil {
+		pterm.Error.Printfln("%s\n", err)
+	}
 
 	return time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute)
 }
@@ -321,7 +326,10 @@ func (t *Timer) start(endTime time.Time) {
 			t.Session.Completed = true
 			t.Session.EndTime = time.Now()
 
-			_ = t.saveSession()
+			err := t.saveSession()
+			if err != nil {
+				pterm.Error.Printfln("%s\n", err)
+			}
 
 			t.notify()
 
@@ -356,7 +364,7 @@ func (t *Timer) start(endTime time.Time) {
 // countdown prints the time remaining until the end of
 // the current session.
 func (t *Timer) countdown(timeRemaining countdown) {
-	fmt.Printf("Minutes: %02d Seconds: %02d", timeRemaining.m, timeRemaining.s)
+	fmt.Printf("🕒%s:%s", pterm.Yellow(fmt.Sprintf("%02d", timeRemaining.m)), pterm.Yellow(fmt.Sprintf("%02d", timeRemaining.s)))
 }
 
 // setOptions configures the Timer instance based
