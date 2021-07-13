@@ -114,12 +114,13 @@ type Stats struct {
 	Weekday   map[time.Weekday]*pomo
 	HourofDay map[int]*pomo
 	Sort      statsSort
+	store     *Store
 }
 
 // getSessions retrieves the pomodoro sessions
 // for the specified time period.
 func (s *Stats) getSessions(start, end time.Time) {
-	b, err := store.getSessions(start, end)
+	b, err := s.store.getSessions(start, end)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -333,8 +334,10 @@ func (s *Stats) Show() {
 
 // NewStats returns an instance of Stats constructed
 // from command-line arguments.
-func NewStats(ctx *cli.Context) (*Stats, error) {
+func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 	s := &Stats{}
+
+	s.store = store
 
 	s.Sort = statsSort(ctx.String("sort"))
 

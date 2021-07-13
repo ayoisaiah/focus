@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pterm/pterm"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -16,33 +15,42 @@ const (
 	dbFile = "focus.db"
 )
 
-var store Store
+var (
+	errSingleInstanceAllowed = errors.New("Only one instance of Focus can be active at a time")
+)
 
+type DB interface {
+	init() error
+	getSessions(start, end time.Time) ([][]byte, error)
+	deleteTimerState() error
+	getTimerState() ([]byte, []byte, error)
+	saveTimerState(timer, sessionKey []byte) error
+	updateSession(key, value []byte) error
+}
+
+// Store is a wrapper for a BoltDB connection.
 type Store struct {
 	conn *bolt.DB
 }
 
-func init() {
-	err := store.init()
-	if err != nil {
-		if errors.Is(err, bolt.ErrDatabaseOpen) || errors.Is(err, bolt.ErrTimeout) {
-			pterm.Error.Println("Only one instance of Focus can be active at a time")
-		} else {
-			pterm.Error.Println(err)
-		}
-
-		os.Exit(1)
-	}
-}
-
+// init initialises a BoltDB connection
+// and creates the buckets for storing data
+// if necessary.
 func (s *Store) init() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}
 
-	appRoot := filepath.Join(homeDir, configPath)
-	pathToDB := filepath.Join(appRoot, dbFile)
+	pathToConfigDir := filepath.Join(homeDir, configPath)
+
+	// Ensure the config directory exists
+	err = os.MkdirAll(pathToConfigDir, 0750)
+	if err != nil {
+		return err
+	}
+
+	pathToDB := filepath.Join(pathToConfigDir, dbFile)
 
 	var fileMode fs.FileMode = 0600
 
@@ -66,6 +74,9 @@ func (s *Store) init() error {
 	return err
 }
 
+// updateSession creates or updates a pomodoro session
+// in the database. The session is created if it doesn't
+// exist already, or overwritten if it does.
 func (s *Store) updateSession(key, value []byte) error {
 	err := s.conn.Update(func(tx *bolt.Tx) error {
 		return tx.Bucket([]byte("sessions")).Put(key, value)
@@ -134,4 +145,19 @@ func (s *Store) getSessions(startTime, endTime time.Time) ([][]byte, error) {
 	})
 
 	return b, err
+}
+
+func NewStore() (*Store, error) {
+	store := &Store{}
+
+	err := store.init()
+	if err != nil {
+		if errors.Is(err, bolt.ErrDatabaseOpen) || errors.Is(err, bolt.ErrTimeout) {
+			return nil, errSingleInstanceAllowed
+		}
+
+		return nil, err
+	}
+
+	return store, nil
 }

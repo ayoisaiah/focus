@@ -28,8 +28,8 @@ const ascii = `
 ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝
 `
 
-// Config represents the user's preferences.
-type Config struct {
+// config represents the user's preferences.
+type config struct {
 	PomodoroMinutes     int    `yaml:"pomodoro_mins"`
 	PomodoroMessage     string `yaml:"pomodoro_msg"`
 	ShortBreakMinutes   int    `yaml:"short_break_mins"`
@@ -80,7 +80,7 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 
 // configPrompt is the prompt for the app's
 // initial configuration.
-func (c *Config) prompt(path string) {
+func (c *config) prompt(path string) {
 	fmt.Println(ascii)
 
 	pterm.Info.Printfln("Your preferences will be saved to: %s\n\n", path)
@@ -133,7 +133,7 @@ Edit the configuration file to change any settings, or use command-line argument
 		}
 
 		if c.LongBreakInterval == 0 {
-			fmt.Printf("Pomodoro cycles before long break (default: %s): \n", pterm.Green(longBreakInterval))
+			fmt.Printf("Pomodoro cycles before long break (default: %s): ", pterm.Green(longBreakInterval))
 
 			num, err := numberPrompt(reader, longBreakInterval)
 			if err != nil {
@@ -149,7 +149,7 @@ Edit the configuration file to change any settings, or use command-line argument
 }
 
 // save stores the current configuration to disk.
-func (c *Config) save(path string) error {
+func (c *config) save(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -177,29 +177,35 @@ func (c *Config) save(path string) error {
 	return writer.Flush()
 }
 
-// Init initialises the app configuration.
+// init initialises the application configuration.
 // If the config file does not exist,.it prompts the user
 // and saves the inputted preferences in a config file.
-func (c *Config) Init() error {
+func (c *config) init() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}
 
-	appRoot := filepath.Join(homeDir, configPath)
-	pathToConfig := filepath.Join(appRoot, configFileName)
+	pathToConfigDir := filepath.Join(homeDir, configPath)
+	pathToConfigFile := filepath.Join(pathToConfigDir, configFileName)
 
-	_, err = os.Stat(pathToConfig)
-	if err != nil && !errors.Is(err, os.ErrExist) {
-		return c.new(pathToConfig)
+	// Ensure the config directory exists
+	err = os.MkdirAll(pathToConfigDir, 0750)
+	if err != nil {
+		return err
 	}
 
-	return c.get(pathToConfig)
+	_, err = os.Stat(pathToConfigFile)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return c.create(pathToConfigFile)
+	}
+
+	return c.get(pathToConfigFile)
 }
 
 // get retrieves an already existing configuration from
 // the filesystem.
-func (c *Config) get(pathToConfig string) error {
+func (c *config) get(pathToConfig string) error {
 	c.defaults(false)
 
 	b, err := os.ReadFile(pathToConfig)
@@ -219,7 +225,7 @@ func (c *Config) get(pathToConfig string) error {
 // The `willPrompt` flag is used to control
 // if default values should be set for the
 // values that.are requested in the prompt.
-func (c *Config) defaults(willPrompt bool) {
+func (c *config) defaults(willPrompt bool) {
 	if !willPrompt {
 		c.PomodoroMinutes = pomodoroMinutes
 		c.ShortBreakMinutes = shortBreakMinutes
@@ -237,28 +243,34 @@ func (c *Config) defaults(willPrompt bool) {
 	c.AllowPausing = false
 }
 
-// new prompts the user to set a configuration
+// create prompts the user to set a configuration
 // for the application. The resulting values are saved
 // to the filesystem.
-func (c *Config) new(pathToConfig string) error {
+func (c *config) create(pathToConfig string) error {
 	c.defaults(true)
-
-	appRoot := filepath.Dir(pathToConfig)
-
-	// Ensure the config directory exists
-	err := os.MkdirAll(appRoot, 0750)
-	if err != nil {
-		return err
-	}
 
 	c.prompt(pathToConfig)
 
-	err = c.save(pathToConfig)
+	err := c.save(pathToConfig)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println()
 	pterm.Success.Printfln("Your settings have been saved. Thanks for using Focus!\n\n")
 
 	return nil
+}
+
+func NewConfig() (*config, error) {
+	c := &config{}
+
+	err := c.init()
+	if err != nil {
+		fmt.Println(
+			fmt.Errorf("Unable to initialise Focus from configuration file: %w\n", err),
+		)
+	}
+
+	return c, nil
 }

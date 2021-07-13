@@ -61,6 +61,7 @@ type Timer struct {
 	ShowNotification    bool        `json:"show_notification"`
 	TwentyFourHourClock bool        `json:"24_hour_clock"`
 	AllowPausing        bool        `json:"allow_pausing"`
+	Store               DB          `json:"-"`
 }
 
 // nextSession retrieves the next session.
@@ -112,7 +113,7 @@ func (t *Timer) saveSession() error {
 		return err
 	}
 
-	return store.updateSession(key, value)
+	return t.Store.updateSession(key, value)
 }
 
 // printSession writes the details of the current
@@ -207,7 +208,7 @@ func (t *Timer) handleInterruption() {
 
 			sessionKey := []byte(t.Session.StartTime.Format(time.RFC3339))
 
-			err = store.saveTimerState(timerBytes, sessionKey)
+			err = t.Store.saveTimerState(timerBytes, sessionKey)
 			if err != nil {
 				pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
 				goto exit
@@ -243,7 +244,7 @@ func (t *Timer) Run() {
 // Resume attempts to retrieve a paused pomodoro session
 // and continue from where it left of.
 func (t *Timer) Resume() error {
-	timerBytes, sessionBytes, err := store.getTimerState()
+	timerBytes, sessionBytes, err := t.Store.getTimerState()
 	if err != nil {
 		return err
 	}
@@ -267,7 +268,7 @@ func (t *Timer) Resume() error {
 
 	t.Session.EndTime = newEndTime
 
-	err = store.deleteTimerState()
+	err = t.Store.deleteTimerState()
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -417,7 +418,7 @@ func (t *Timer) setOptions(ctx *cli.Context) {
 
 // NewTimer returns a new timer constructed from
 // the configuration file and command line arguments.
-func NewTimer(ctx *cli.Context, c *Config) *Timer {
+func NewTimer(ctx *cli.Context, c *config, store *Store) *Timer {
 	t := &Timer{
 		Kind: kind{
 			pomodoro:   c.PomodoroMinutes,
@@ -435,6 +436,7 @@ func NewTimer(ctx *cli.Context, c *Config) *Timer {
 		AutoStartBreak:      c.AutoStartBreak,
 		TwentyFourHourClock: c.TwentyFourHourClock,
 		AllowPausing:        c.AllowPausing,
+		Store:               store,
 	}
 
 	// Command-line flags will override the configuration

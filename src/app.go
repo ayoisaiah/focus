@@ -99,7 +99,14 @@ func GetApp() *cli.App {
 			{
 				Name: "resume",
 				Action: func(ctx *cli.Context) error {
-					t := &focus.Timer{}
+					store, err := focus.NewStore()
+					if err != nil {
+						return err
+					}
+
+					t := &focus.Timer{
+						Store: store,
+					}
 
 					return t.Resume()
 				},
@@ -107,7 +114,12 @@ func GetApp() *cli.App {
 			{
 				Name: "stats",
 				Action: func(ctx *cli.Context) error {
-					stats, err := focus.NewStats(ctx)
+					store, err := focus.NewStore()
+					if err != nil {
+						return err
+					}
+
+					stats, err := focus.NewStats(ctx, store)
 					if err != nil {
 						return err
 					}
@@ -192,16 +204,17 @@ func GetApp() *cli.App {
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			c := &focus.Config{}
-
-			err := c.Init()
+			config, err := focus.NewConfig()
 			if err != nil {
-				fmt.Println(
-					fmt.Errorf("Unable to initialise Focus from configuration file: %w\n", err),
-				)
+				return err
 			}
 
-			t := focus.NewTimer(ctx, c)
+			store, err := focus.NewStore()
+			if err != nil {
+				return err
+			}
+
+			t := focus.NewTimer(ctx, config, store)
 			t.Run()
 
 			return nil
