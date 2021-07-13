@@ -309,57 +309,59 @@ func (t *Timer) initSession() time.Time {
 
 // start begins a new session.
 func (t *Timer) start(endTime time.Time) {
-	t.printSession(endTime)
-
-	fmt.Print("\033[s")
-
-	timeRemaining := t.getTimeRemaining(endTime)
-
-	t.countdown(timeRemaining)
-
-	ticker := time.NewTicker(time.Second)
-	for range ticker.C {
-		fmt.Print("\033[u\033[K")
-
-		timeRemaining = t.getTimeRemaining(endTime)
-
-		if timeRemaining.t <= 0 {
-			t.Session.Completed = true
-			t.Session.EndTime = time.Now()
-
-			err := t.saveSession()
-			if err != nil {
-				pterm.Error.Printfln("%s\n", err)
-			}
-
-			t.notify()
-
-			break
-		}
-
-		t.countdown(timeRemaining)
-	}
-
-	if t.Counter == t.MaxPomodoros {
-		return
-	}
-
-	if t.SessionType != pomodoro && !t.AutoStartPomodoro ||
-		t.SessionType == pomodoro && !t.AutoStartBreak {
-		// Block until user input before beginning next session
-		reader := bufio.NewReader(os.Stdin)
+	for {
+		t.printSession(endTime)
 
 		fmt.Print("\033[s")
-		fmt.Print("Press ENTER to start the next session")
 
-		_, _ = reader.ReadString('\n')
+		timeRemaining := t.getTimeRemaining(endTime)
 
-		fmt.Print("\033[u\033[K")
+		t.countdown(timeRemaining)
+
+		ticker := time.NewTicker(time.Second)
+		for range ticker.C {
+			fmt.Print("\033[u\033[K")
+
+			timeRemaining = t.getTimeRemaining(endTime)
+
+			if timeRemaining.t <= 0 {
+				t.Session.Completed = true
+				t.Session.EndTime = time.Now()
+
+				err := t.saveSession()
+				if err != nil {
+					pterm.Error.Printfln("%s\n", err)
+				}
+
+				t.notify()
+
+				break
+			}
+
+			t.countdown(timeRemaining)
+		}
+
+		if t.Counter == t.MaxPomodoros {
+			return
+		}
+
+		if t.SessionType != pomodoro && !t.AutoStartPomodoro ||
+			t.SessionType == pomodoro && !t.AutoStartBreak {
+			// Block until user input before beginning next session
+			reader := bufio.NewReader(os.Stdin)
+
+			fmt.Print("\033[s")
+			fmt.Print("Press ENTER to start the next session")
+
+			_, _ = reader.ReadString('\n')
+
+			fmt.Print("\033[u\033[K")
+		}
+
+		t.SessionType = t.nextSession()
+
+		endTime = t.initSession()
 	}
-
-	t.SessionType = t.nextSession()
-
-	t.start(t.initSession())
 }
 
 // countdown prints the time remaining until the end of
