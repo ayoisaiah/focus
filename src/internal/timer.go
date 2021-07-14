@@ -34,12 +34,32 @@ const (
 	longBreak  sessionType = "long_break"
 )
 
+type sessionTimeline struct {
+	// StartTime is the start of the session including
+	// the start of a paused session
+	StartTime time.Time `json:"start_time"`
+	// EndTime is the end of a session including
+	// when a session is paused or stopped prematurely
+	EndTime time.Time `json:"end_time"`
+}
+
+// session represents a pomodoro or break session.
 type session struct {
-	Name      sessionType `json:"name"`
-	Duration  int         `json:"duration"`
-	StartTime time.Time   `json:"start_time"`
-	EndTime   time.Time   `json:"end_time"`
-	Completed bool        `json:"completed"`
+	// Name is the name of a session
+	Name sessionType `json:"name"`
+	// Duration is the duration in minutes for a session
+	Duration int `json:"duration"`
+	// Timeline helps to keep track of how many times
+	// a session was paused, for how long, and when it
+	// was restarted
+	Timeline []sessionTimeline `json:"timeline"`
+	// StartTime is the original time the session was started
+	StartTime time.Time `json:"start_time"`
+	// EndTime the final end time of the session
+	EndTime time.Time `json:"end_time"`
+	// Completed indicates whether a session was completed
+	// or abandoned
+	Completed bool `json:"completed"`
 }
 
 type kind map[sessionType]int
@@ -188,7 +208,11 @@ func (t *Timer) handleInterruption() {
 		fmt.Printf("\n\n")
 
 		if t.SessionType == pomodoro {
-			t.Session.EndTime = time.Now()
+			pausedTime := time.Now()
+			t.Session.EndTime = pausedTime
+
+			lastIndex := len(t.Session.Timeline) - 1
+			t.Session.Timeline[lastIndex].EndTime = pausedTime
 
 			err := t.saveSession()
 			if err != nil {
@@ -263,14 +287,23 @@ func (t *Timer) Resume() error {
 		return err
 	}
 
-	elapsedTimeInSeconds := int(t.Session.EndTime.Sub(t.Session.StartTime).Seconds())
+	var elapsedTimeInSeconds int
+	for _, v := range t.Session.Timeline {
+		elapsedTimeInSeconds += int(v.EndTime.Sub(v.StartTime).Seconds())
+	}
+
 	newEndTime := time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute).Add(-time.Second * time.Duration(elapsedTimeInSeconds))
 
 	t.Session.EndTime = newEndTime
 
+	t.Session.Timeline = append(t.Session.Timeline, sessionTimeline{
+		StartTime: time.Now(),
+		EndTime:   newEndTime,
+	})
+
 	err = t.Store.deleteTimerState()
 	if err != nil {
-		fmt.Println(err)
+		pterm.Error.Println(err)
 	}
 
 	t.Run()
@@ -291,20 +324,28 @@ func (t *Timer) initSession() time.Time {
 		}
 	}
 
+	startTime := time.Now()
+	endTime := time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute)
+
 	t.Session = session{
 		Name:      t.SessionType,
 		Duration:  t.Kind[t.SessionType],
 		Completed: false,
-		StartTime: time.Now(),
+		StartTime: startTime,
+		Timeline: []sessionTimeline{
+			{
+				startTime,
+				endTime,
+			},
+		},
 	}
 
-	// TODO: Handle error
 	err := t.saveSession()
 	if err != nil {
 		pterm.Error.Printfln("%s\n", err)
 	}
 
-	return time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute)
+	return endTime
 }
 
 // start begins a new session.
