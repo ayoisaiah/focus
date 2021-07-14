@@ -6,6 +6,7 @@ import (
 	"time"
 
 	focus "github.com/ayoisaiah/focus/src/internal"
+	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 )
 
@@ -22,20 +23,19 @@ AUTHOR:
 {{if .Version}}
 VERSION:
 	 {{.Version}}{{end}}
+{{if .Commands}}
+COMMANDS:
+{{range .Commands}}{{if not .HideHelp}}   {{join .Names ", "}}{{ "\t"}}{{.Usage}}{{ "\n" }}{{end}}{{end}}{{end}}
 {{if .VisibleFlags}}
-FLAGS:{{range .VisibleFlags}}{{ if (eq .Name "find" "undo" "replace") }}
-		 {{if .Aliases}}-{{range $element := .Aliases}}{{$element}},{{end}}{{end}} --{{.Name}} {{.DefaultText}}
-				 {{.Usage}}
-		 {{end}}{{end}}
 OPTIONS:{{range .VisibleFlags}}{{ if not (eq .Name "find" "replace" "undo") }}
 		 {{if .Aliases}}-{{range $element := .Aliases}}{{$element}},{{end}}{{end}} --{{.Name}} {{ .DefaultText }}
 				 {{.Usage}}
 		 {{end}}{{end}}{{end}}
 DOCUMENTATION:
-	https://github.com/ayoisaiah/f2/wiki
+	https://github.com/ayoisaiah/focus/wiki
 
 WEBSITE:
-	https://github.com/ayoisaiah/f2
+	https://github.com/ayoisaiah/focus
 `
 
 	// Override the default version printer
@@ -51,9 +51,9 @@ func checkForUpdates(app *cli.App) {
 
 	c := http.Client{Timeout: 20 * time.Second}
 
-	resp, err := c.Get("https://github.com/ayoisaiah/f2/releases/latest")
+	resp, err := c.Get("https://github.com/ayoisaiah/focus/releases/latest")
 	if err != nil {
-		fmt.Println("HTTP Error: Failed to check for update")
+		pterm.Error.Println("HTTP Error: Failed to check for update")
 		return
 	}
 
@@ -63,21 +63,21 @@ func checkForUpdates(app *cli.App) {
 
 	_, err = fmt.Sscanf(
 		resp.Request.URL.String(),
-		"https://github.com/ayoisaiah/f2/releases/tag/%s",
+		"https://github.com/ayoisaiah/focus/releases/tag/%s",
 		&version,
 	)
 	if err != nil {
-		fmt.Println("Failed to get latest version")
+		pterm.Error.Println("Failed to get latest version")
 		return
 	}
 
 	if version == app.Version {
-		fmt.Printf(
+		pterm.Info.Printf(
 			"Congratulations, you are using the latest version of %s\n",
 			app.Name,
 		)
 	} else {
-		fmt.Printf("%s: %s at %s\n", focus.PrintColor("green", "Update available"), version, resp.Request.URL.String())
+		pterm.Info.Printf("%s: %s at %s\n", focus.PrintColor("green", "Update available"), version, resp.Request.URL.String())
 	}
 }
 
@@ -91,13 +91,14 @@ func GetApp() *cli.App {
 				Email: "ayo@freshman.tech",
 			},
 		},
-		Usage:                "Focus is a cross-platform pomodoro app for the command line",
-		UsageText:            "FLAGS [OPTIONS] [PATHS...]",
+		Usage:                "Focus is a cross-platform pomodoro timer application for the command line",
+		UsageText:            "[COMMAND] [OPTIONS]",
 		Version:              "v0.1.0",
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{
-				Name: "resume",
+				Name:  "resume",
+				Usage: "Resume the most recent incomplete pomodoro session",
 				Action: func(ctx *cli.Context) error {
 					store, err := focus.NewStore()
 					if err != nil {
@@ -112,7 +113,8 @@ func GetApp() *cli.App {
 				},
 			},
 			{
-				Name: "stats",
+				Name:  "stats",
+				Usage: "Calculates and displays statistics for pomodoro sessions. Defaults to a reporting period of 7 days",
 				Action: func(ctx *cli.Context) error {
 					store, err := focus.NewStore()
 					if err != nil {
@@ -131,24 +133,24 @@ func GetApp() *cli.App {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "sort",
-						Usage: "Sort the weekly and hourly results. Valid arguments include: default, minutes, completed, abandoned",
+						Usage: "Sort the weekly and hourly tables. Possible values are: default, minutes, completed, abandoned",
 						Value: "minutes",
 					},
 					&cli.StringFlag{
 						Name:    "period",
 						Aliases: []string{"p"},
-						Usage:   "The time period for the statistics",
+						Usage:   "The reporting time period (default: 7days). Possible values are: today, yesterday, 24hours, 7days, 14days, 30days, 90days, 180days, 365days",
 						Value:   "7days",
 					},
 					&cli.StringFlag{
 						Name:    "start",
 						Aliases: []string{"s"},
-						Usage:   "The start date",
+						Usage:   "The reporting start date (format: YYYY-MM-DD)",
 					},
 					&cli.StringFlag{
 						Name:    "end",
 						Aliases: []string{"e"},
-						Usage:   "The end date",
+						Usage:   "The reporting end date (format: YYYY-MM-DD)",
 					},
 				},
 			},
@@ -166,7 +168,7 @@ func GetApp() *cli.App {
 			},
 			&cli.UintFlag{
 				Name:    "pomodoro",
-				Usage:   "Pomodoro interval duration in minutes (default: 25)",
+				Usage:   "Pomodoro duration in minutes (default: 25)",
 				Aliases: []string{"p"},
 			},
 			&cli.UintFlag{
@@ -177,7 +179,7 @@ func GetApp() *cli.App {
 			&cli.UintFlag{
 				Name:    "max-pomodoros",
 				Aliases: []string{"max"},
-				Usage:   "The maximum number of pomodoro sessions (default: unlimited)",
+				Usage:   "The maximum number of pomodoro sessions (unlimited by default)",
 			},
 			&cli.BoolFlag{
 				Name:  "24-hour",
@@ -186,17 +188,17 @@ func GetApp() *cli.App {
 			&cli.BoolFlag{
 				Name:    "auto-pomodoro",
 				Aliases: []string{"ap"},
-				Usage:   "Start pomodoro sessions automatically without user interaction",
+				Usage:   "Start pomodoro sessions automatically without user intervention",
 			},
 			&cli.BoolFlag{
 				Name:    "auto-break",
 				Aliases: []string{"ab"},
-				Usage:   "Start break sessions automatically without user interaction",
+				Usage:   "Start break sessions automatically without user intervention",
 			},
 			&cli.BoolFlag{
 				Name:    "disable-notifications",
 				Aliases: []string{"d"},
-				Usage:   "Disable notification alerts after a session is completed",
+				Usage:   "Disable system notification after a session is completed",
 			},
 		},
 		Action: func(ctx *cli.Context) error {
