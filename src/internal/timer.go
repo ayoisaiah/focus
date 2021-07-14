@@ -80,7 +80,6 @@ type Timer struct {
 	Msg                 message     `json:"msg"`
 	ShowNotification    bool        `json:"show_notification"`
 	TwentyFourHourClock bool        `json:"24_hour_clock"`
-	AllowPausing        bool        `json:"allow_pausing"`
 	Store               DB          `json:"-"`
 }
 
@@ -220,10 +219,6 @@ func (t *Timer) handleInterruption() {
 				goto exit
 			}
 
-			if !t.AllowPausing {
-				goto exit
-			}
-
 			timerBytes, err := json.Marshal(t)
 			if err != nil {
 				pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
@@ -238,7 +233,7 @@ func (t *Timer) handleInterruption() {
 				goto exit
 			}
 
-			pterm.Success.Printfln("Pomodoro session is paused. Use %s to continue later", PrintColor(yellow, "focus resume"))
+			pterm.Info.Printfln("Pomodoro session exited prematurely. Use %s to continue later", PrintColor(yellow, "focus resume"))
 		}
 
 	exit:
@@ -446,10 +441,6 @@ func (t *Timer) setOptions(ctx *cli.Context) {
 		t.ShowNotification = false
 	}
 
-	if ctx.Bool("allow-pausing") {
-		t.AllowPausing = true
-	}
-
 	if t.LongBreakInterval <= 0 {
 		t.LongBreakInterval = 4
 	}
@@ -478,7 +469,6 @@ func NewTimer(ctx *cli.Context, c *config, store *Store) *Timer {
 		AutoStartPomodoro:   c.AutoStartPomorodo,
 		AutoStartBreak:      c.AutoStartBreak,
 		TwentyFourHourClock: c.TwentyFourHourClock,
-		AllowPausing:        c.AllowPausing,
 		Store:               store,
 	}
 
