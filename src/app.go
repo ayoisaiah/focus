@@ -198,10 +198,6 @@ func GetApp() *cli.App {
 				Aliases: []string{"d"},
 				Usage:   "Disable notification alerts after a session is completed",
 			},
-			&cli.BoolFlag{
-				Name:  "allow-pausing",
-				Usage: "Enable interrupted pomodoro sessions to be resumed",
-			},
 		},
 		Action: func(ctx *cli.Context) error {
 			config, err := focus.NewConfig()
