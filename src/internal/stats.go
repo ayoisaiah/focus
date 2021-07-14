@@ -46,7 +46,7 @@ const (
 	period365Days   timePeriod = "365days"
 )
 
-var StatsPeriod = []timePeriod{periodAllTime, periodToday, periodYesterday, period7Days, period14Days, period30Days, period90Days, period180Days, period365Days}
+var statsPeriod = []timePeriod{periodAllTime, periodToday, periodYesterday, period7Days, period14Days, period30Days, period90Days, period180Days, period365Days}
 
 type pomo struct {
 	minutes   int
@@ -415,9 +415,9 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 		return nil, errInvalidDateRange
 	}
 
-	if !contains(StatsPeriod, timePeriod(period)) {
+	if !contains(statsPeriod, timePeriod(period)) {
 		var sl []string
-		for _, v := range StatsPeriod {
+		for _, v := range statsPeriod {
 			sl = append(sl, string(v))
 		}
 
