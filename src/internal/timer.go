@@ -216,13 +216,13 @@ func (t *Timer) handleInterruption() {
 			err := t.saveSession()
 			if err != nil {
 				pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
-				goto exit
+				os.Exit(1)
 			}
 
 			timerBytes, err := json.Marshal(t)
 			if err != nil {
 				pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
-				goto exit
+				os.Exit(1)
 			}
 
 			sessionKey := []byte(t.Session.StartTime.Format(time.RFC3339))
@@ -230,13 +230,12 @@ func (t *Timer) handleInterruption() {
 			err = t.Store.saveTimerState(timerBytes, sessionKey)
 			if err != nil {
 				pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
-				goto exit
+				os.Exit(1)
 			}
 
 			pterm.Info.Printfln("Pomodoro session exited prematurely. Use %s to continue later", PrintColor(yellow, "focus resume"))
 		}
 
-	exit:
 		os.Exit(0)
 	}()
 }
