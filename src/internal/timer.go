@@ -361,7 +361,11 @@ func (t *Timer) start(endTime time.Time) {
 
 			if timeRemaining.t <= 0 {
 				t.Session.Completed = true
-				t.Session.EndTime = time.Now()
+				end := time.Now()
+				t.Session.EndTime = end
+
+				lastIndex := len(t.Session.Timeline) - 1
+				t.Session.Timeline[lastIndex].EndTime = end
 
 				err := t.saveSession()
 				if err != nil {
