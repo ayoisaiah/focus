@@ -21,7 +21,11 @@ var (
 	errInvalidDateRange = errors.New("The end date must not be less than the start date")
 )
 
-const hourMins = 60
+const (
+	hoursInADay      = 24
+	maxHoursInAMonth = 744 // 31 day months
+	minutesInAnHour  = 60
+)
 
 type statsSort string
 
@@ -37,7 +41,6 @@ const (
 	periodAllTime   timePeriod = "all-time"
 	periodToday     timePeriod = "today"
 	periodYesterday timePeriod = "yesterday"
-	period24Hours   timePeriod = "24hours"
 	period7Days     timePeriod = "7days"
 	period14Days    timePeriod = "14days"
 	period30Days    timePeriod = "30days"
@@ -80,59 +83,71 @@ func printTable(title string, data [][]string) {
 
 // getPeriod returns the start and end time according to the
 // specified time period.
-func getPeriod(period timePeriod) (startTime, endTime time.Time) {
+func getPeriod(period timePeriod) (start, end time.Time) {
+	end = time.Now()
+
 	switch period {
 	case periodToday:
-		now := time.Now()
-		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()), now
+		start = time.Now()
 	case periodYesterday:
-		yesterday := time.Now().AddDate(0, 0, -1)
-		year, month, day := yesterday.Date()
-
-		return time.Date(year, month, day, 0, 0, 0, 0, yesterday.Location()), time.Date(year, month, day, 23, 59, 59, 0, yesterday.Location())
-	case period24Hours:
-		return time.Now().AddDate(0, 0, -1), time.Now()
+		start = time.Now().AddDate(0, 0, -1)
+		year, month, day := start.Date()
+		end = time.Date(year, month, day, 23, 59, 59, 0, start.Location())
 	case period7Days:
-		return time.Now().AddDate(0, 0, -7), time.Now()
+		start = time.Now().AddDate(0, 0, -6)
 	case period14Days:
-		return time.Now().AddDate(0, 0, -14), time.Now()
+		start = time.Now().AddDate(0, 0, -13)
 	case period30Days:
-		return time.Now().AddDate(0, 0, -30), time.Now()
+		start = time.Now().AddDate(0, 0, -29)
 	case period90Days:
-		return time.Now().AddDate(0, 0, -90), time.Now()
+		start = time.Now().AddDate(0, 0, -89)
 	case period180Days:
-		return time.Now().AddDate(0, 0, -180), time.Now()
+		start = time.Now().AddDate(0, 0, -179)
 	case period365Days:
-		return time.Now().AddDate(0, 0, -365), time.Now()
+		start = time.Now().AddDate(0, 0, -364)
 	case periodAllTime:
-		return time.Time{}, time.Now()
+		return start, end
+	default:
+		return start, end
 	}
 
-	return time.Time{}, time.Now()
+	return time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location()), end
 }
 
 type Data struct {
-	Weekday   map[time.Weekday]*pomo
-	HourofDay map[int]*pomo
-	Totals    pomo
-	Averages  pomo
+	Weekday          map[time.Weekday]*pomo
+	HourofDay        map[int]*pomo
+	History          map[string]*pomo
+	HistoryKeyFormat string
+	Totals           pomo
+	Averages         pomo
 }
 
-func initData() *Data {
-	s := &Data{}
+func initData(start, end time.Time, hoursDiff int) *Data {
+	d := &Data{}
 
-	s.Weekday = make(map[time.Weekday]*pomo)
-	s.HourofDay = make(map[int]*pomo)
+	d.Weekday = make(map[time.Weekday]*pomo)
+	d.History = make(map[string]*pomo)
+	d.HourofDay = make(map[int]*pomo)
 
 	for i := 0; i <= 6; i++ {
-		s.Weekday[time.Weekday(i)] = &pomo{}
+		d.Weekday[time.Weekday(i)] = &pomo{}
 	}
 
 	for i := 0; i <= 23; i++ {
-		s.HourofDay[i] = &pomo{}
+		d.HourofDay[i] = &pomo{}
 	}
 
-	return s
+	d.HistoryKeyFormat = "January 2006"
+	if hoursDiff > hoursInADay && hoursDiff <= maxHoursInAMonth {
+		d.HistoryKeyFormat = "January 02, 2006"
+	}
+
+	for date := start; !date.After(end); date = date.Add(time.Duration(hoursInADay) * time.Hour) {
+		d.History[date.Format(d.HistoryKeyFormat)] = &pomo{}
+	}
+
+	return d
 }
 
 // computeAverages calculates the average minutes, completed pomodoros,
@@ -159,43 +174,51 @@ func (d *Data) computeTotals(sessions []session) {
 		if v.Completed {
 			d.Weekday[v.StartTime.Weekday()].completed++
 			d.HourofDay[v.StartTime.Hour()].completed++
+			d.History[v.StartTime.Format(d.HistoryKeyFormat)].completed++
 			d.Totals.completed++
 			d.Totals.minutes += v.Duration
 		} else {
 			d.Weekday[v.StartTime.Weekday()].abandoned++
 			d.HourofDay[v.StartTime.Hour()].abandoned++
+			d.History[v.StartTime.Format(d.HistoryKeyFormat)].abandoned++
 			d.Totals.abandoned++
 
 			var elapsedTimeInSeconds int
 			for _, v2 := range v.Timeline {
 				elapsedTimeInSeconds += int(v2.EndTime.Sub(v2.StartTime).Seconds())
 			}
-			d.Totals.minutes += int(math.Round(float64(elapsedTimeInSeconds) / float64(hourMins)))
+			d.Totals.minutes += int(math.Round(float64(elapsedTimeInSeconds) / float64(minutesInAnHour)))
 		}
 
 		hourly := map[int]float64{}
 		weekday := map[time.Weekday]float64{}
+		daily := map[string]float64{}
 
 		for _, v2 := range v.Timeline {
-			for d := v2.StartTime; !d.After(v2.EndTime); d = d.Add(1 * time.Minute) {
+			for date := v2.StartTime; !date.After(v2.EndTime); date = date.Add(1 * time.Minute) {
 				var end time.Time
-				if d.Add(1 * time.Minute).After(v2.EndTime) {
+				if date.Add(1 * time.Minute).After(v2.EndTime) {
 					end = v2.EndTime
 				} else {
-					end = d.Add(1 * time.Minute)
+					end = date.Add(1 * time.Minute)
 				}
 
-				hourly[d.Hour()] += end.Sub(d).Seconds()
-				weekday[d.Weekday()] += end.Sub(d).Seconds()
+				hourly[date.Hour()] += end.Sub(date).Seconds()
+				weekday[date.Weekday()] += end.Sub(date).Seconds()
+				daily[date.Format(d.HistoryKeyFormat)] += end.Sub(date).Seconds()
 			}
 		}
 
 		for k, val := range weekday {
-			d.Weekday[k].minutes += int(math.Round(val / float64(hourMins)))
+			d.Weekday[k].minutes += int(math.Round(val / float64(minutesInAnHour)))
 		}
 
 		for k, val := range hourly {
-			d.HourofDay[k].minutes += int(math.Round(val / float64(hourMins)))
+			d.HourofDay[k].minutes += int(math.Round(val / float64(minutesInAnHour)))
+		}
+
+		for k, val := range daily {
+			d.History[k].minutes += int(math.Round(val / float64(minutesInAnHour)))
 		}
 	}
 }
@@ -208,6 +231,7 @@ type Stats struct {
 	store     *Store
 	sortValue statsSort
 	Data      *Data
+	HoursDiff int
 }
 
 // getSessions retrieves the pomodoro sessions
@@ -281,6 +305,49 @@ func (s *Stats) displayHourlyBreakdown() {
 	printTable("hours", data)
 }
 
+// displayPomodoroHistory prints the appropriate bar graph
+// for the current time period.
+func (s *Stats) displayPomodoroHistory() {
+	fmt.Printf("\n%s\n", pterm.Blue("Pomodoro history (minutes)"))
+
+	type keyValue struct {
+		key   string
+		value *pomo
+	}
+
+	sl := make([]keyValue, 0, len(s.Data.History))
+	for k, v := range s.Data.History {
+		sl = append(sl, keyValue{k, v})
+	}
+
+	sort.Slice(sl, func(i, j int) bool {
+		iTime, err := time.Parse(s.Data.HistoryKeyFormat, sl[i].key)
+		if err != nil {
+			return true
+		}
+
+		jTime, err := time.Parse(s.Data.HistoryKeyFormat, sl[j].key)
+		if err != nil {
+			return true
+		}
+
+		return iTime.Before(jTime)
+	})
+
+	var bars pterm.Bars
+
+	for _, v := range sl {
+		val := s.Data.History[v.key]
+
+		bars = append(bars, pterm.Bar{
+			Label: v.key,
+			Value: val.minutes,
+		})
+	}
+
+	_ = pterm.DefaultBarChart.WithHorizontalBarCharacter("▇").WithHorizontal().WithShowValue().WithBars(bars).Render()
+}
+
 // displayWeeklyBreakdown prints the weekly breakdown
 // for the current time period.
 func (s *Stats) displayWeeklyBreakdown() {
@@ -331,13 +398,12 @@ func (s *Stats) displayWeeklyBreakdown() {
 
 func (s *Stats) displayAverages() {
 	hoursDiff := int(math.Round(s.EndTime.Sub(s.StartTime).Hours()))
-	hoursInADay := 24
 
 	if hoursDiff > hoursInADay {
 		fmt.Printf("\n%s\n", pterm.Blue("Averages"))
 
-		hours := int(math.Floor(float64(s.Data.Totals.minutes) / float64(hourMins)))
-		minutes := s.Data.Totals.minutes % hourMins
+		hours := int(math.Floor(float64(s.Data.Totals.minutes) / float64(minutesInAnHour)))
+		minutes := s.Data.Totals.minutes % minutesInAnHour
 
 		fmt.Println("Averaged time logged:", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
 		fmt.Println("Completed pomodoros per day:", pterm.Green(s.Data.Averages.completed))
@@ -348,8 +414,8 @@ func (s *Stats) displayAverages() {
 func (s *Stats) displayTotals() {
 	fmt.Printf("%s\n", pterm.Blue("Totals"))
 
-	hours := int(math.Floor(float64(s.Data.Totals.minutes) / float64(hourMins)))
-	minutes := s.Data.Totals.minutes % hourMins
+	hours := int(math.Floor(float64(s.Data.Totals.minutes) / float64(minutesInAnHour)))
+	minutes := s.Data.Totals.minutes % minutesInAnHour
 
 	fmt.Printf("Total time logged: %s %s %s %s\n", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
 
@@ -377,6 +443,11 @@ func (s *Stats) Show() {
 	s.displayTotals()
 	s.displayAverages()
 	s.displayWeeklyBreakdown()
+
+	if s.HoursDiff > hoursInADay {
+		s.displayPomodoroHistory()
+	}
+
 	s.displayHourlyBreakdown()
 }
 
@@ -385,11 +456,26 @@ func (s *Stats) Show() {
 func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 	s := &Stats{}
 	s.store = store
-	s.Data = initData()
 
 	s.sortValue = statsSort(ctx.String("sort"))
 	period := ctx.String("period")
 
+	if int(s.EndTime.Sub(s.StartTime).Seconds()) < 0 {
+		return nil, errInvalidDateRange
+	}
+
+	if !contains(statsPeriod, timePeriod(period)) {
+		var sl []string
+		for _, v := range statsPeriod {
+			sl = append(sl, string(v))
+		}
+
+		return nil, fmt.Errorf("Period must be one of: %s", strings.Join(sl, ", "))
+	}
+
+	s.StartTime, s.EndTime = getPeriod(timePeriod(period))
+
+	// start and end arguments override the set period
 	start := ctx.String("start")
 	end := ctx.String("end")
 
@@ -411,23 +497,10 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 		s.EndTime = time.Date(v.Year(), v.Month(), v.Day(), 23, 59, 59, 0, v.Location())
 	}
 
-	if int(s.EndTime.Sub(s.StartTime).Seconds()) < 0 {
-		return nil, errInvalidDateRange
-	}
+	diff := s.EndTime.Sub(s.StartTime)
+	s.HoursDiff = int(diff.Hours())
 
-	if !contains(statsPeriod, timePeriod(period)) {
-		var sl []string
-		for _, v := range statsPeriod {
-			sl = append(sl, string(v))
-		}
-
-		return nil, fmt.Errorf("Period must be one of: %s", strings.Join(sl, ", "))
-	}
-
-	if period != "" {
-		// The set time period overrides start and end times
-		s.StartTime, s.EndTime = getPeriod(timePeriod(period))
-	}
+	s.Data = initData(s.StartTime, s.EndTime, s.HoursDiff)
 
 	return s, nil
 }

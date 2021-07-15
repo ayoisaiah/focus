@@ -139,7 +139,7 @@ func GetApp() *cli.App {
 					&cli.StringFlag{
 						Name:    "period",
 						Aliases: []string{"p"},
-						Usage:   "The reporting time period (default: 7days). Possible values are: today, yesterday, 24hours, 7days, 14days, 30days, 90days, 180days, 365days",
+						Usage:   "The reporting time period (default: 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days",
 						Value:   "7days",
 					},
 					&cli.StringFlag{
