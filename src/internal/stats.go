@@ -228,7 +228,7 @@ type Stats struct {
 	StartTime time.Time
 	EndTime   time.Time
 	Sessions  []session
-	store     *Store
+	store     DB
 	sortValue statsSort
 	Data      *Data
 	HoursDiff int
@@ -308,6 +308,11 @@ func (s *Stats) displayHourlyBreakdown() {
 // displayPomodoroHistory prints the appropriate bar graph
 // for the current time period.
 func (s *Stats) displayPomodoroHistory() {
+	// TODO: Remove this when pterm is updated
+	if s.Data.Totals.minutes == 0 {
+		return
+	}
+
 	fmt.Printf("\n%s\n", pterm.Blue("Pomodoro history (minutes)"))
 
 	type keyValue struct {
@@ -345,7 +350,10 @@ func (s *Stats) displayPomodoroHistory() {
 		})
 	}
 
-	_ = pterm.DefaultBarChart.WithHorizontalBarCharacter("▇").WithHorizontal().WithShowValue().WithBars(bars).Render()
+	err := pterm.DefaultBarChart.WithHorizontalBarCharacter("▇").WithHorizontal().WithShowValue().WithBars(bars).Render()
+	if err != nil {
+		pterm.Error.Println(err)
+	}
 }
 
 // displayWeeklyBreakdown prints the weekly breakdown
