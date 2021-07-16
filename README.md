@@ -1,3 +1,7 @@
+<p align="center">
+   <img src="https://ik.imagekit.io/turnupdev/focus-logo-removebg-preview__1__vDbi9MH8mC.png" width="300" height="288" alt="Focus logo">
+</p>
+
 # Focus on your task
 
 Focus is a cross-platform pomodoro timer for the command line.
