@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -189,8 +190,17 @@ func (t *Timer) notify() {
 	if t.ShowNotification {
 		msg := m[t.SessionType] + " is finished"
 
-		// TODO: Handle error
-		_ = beeep.Notify(msg, t.Msg[t.nextSession()], "")
+		var pathToIcon string
+
+		homeDir, _ := os.UserHomeDir()
+		if homeDir != "" {
+			pathToIcon = filepath.Join(homeDir, configPath, "icon.png")
+		}
+
+		err := beeep.Notify(msg, t.Msg[t.nextSession()], pathToIcon)
+		if err != nil {
+			pterm.Error.Println(fmt.Errorf("Unable to display notification: %w", err))
+		}
 	}
 }
 
@@ -206,7 +216,7 @@ func (t *Timer) handleInterruption() {
 
 		fmt.Printf("\n\n")
 
-		if t.SessionType == pomodoro {
+		if t.SessionType == pomodoro && !t.Session.Completed {
 			pausedTime := time.Now()
 			t.Session.EndTime = pausedTime
 
@@ -240,7 +250,6 @@ func (t *Timer) handleInterruption() {
 	}()
 }
 
-// Run.begins a timer.
 func (t *Timer) Run() {
 	t.handleInterruption()
 
@@ -455,7 +464,7 @@ func (t *Timer) setOptions(ctx *cli.Context) {
 
 // NewTimer returns a new timer constructed from
 // the configuration file and command line arguments.
-func NewTimer(ctx *cli.Context, c *config, store *Store) *Timer {
+func NewTimer(ctx *cli.Context, c *Config, store *Store) *Timer {
 	t := &Timer{
 		Kind: kind{
 			pomodoro:   c.PomodoroMinutes,

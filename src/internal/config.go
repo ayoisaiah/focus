@@ -17,6 +17,7 @@ var (
 	errReadingInput          = errors.New("An error occurred while reading input. Please try again")
 	errExpectedNumber        = errors.New("Expected a number")
 	errExpectPositiveInteger = errors.New("Number must be greater than zero")
+	errInitFailed            = errors.New("Unable to initialise Focus settings from configuration file")
 )
 
 const ascii = `
@@ -28,8 +29,8 @@ const ascii = `
 ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝
 `
 
-// config represents the user's preferences.
-type config struct {
+// Config represents the user's preferences.
+type Config struct {
 	PomodoroMinutes     int    `yaml:"pomodoro_mins"`
 	PomodoroMessage     string `yaml:"pomodoro_msg"`
 	ShortBreakMinutes   int    `yaml:"short_break_mins"`
@@ -77,16 +78,15 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 	return num, nil
 }
 
-// configPrompt is the prompt for the app's
-// initial configuration.
-func (c *config) prompt(path string) {
+// configPrompt is the prompt for the app's initial configuration.
+func (c *Config) prompt(path string) {
 	fmt.Println(ascii)
 
 	pterm.Info.Printfln("Your preferences will be saved to: %s\n\n", path)
 
 	_ = pterm.NewBulletListFromString(`Follow the prompts below to configure Focus for the first time.
 Type your preferred value, or press ENTER to accept the defaults.
-Edit the configuration file to change any settings, or use command-line arguments (see the --help flag)`, " ").Render()
+Edit the configuration file to change any settings, or use command line arguments (see the --help flag)`, " ").Render()
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -148,7 +148,7 @@ Edit the configuration file to change any settings, or use command-line argument
 }
 
 // save stores the current configuration to disk.
-func (c *config) save(path string) error {
+func (c *Config) save(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -179,7 +179,7 @@ func (c *config) save(path string) error {
 // init initialises the application configuration.
 // If the config file does not exist,.it prompts the user
 // and saves the inputted preferences in a config file.
-func (c *config) init() error {
+func (c *Config) init() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -204,7 +204,7 @@ func (c *config) init() error {
 
 // get retrieves an already existing configuration from
 // the filesystem.
-func (c *config) get(pathToConfig string) error {
+func (c *Config) get(pathToConfig string) error {
 	c.defaults(false)
 
 	b, err := os.ReadFile(pathToConfig)
@@ -224,7 +224,7 @@ func (c *config) get(pathToConfig string) error {
 // The `willPrompt` flag is used to control
 // if default values should be set for the
 // values that.are requested in the prompt.
-func (c *config) defaults(willPrompt bool) {
+func (c *Config) defaults(willPrompt bool) {
 	if !willPrompt {
 		c.PomodoroMinutes = pomodoroMinutes
 		c.ShortBreakMinutes = shortBreakMinutes
@@ -241,10 +241,10 @@ func (c *config) defaults(willPrompt bool) {
 	c.TwentyFourHourClock = false
 }
 
-// create prompts the user to set a configuration
-// for the application. The resulting values are saved
-// to the filesystem.
-func (c *config) create(pathToConfig string) error {
+// create prompts the user to set perferred values
+// for key application settings. The results are
+// saved to the filesystem to facilitate reuse.
+func (c *Config) create(pathToConfig string) error {
 	c.defaults(true)
 
 	c.prompt(pathToConfig)
@@ -260,14 +260,13 @@ func (c *config) create(pathToConfig string) error {
 	return nil
 }
 
-func NewConfig() (*config, error) {
-	c := &config{}
+// NewConfig returns the application configuration.
+func NewConfig() (*Config, error) {
+	c := &Config{}
 
 	err := c.init()
 	if err != nil {
-		fmt.Println(
-			fmt.Errorf("Unable to initialise Focus from configuration file: %w\n", err),
-		)
+		pterm.Error.Println(errInitFailed, err)
 	}
 
 	return c, nil
