@@ -34,6 +34,7 @@ func init() {
 
 	pathToIcon := filepath.Join(pathToConfigDir, "icon.png")
 	_, err = os.Stat(pathToIcon)
+
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		_ = os.WriteFile(pathToIcon, icon, os.ModePerm)
 	}

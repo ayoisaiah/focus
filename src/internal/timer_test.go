@@ -19,7 +19,7 @@ func (d *DBMock) deleteTimerState() error {
 	return nil
 }
 
-func (d *DBMock) getTimerState() ([]byte, []byte, error) {
+func (d *DBMock) getTimerState() (timer, session []byte, err error) {
 	return nil, nil, nil
 }
 
