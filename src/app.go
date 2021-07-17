@@ -98,7 +98,7 @@ func GetApp() *cli.App {
 		Commands: []*cli.Command{
 			{
 				Name:  "resume",
-				Usage: "Resume the most recent incomplete pomodoro session",
+				Usage: "Resume the most recently interrupted focus session",
 				Action: func(ctx *cli.Context) error {
 					store, err := focus.NewStore()
 					if err != nil {

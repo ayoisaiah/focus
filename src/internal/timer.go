@@ -123,6 +123,8 @@ func (t *Timer) getTimeRemaining(endTime time.Time) countdown {
 }
 
 // saveSession adds or updates the current session in the database.
+// If the current session is not a pomodoro session, it will be
+// skipped.
 func (t *Timer) saveSession() error {
 	if t.SessionType != pomodoro {
 		return nil
@@ -217,36 +219,30 @@ func (t *Timer) handleInterruption() {
 	go func() {
 		<-c
 
-		fmt.Printf("\n\n")
+		pausedTime := time.Now()
+		t.Session.EndTime = pausedTime
 
-		if t.SessionType == pomodoro && !t.Session.Completed {
-			pausedTime := time.Now()
-			t.Session.EndTime = pausedTime
+		lastIndex := len(t.Session.Timeline) - 1
+		t.Session.Timeline[lastIndex].EndTime = pausedTime
 
-			lastIndex := len(t.Session.Timeline) - 1
-			t.Session.Timeline[lastIndex].EndTime = pausedTime
+		err := t.saveSession()
+		if err != nil {
+			pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
+			os.Exit(1)
+		}
 
-			err := t.saveSession()
-			if err != nil {
-				pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
-				os.Exit(1)
-			}
+		timerBytes, err := json.Marshal(t)
+		if err != nil {
+			pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
+			os.Exit(1)
+		}
 
-			timerBytes, err := json.Marshal(t)
-			if err != nil {
-				pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
-				os.Exit(1)
-			}
+		sessionKey := []byte(t.Session.StartTime.Format(time.RFC3339))
 
-			sessionKey := []byte(t.Session.StartTime.Format(time.RFC3339))
-
-			err = t.Store.saveTimerState(timerBytes, sessionKey)
-			if err != nil {
-				pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
-				os.Exit(1)
-			}
-
-			pterm.Info.Printfln("Pomodoro session exited prematurely. Use %s to continue later", PrintColor(yellow, "focus resume"))
+		err = t.Store.saveTimerState(timerBytes, sessionKey)
+		if err != nil {
+			pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
+			os.Exit(1)
 		}
 
 		os.Exit(0)
@@ -271,15 +267,17 @@ func (t *Timer) Run() {
 	t.start(endTime)
 }
 
-// Resume attempts to retrieve a paused pomodoro session
-// and continue from where it left of.
+// Resume attempts to continue an interrupted pomodoro session
+// from where it left off. If the interrupted session is not
+// pomodoro, it skips right to the next pomodoro session
+// in the cycle and starts from there.
 func (t *Timer) Resume() error {
 	timerBytes, sessionBytes, err := t.Store.getTimerState()
 	if err != nil {
 		return err
 	}
 
-	if len(timerBytes) == 0 || len(sessionBytes) == 0 {
+	if len(timerBytes) == 0 {
 		return errNoPausedSession
 	}
 
@@ -288,24 +286,33 @@ func (t *Timer) Resume() error {
 		return err
 	}
 
-	err = json.Unmarshal(sessionBytes, &t.Session)
-	if err != nil {
-		return err
+	if len(sessionBytes) != 0 {
+		err = json.Unmarshal(sessionBytes, &t.Session)
+		if err != nil {
+			return err
+		}
 	}
 
-	var elapsedTimeInSeconds int
-	for _, v := range t.Session.Timeline {
-		elapsedTimeInSeconds += int(v.EndTime.Sub(v.StartTime).Seconds())
+	if t.Session.Name != pomodoro || t.Session.Completed {
+		t.SessionType = pomodoro
+		t.Session.EndTime = time.Time{}
+	} else {
+		// Calculate new end time for an interrupted pomodoro
+		// session
+		var elapsedTimeInSeconds int
+		for _, v := range t.Session.Timeline {
+			elapsedTimeInSeconds += int(v.EndTime.Sub(v.StartTime).Seconds())
+		}
+
+		newEndTime := time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute).Add(-time.Second * time.Duration(elapsedTimeInSeconds))
+
+		t.Session.EndTime = newEndTime
+
+		t.Session.Timeline = append(t.Session.Timeline, sessionTimeline{
+			StartTime: time.Now(),
+			EndTime:   newEndTime,
+		})
 	}
-
-	newEndTime := time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute).Add(-time.Second * time.Duration(elapsedTimeInSeconds))
-
-	t.Session.EndTime = newEndTime
-
-	t.Session.Timeline = append(t.Session.Timeline, sessionTimeline{
-		StartTime: time.Now(),
-		EndTime:   newEndTime,
-	})
 
 	err = t.Store.deleteTimerState()
 	if err != nil {
