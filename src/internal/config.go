@@ -13,11 +13,11 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var (
-	errReadingInput          = errors.New("An error occurred while reading input. Please try again")
-	errExpectedNumber        = errors.New("Expected a number")
-	errExpectPositiveInteger = errors.New("Number must be greater than zero")
-	errInitFailed            = errors.New("Unable to initialise Focus settings from configuration file")
+const (
+	errReadingInput          = Error("An error occurred while reading input. Please try again")
+	errExpectedNumber        = Error("Expected a number")
+	errExpectPositiveInteger = Error("Number must be greater than zero")
+	errInitFailed            = Error("Unable to initialise Focus settings from configuration file")
 )
 
 const ascii = `

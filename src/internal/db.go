@@ -15,8 +15,8 @@ const (
 	dbFile = "focus.db"
 )
 
-var (
-	errSingleInstanceAllowed = errors.New("Only one instance of Focus can be active at a time")
+const (
+	errSingleInstanceAllowed = Error("Only one instance of Focus can be active at a time")
 )
 
 type DB interface {

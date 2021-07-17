@@ -3,7 +3,6 @@ package focus
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -16,9 +15,13 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var (
-	errUnableToSaveSession = errors.New("Unable to save incomplete session")
-	errNoPausedSession     = errors.New("Paused session not found. Please start a new session")
+type Error string
+
+func (e Error) Error() string { return string(e) }
+
+const (
+	errUnableToSaveSession = Error("Unable to save incomplete session")
+	errNoPausedSession     = Error("Paused session not found. Please start a new session")
 )
 
 type countdown struct {

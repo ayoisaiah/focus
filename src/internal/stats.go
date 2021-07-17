@@ -2,7 +2,6 @@ package focus
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -16,9 +15,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var (
-	errParsingDate      = errors.New("The date format must be: YYYY-MM-DD")
-	errInvalidDateRange = errors.New("The end date must not be less than the start date")
+const (
+	errParsingDate      = Error("The date format must be: YYYY-MM-DD")
+	errInvalidDateRange = Error("The end date must not be less than the start date")
 )
 
 const (
