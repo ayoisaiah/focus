@@ -97,26 +97,6 @@ func GetApp() *cli.App {
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{
-				Name:  "new",
-				Usage: "Always start a new Focus session",
-				Action: func(ctx *cli.Context) error {
-					store, err := focus.NewStore()
-					if err != nil {
-						return err
-					}
-
-					config, err := focus.NewConfig()
-					if err != nil {
-						return err
-					}
-
-					t := focus.NewTimer(ctx, config, store)
-					t.Run()
-
-					return nil
-				},
-			},
-			{
 				Name:  "stats",
 				Usage: "Calculates and displays statistics for pomodoro sessions. Defaults to a reporting period of 7 days",
 				Action: func(ctx *cli.Context) error {
@@ -186,23 +166,14 @@ func GetApp() *cli.App {
 				Usage:   "The maximum number of pomodoro sessions (unlimited by default)",
 			},
 			&cli.BoolFlag{
-				Name:  "24-hour",
-				Usage: "Switch from 12-hour clock to 24-hour clock",
-			},
-			&cli.BoolFlag{
-				Name:    "auto-pomodoro",
-				Aliases: []string{"ap"},
-				Usage:   "Start pomodoro sessions automatically without user intervention",
-			},
-			&cli.BoolFlag{
-				Name:    "auto-break",
-				Aliases: []string{"ab"},
-				Usage:   "Start break sessions automatically without user intervention",
-			},
-			&cli.BoolFlag{
 				Name:    "disable-notifications",
 				Aliases: []string{"d"},
 				Usage:   "Disable system notification after a session is completed",
+			},
+			&cli.BoolFlag{
+				Name:    "new",
+				Aliases: []string{"n"},
+				Usage:   "Always start a new focus session",
 			},
 		},
 		Action: func(ctx *cli.Context) error {
@@ -211,14 +182,16 @@ func GetApp() *cli.App {
 				return err
 			}
 
-			t := &focus.Timer{
-				Store: store,
-			}
+			if !ctx.Bool("new") || ctx.NumFlags() == 0 {
+				t := &focus.Timer{
+					Store: store,
+				}
 
-			_, _, err = t.GetInterrupted()
-			if err == nil {
-				pterm.Info.Printfln("Picking up from where you left off...\n")
-				return t.Resume()
+				_, _, err = t.GetInterrupted()
+				if err == nil {
+					pterm.Info.Printfln("Picking up from where you left off...\n")
+					return t.Resume()
+				}
 			}
 
 			config, err := focus.NewConfig()
@@ -226,7 +199,7 @@ func GetApp() *cli.App {
 				return err
 			}
 
-			t = focus.NewTimer(ctx, config, store)
+			t := focus.NewTimer(ctx, config, store)
 			t.Run()
 
 			return nil

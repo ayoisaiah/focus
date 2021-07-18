@@ -53,7 +53,11 @@ func TestTimerInitSession(t *testing.T) {
 
 		now := time.Now()
 
-		endTime := timer.initSession()
+		endTime, err := timer.initSession()
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		got := int(endTime.Sub(now).Minutes())
 
 		if v.duration != got {

@@ -78,17 +78,15 @@ func (s *Store) init() error {
 // in the database. The session is created if it doesn't
 // exist already, or overwritten if it does.
 func (s *Store) updateSession(key, value []byte) error {
-	err := s.conn.Update(func(tx *bolt.Tx) error {
+	return s.conn.Update(func(tx *bolt.Tx) error {
 		return tx.Bucket([]byte("sessions")).Put(key, value)
 	})
-
-	return err
 }
 
 // saveTimerState persists the current timer settings,
 // and the key of the paused session to the database.
 func (s *Store) saveTimerState(timer, sessionKey []byte) error {
-	err := s.conn.Update(func(tx *bolt.Tx) error {
+	return s.conn.Update(func(tx *bolt.Tx) error {
 		err := tx.Bucket([]byte("timer")).Put([]byte("timer"), timer)
 		if err != nil {
 			return err
@@ -96,8 +94,6 @@ func (s *Store) saveTimerState(timer, sessionKey []byte) error {
 
 		return tx.Bucket([]byte("timer")).Put([]byte("paused_session_key"), sessionKey)
 	})
-
-	return err
 }
 
 // getTimerState retrieves the stored timer and session key.

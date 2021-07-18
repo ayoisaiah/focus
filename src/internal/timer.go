@@ -261,11 +261,11 @@ func (t *Timer) handleInterruption() {
 	go func() {
 		<-c
 
-		pausedTime := time.Now()
-		t.Session.EndTime = pausedTime
+		interrruptedTime := time.Now()
+		t.Session.EndTime = interrruptedTime
 
 		lastIndex := len(t.Session.Timeline) - 1
-		t.Session.Timeline[lastIndex].EndTime = pausedTime
+		t.Session.Timeline[lastIndex].EndTime = interrruptedTime
 
 		err := t.saveSession()
 		if err != nil {
@@ -301,7 +301,13 @@ func (t *Timer) Run() {
 	var endTime time.Time
 
 	if t.Session.EndTime.IsZero() {
-		endTime = t.initSession()
+		var err error
+
+		endTime, err = t.initSession()
+		if err != nil {
+			pterm.Error.Println(err)
+			os.Exit(1)
+		}
 	} else {
 		endTime = t.Session.EndTime
 	}
@@ -346,6 +352,7 @@ func (t *Timer) Resume() error {
 
 	if t.Session.Name != pomodoro || t.Session.Completed {
 		t.SessionType = pomodoro
+		// Set to zero value so that a new session is initialised
 		t.Session.EndTime = time.Time{}
 	} else {
 		// Calculate new end time for an interrupted pomodoro
@@ -371,9 +378,10 @@ func (t *Timer) Resume() error {
 	return nil
 }
 
-// initSession initialises a new session
-// and returns the end time for the session.
-func (t *Timer) initSession() time.Time {
+// initSession initialises a new session and saves it
+// to the database. It returns the end time for the session
+// or an error if saving the session is unsuccessful.
+func (t *Timer) initSession() (time.Time, error) {
 	t.Counter++
 
 	if t.SessionType == pomodoro {
@@ -394,18 +402,18 @@ func (t *Timer) initSession() time.Time {
 		StartTime: startTime,
 		Timeline: []sessionTimeline{
 			{
-				startTime,
-				endTime,
+				StartTime: startTime,
+				EndTime:   time.Time{},
 			},
 		},
 	}
 
 	err := t.saveSession()
 	if err != nil {
-		pterm.Error.Printfln("%s\n", err)
+		return time.Time{}, err
 	}
 
-	return endTime
+	return endTime, nil
 }
 
 // start begins a new session.
@@ -465,7 +473,13 @@ func (t *Timer) start(endTime time.Time) {
 
 		t.SessionType = t.nextSession()
 
-		endTime = t.initSession()
+		var err error
+
+		endTime, err = t.initSession()
+		if err != nil {
+			pterm.Error.Println(err)
+			os.Exit(1)
+		}
 	}
 }
 
@@ -498,24 +512,8 @@ func (t *Timer) setOptions(ctx *cli.Context) {
 		t.MaxPomodoros = int(ctx.Uint("max-pomodoros"))
 	}
 
-	if ctx.Bool("auto-pomodoro") {
-		t.AutoStartPomodoro = true
-	}
-
-	if ctx.Bool("auto-break") {
-		t.AutoStartBreak = true
-	}
-
 	if ctx.Bool("disable-notifications") {
 		t.ShowNotification = false
-	}
-
-	if t.LongBreakInterval <= 0 {
-		t.LongBreakInterval = 4
-	}
-
-	if ctx.Bool("24-hour") {
-		t.TwentyFourHourClock = ctx.Bool("24-hour")
 	}
 }
 

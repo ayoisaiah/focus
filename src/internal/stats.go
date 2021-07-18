@@ -26,6 +26,10 @@ const (
 	minutesInAnHour  = 60
 )
 
+const (
+	barChartChar = "▇"
+)
+
 type statsSort string
 
 const (
@@ -259,7 +263,7 @@ func (s *Stats) getSessions(start, end time.Time) {
 // displayHourlyBreakdown prints the hourly breakdown
 // for the current time period.
 func (s *Stats) displayHourlyBreakdown() {
-	fmt.Printf("\n%s\n", pterm.Blue("Hourly breakdown"))
+	fmt.Printf("\n%s", pterm.Blue("Hourly breakdown (minutes)"))
 
 	type keyValue struct {
 		key   int
@@ -271,49 +275,37 @@ func (s *Stats) displayHourlyBreakdown() {
 		sl = append(sl, keyValue{k, v})
 	}
 
-	switch s.sortValue {
-	case sortMinutes:
-		sort.SliceStable(sl, func(i, j int) bool {
-			return sl[i].value.minutes > sl[j].value.minutes
-		})
-	case sortCompleted:
-		sort.SliceStable(sl, func(i, j int) bool {
-			return sl[i].value.completed > sl[j].value.completed
-		})
-	case sortAbandoned:
-		sort.SliceStable(sl, func(i, j int) bool {
-			return sl[i].value.abandoned > sl[j].value.abandoned
-		})
-	default:
-		sort.SliceStable(sl, func(i, j int) bool {
-			return sl[i].key < sl[j].key
-		})
-	}
+	sort.SliceStable(sl, func(i, j int) bool {
+		return sl[i].key < sl[j].key
+	})
 
-	var data = make([][]string, len(sl))
+	var bars pterm.Bars
 
 	for _, v := range sl {
 		val := s.Data.HourofDay[v.key]
-		completed := strconv.Itoa(val.completed)
-		abandoned := strconv.Itoa(val.abandoned)
-		total := strconv.Itoa(val.minutes)
 
 		d := time.Date(2000, 1, 1, v.key, 0, 0, 0, time.UTC)
-		data = append(data, []string{d.Format("03:04 PM"), total, completed, abandoned})
+
+		bars = append(bars, pterm.Bar{
+			Label: d.Format("03:04 PM"),
+			Value: val.minutes,
+		})
 	}
 
-	printTable("hours", data)
+	err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).WithHorizontal().WithShowValue().WithBars(bars).Render()
+	if err != nil {
+		pterm.Error.Println(err)
+	}
 }
 
 // displayPomodoroHistory prints the appropriate bar graph
 // for the current time period.
 func (s *Stats) displayPomodoroHistory() {
-	// TODO: Remove this when pterm is updated
 	if s.Data.Totals.minutes == 0 {
 		return
 	}
 
-	fmt.Printf("\n%s\n", pterm.Blue("Pomodoro history (minutes)"))
+	fmt.Printf("\n%s", pterm.Blue("Pomodoro history (minutes)"))
 
 	type keyValue struct {
 		key   string
@@ -350,7 +342,7 @@ func (s *Stats) displayPomodoroHistory() {
 		})
 	}
 
-	err := pterm.DefaultBarChart.WithHorizontalBarCharacter("▇").WithHorizontal().WithShowValue().WithBars(bars).Render()
+	err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).WithHorizontal().WithShowValue().WithBars(bars).Render()
 	if err != nil {
 		pterm.Error.Println(err)
 	}
