@@ -97,19 +97,23 @@ func GetApp() *cli.App {
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{
-				Name:  "resume",
-				Usage: "Resume the most recently interrupted focus session",
+				Name:  "new",
+				Usage: "Always start a new Focus session",
 				Action: func(ctx *cli.Context) error {
 					store, err := focus.NewStore()
 					if err != nil {
 						return err
 					}
 
-					t := &focus.Timer{
-						Store: store,
+					config, err := focus.NewConfig()
+					if err != nil {
+						return err
 					}
 
-					return t.Resume()
+					t := focus.NewTimer(ctx, config, store)
+					t.Run()
+
+					return nil
 				},
 			},
 			{
@@ -202,17 +206,27 @@ func GetApp() *cli.App {
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			config, err := focus.NewConfig()
-			if err != nil {
-				return err
-			}
-
 			store, err := focus.NewStore()
 			if err != nil {
 				return err
 			}
 
-			t := focus.NewTimer(ctx, config, store)
+			t := &focus.Timer{
+				Store: store,
+			}
+
+			_, _, err = t.GetInterrupted()
+			if err == nil {
+				pterm.Info.Printfln("Picking up from where you left off...\n")
+				return t.Resume()
+			}
+
+			config, err := focus.NewConfig()
+			if err != nil {
+				return err
+			}
+
+			t = focus.NewTimer(ctx, config, store)
 			t.Run()
 
 			return nil

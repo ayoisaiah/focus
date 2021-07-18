@@ -309,18 +309,27 @@ func (t *Timer) Run() {
 	t.start(endTime)
 }
 
+func (t *Timer) GetInterrupted() (timerBytes, sessionBytes []byte, err error) {
+	timerBytes, sessionBytes, err = t.Store.getTimerState()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(timerBytes) == 0 {
+		return nil, nil, errNoPausedSession
+	}
+
+	return
+}
+
 // Resume attempts to continue an interrupted pomodoro session
 // from where it left off. If the interrupted session is not
 // pomodoro, it skips right to the next pomodoro session
 // in the cycle and starts from there.
 func (t *Timer) Resume() error {
-	timerBytes, sessionBytes, err := t.Store.getTimerState()
+	timerBytes, sessionBytes, err := t.GetInterrupted()
 	if err != nil {
 		return err
-	}
-
-	if len(timerBytes) == 0 {
-		return errNoPausedSession
 	}
 
 	err = json.Unmarshal(timerBytes, t)
