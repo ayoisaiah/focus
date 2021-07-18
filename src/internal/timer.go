@@ -20,8 +20,8 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const (
-	errUnableToSaveSession = Error("Unable to save incomplete session")
-	errNoPausedSession     = Error("Paused session not found. Please start a new session")
+	errUnableToSaveSession = Error("Unable to persist interrupted session")
+	errNoPausedSession     = Error("A previously interrupted session was not found. Please start a new session")
 )
 
 type countdown struct {
@@ -64,6 +64,45 @@ type session struct {
 	// Completed indicates whether a session was completed
 	// or abandoned
 	Completed bool `json:"completed"`
+}
+
+// getElapsedTime returns the elapsed time for the session
+// in seconds.
+func (s *session) getElapsedTime() int {
+	var elapsedTimeInSeconds int
+	for _, v := range s.Timeline {
+		elapsedTimeInSeconds += int(v.EndTime.Sub(v.StartTime).Seconds())
+	}
+
+	return elapsedTimeInSeconds
+}
+
+// validate ensures that the end time for the current
+// session is does not exceed what is required to
+// complete the session.
+func (s *session) validateEndTime() {
+	elapsed := s.getElapsedTime()
+
+	if elapsed > s.Duration*60 {
+		var num int
+
+		for i := 0; i < len(s.Timeline)-1; i++ {
+			v := s.Timeline[i]
+			num += int(v.EndTime.Sub(v.StartTime).Seconds())
+		}
+
+		if num == 0 {
+			num = 60 * s.Duration
+		}
+
+		lastIndex := len(s.Timeline) - 1
+		start := s.Timeline[lastIndex]
+
+		end := start.StartTime.Add(time.Duration(num) * time.Second)
+		s.Timeline[lastIndex].EndTime = end
+		s.EndTime = end
+		s.Completed = true
+	}
 }
 
 type kind map[sessionType]int
@@ -130,10 +169,13 @@ func (t *Timer) saveSession() error {
 		return nil
 	}
 
-	ev := t.Session
-	key := []byte(ev.StartTime.Format(time.RFC3339))
+	s := t.Session
 
-	value, err := json.Marshal(ev)
+	s.validateEndTime()
+
+	key := []byte(s.StartTime.Format(time.RFC3339))
+
+	value, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}
@@ -299,11 +341,7 @@ func (t *Timer) Resume() error {
 	} else {
 		// Calculate new end time for an interrupted pomodoro
 		// session
-		var elapsedTimeInSeconds int
-		for _, v := range t.Session.Timeline {
-			elapsedTimeInSeconds += int(v.EndTime.Sub(v.StartTime).Seconds())
-		}
-
+		elapsedTimeInSeconds := t.Session.getElapsedTime()
 		newEndTime := time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute).Add(-time.Second * time.Duration(elapsedTimeInSeconds))
 
 		t.Session.EndTime = newEndTime

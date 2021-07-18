@@ -152,6 +152,7 @@ func initData(start, end time.Time, hoursDiff int) *Data {
 // computeAverages calculates the average minutes, completed pomodoros,
 // and abandoned pomodoros per day for the specified time period.
 func (d *Data) computeAverages(start, end time.Time) {
+	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, end.Location())
 	hoursDiff := int(math.Round(end.Sub(start).Hours()))
 	hoursInADay := 24
 
@@ -409,8 +410,8 @@ func (s *Stats) displayAverages() {
 	if hoursDiff > hoursInADay {
 		fmt.Printf("\n%s\n", pterm.Blue("Averages"))
 
-		hours := int(math.Floor(float64(s.Data.Totals.minutes) / float64(minutesInAnHour)))
-		minutes := s.Data.Totals.minutes % minutesInAnHour
+		hours := int(math.Floor(float64(s.Data.Averages.minutes) / float64(minutesInAnHour)))
+		minutes := s.Data.Averages.minutes % minutesInAnHour
 
 		fmt.Println("Averaged time logged:", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
 		fmt.Println("Completed pomodoros per day:", pterm.Green(s.Data.Averages.completed))
