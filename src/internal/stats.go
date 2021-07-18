@@ -153,14 +153,14 @@ func initData(start, end time.Time, hoursDiff int) *Data {
 // and abandoned pomodoros per day for the specified time period.
 func (d *Data) computeAverages(start, end time.Time) {
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, end.Location())
-	hoursDiff := int(math.Round(end.Sub(start).Hours()))
+	hoursDiff := roundTime(end.Sub(start).Hours())
 	hoursInADay := 24
 
 	numberOfDays := hoursDiff / hoursInADay
 
-	d.Averages.minutes = int(math.Round(float64(d.Totals.minutes) / float64(numberOfDays)))
-	d.Averages.completed = int(math.Round(float64(d.Totals.completed) / float64(numberOfDays)))
-	d.Averages.abandoned = int(math.Round(float64(d.Totals.abandoned) / float64(numberOfDays)))
+	d.Averages.minutes = roundTime(float64(d.Totals.minutes) / float64(numberOfDays))
+	d.Averages.completed = roundTime(float64(d.Totals.completed) / float64(numberOfDays))
+	d.Averages.abandoned = roundTime(float64(d.Totals.abandoned) / float64(numberOfDays))
 }
 
 // computeTotals calculates the the computeTotals minutes, completed pomodoros,
@@ -187,7 +187,7 @@ func (d *Data) computeTotals(sessions []session) {
 			for _, v2 := range v.Timeline {
 				elapsedTimeInSeconds += int(v2.EndTime.Sub(v2.StartTime).Seconds())
 			}
-			d.Totals.minutes += int(math.Round(float64(elapsedTimeInSeconds) / float64(minutesInAnHour)))
+			d.Totals.minutes += roundTime(float64(elapsedTimeInSeconds) / float64(minutesInAnHour))
 		}
 
 		hourly := map[int]float64{}
@@ -210,15 +210,15 @@ func (d *Data) computeTotals(sessions []session) {
 		}
 
 		for k, val := range weekday {
-			d.Weekday[k].minutes += int(math.Round(val / float64(minutesInAnHour)))
+			d.Weekday[k].minutes += roundTime(val / float64(minutesInAnHour))
 		}
 
 		for k, val := range hourly {
-			d.HourofDay[k].minutes += int(math.Round(val / float64(minutesInAnHour)))
+			d.HourofDay[k].minutes += roundTime(val / float64(minutesInAnHour))
 		}
 
 		for k, val := range daily {
-			d.History[k].minutes += int(math.Round(val / float64(minutesInAnHour)))
+			d.History[k].minutes += roundTime(val / float64(minutesInAnHour))
 		}
 	}
 }
@@ -405,13 +405,12 @@ func (s *Stats) displayWeeklyBreakdown() {
 }
 
 func (s *Stats) displayAverages() {
-	hoursDiff := int(math.Round(s.EndTime.Sub(s.StartTime).Hours()))
+	hoursDiff := roundTime(s.EndTime.Sub(s.StartTime).Hours())
 
 	if hoursDiff > hoursInADay {
 		fmt.Printf("\n%s\n", pterm.Blue("Averages"))
 
-		hours := int(math.Floor(float64(s.Data.Averages.minutes) / float64(minutesInAnHour)))
-		minutes := s.Data.Averages.minutes % minutesInAnHour
+		hours, minutes := minsToHoursAndMins(s.Data.Averages.minutes)
 
 		fmt.Println("Averaged time logged:", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
 		fmt.Println("Completed pomodoros per day:", pterm.Green(s.Data.Averages.completed))
@@ -422,8 +421,7 @@ func (s *Stats) displayAverages() {
 func (s *Stats) displayTotals() {
 	fmt.Printf("%s\n", pterm.Blue("Totals"))
 
-	hours := int(math.Floor(float64(s.Data.Totals.minutes) / float64(minutesInAnHour)))
-	minutes := s.Data.Totals.minutes % minutesInAnHour
+	hours, minutes := minsToHoursAndMins(s.Data.Totals.minutes)
 
 	fmt.Printf("Total time logged: %s %s %s %s\n", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
 
@@ -511,4 +509,18 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 	s.Data = initData(s.StartTime, s.EndTime, s.HoursDiff)
 
 	return s, nil
+}
+
+// roundTime rounds a time value in seconds, minutes, or hours to the nearest integer.
+func roundTime(t float64) int {
+	return int(math.Round(t))
+}
+
+// minsToHoursAndMins expresses a minutes value
+// in hours and mins.
+func minsToHoursAndMins(val int) (hrs, mins int) {
+	hrs = int(math.Floor(float64(val) / float64(minutesInAnHour)))
+	mins = val % minutesInAnHour
+
+	return
 }
