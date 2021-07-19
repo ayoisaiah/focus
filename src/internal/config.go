@@ -14,10 +14,14 @@ import (
 )
 
 const (
-	errReadingInput          = Error("An error occurred while reading input. Please try again")
+	errReadingInput = Error(
+		"An error occurred while reading input. Please try again",
+	)
 	errExpectedNumber        = Error("Expected a number")
 	errExpectPositiveInteger = Error("Number must be greater than zero")
-	errInitFailed            = Error("Unable to initialise Focus settings from configuration file")
+	errInitFailed            = Error(
+		"Unable to initialise Focus settings from configuration file",
+	)
 )
 
 const ascii = `
@@ -86,7 +90,8 @@ func (c *Config) prompt(path string) {
 
 	_ = pterm.NewBulletListFromString(`Follow the prompts below to configure Focus for the first time.
 Type your preferred value, or press ENTER to accept the defaults.
-Edit the configuration file to change any settings, or use command line arguments (see the --help flag)`, " ").Render()
+Edit the configuration file to change any settings, or use command line arguments (see the --help flag)`, " ").
+		Render()
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -96,7 +101,10 @@ Edit the configuration file to change any settings, or use command line argument
 
 	for {
 		if c.PomodoroMinutes == 0 {
-			fmt.Printf("\nPomodoro length in minutes (default: %s): ", pterm.Green(pomodoroMinutes))
+			fmt.Printf(
+				"\nPomodoro length in minutes (default: %s): ",
+				pterm.Green(pomodoroMinutes),
+			)
 
 			num, err := numberPrompt(reader, pomodoroMinutes)
 			if err != nil {
@@ -108,7 +116,10 @@ Edit the configuration file to change any settings, or use command line argument
 		}
 
 		if c.ShortBreakMinutes == 0 {
-			fmt.Printf("Short break length in minutes (default: %s): ", pterm.Green(shortBreakMinutes))
+			fmt.Printf(
+				"Short break length in minutes (default: %s): ",
+				pterm.Green(shortBreakMinutes),
+			)
 
 			num, err := numberPrompt(reader, shortBreakMinutes)
 			if err != nil {
@@ -120,7 +131,10 @@ Edit the configuration file to change any settings, or use command line argument
 		}
 
 		if c.LongBreakMinutes == 0 {
-			fmt.Printf("Long break length in minutes (default: %s): ", pterm.Green(longBreakMinutes))
+			fmt.Printf(
+				"Long break length in minutes (default: %s): ",
+				pterm.Green(longBreakMinutes),
+			)
 
 			num, err := numberPrompt(reader, longBreakMinutes)
 			if err != nil {
@@ -132,7 +146,10 @@ Edit the configuration file to change any settings, or use command line argument
 		}
 
 		if c.LongBreakInterval == 0 {
-			fmt.Printf("Pomodoro cycles before long break (default: %s): ", pterm.Green(longBreakInterval))
+			fmt.Printf(
+				"Pomodoro cycles before long break (default: %s): ",
+				pterm.Green(longBreakInterval),
+			)
 
 			num, err := numberPrompt(reader, longBreakInterval)
 			if err != nil {
@@ -255,7 +272,9 @@ func (c *Config) create(pathToConfig string) error {
 	}
 
 	fmt.Println()
-	pterm.Success.Printfln("Your settings have been saved. Thanks for using Focus!\n\n")
+	pterm.Success.Printfln(
+		"Your settings have been saved. Thanks for using Focus!\n\n",
+	)
 
 	return nil
 }

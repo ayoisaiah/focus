@@ -17,7 +17,9 @@ import (
 
 const (
 	errParsingDate      = Error("The date format must be: YYYY-MM-DD")
-	errInvalidDateRange = Error("The end date must not be less than the start date")
+	errInvalidDateRange = Error(
+		"The end date must not be less than the start date",
+	)
 )
 
 const (
@@ -74,7 +76,9 @@ func contains(s []timePeriod, e timePeriod) bool {
 
 func printTable(title string, data [][]string) {
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{title, "total minutes", "total completed", "total abandoned"})
+	table.SetHeader(
+		[]string{title, "total minutes", "total completed", "total abandoned"},
+	)
 	table.SetAutoWrapText(false)
 
 	for _, v := range data {
@@ -114,7 +118,16 @@ func getPeriod(period timePeriod) (start, end time.Time) {
 		return start, end
 	}
 
-	return time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location()), end
+	return time.Date(
+		start.Year(),
+		start.Month(),
+		start.Day(),
+		0,
+		0,
+		0,
+		0,
+		start.Location(),
+	), end
 }
 
 type Data struct {
@@ -156,15 +169,30 @@ func initData(start, end time.Time, hoursDiff int) *Data {
 // computeAverages calculates the average minutes, completed pomodoros,
 // and abandoned pomodoros per day for the specified time period.
 func (d *Data) computeAverages(start, end time.Time) {
-	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, end.Location())
+	end = time.Date(
+		end.Year(),
+		end.Month(),
+		end.Day(),
+		23,
+		59,
+		59,
+		0,
+		end.Location(),
+	)
 	hoursDiff := roundTime(end.Sub(start).Hours())
 	hoursInADay := 24
 
 	numberOfDays := hoursDiff / hoursInADay
 
-	d.Averages.minutes = roundTime(float64(d.Totals.minutes) / float64(numberOfDays))
-	d.Averages.completed = roundTime(float64(d.Totals.completed) / float64(numberOfDays))
-	d.Averages.abandoned = roundTime(float64(d.Totals.abandoned) / float64(numberOfDays))
+	d.Averages.minutes = roundTime(
+		float64(d.Totals.minutes) / float64(numberOfDays),
+	)
+	d.Averages.completed = roundTime(
+		float64(d.Totals.completed) / float64(numberOfDays),
+	)
+	d.Averages.abandoned = roundTime(
+		float64(d.Totals.abandoned) / float64(numberOfDays),
+	)
 }
 
 // computeTotals calculates the the computeTotals minutes, completed pomodoros,
@@ -209,7 +237,8 @@ func (d *Data) computeTotals(sessions []session) {
 
 				hourly[date.Hour()] += end.Sub(date).Seconds()
 				weekday[date.Weekday()] += end.Sub(date).Seconds()
-				daily[date.Format(d.HistoryKeyFormat)] += end.Sub(date).Seconds()
+				daily[date.Format(d.HistoryKeyFormat)] += end.Sub(date).
+					Seconds()
 			}
 		}
 
@@ -292,7 +321,11 @@ func (s *Stats) displayHourlyBreakdown() {
 		})
 	}
 
-	err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).WithHorizontal().WithShowValue().WithBars(bars).Render()
+	err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).
+		WithHorizontal().
+		WithShowValue().
+		WithBars(bars).
+		Render()
 	if err != nil {
 		pterm.Error.Println(err)
 	}
@@ -342,7 +375,11 @@ func (s *Stats) displayPomodoroHistory() {
 		})
 	}
 
-	err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).WithHorizontal().WithShowValue().WithBars(bars).Render()
+	err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).
+		WithHorizontal().
+		WithShowValue().
+		WithBars(bars).
+		Render()
 	if err != nil {
 		pterm.Error.Println(err)
 	}
@@ -390,7 +427,10 @@ func (s *Stats) displayWeeklyBreakdown() {
 		abandoned := strconv.Itoa(val.abandoned)
 		total := strconv.Itoa(val.minutes)
 
-		data = append(data, []string{v.key.String(), total, completed, abandoned})
+		data = append(
+			data,
+			[]string{v.key.String(), total, completed, abandoned},
+		)
 	}
 
 	printTable("weekday", data)
@@ -404,9 +444,21 @@ func (s *Stats) displayAverages() {
 
 		hours, minutes := minsToHoursAndMins(s.Data.Averages.minutes)
 
-		fmt.Println("Averaged time logged:", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
-		fmt.Println("Completed pomodoros per day:", pterm.Green(s.Data.Averages.completed))
-		fmt.Println("Abandoned pomodoros per day:", pterm.Green(s.Data.Averages.abandoned))
+		fmt.Println(
+			"Averaged time logged:",
+			pterm.Green(hours),
+			pterm.Green("hours"),
+			pterm.Green(minutes),
+			pterm.Green("minutes"),
+		)
+		fmt.Println(
+			"Completed pomodoros per day:",
+			pterm.Green(s.Data.Averages.completed),
+		)
+		fmt.Println(
+			"Abandoned pomodoros per day:",
+			pterm.Green(s.Data.Averages.abandoned),
+		)
 	}
 }
 
@@ -415,7 +467,13 @@ func (s *Stats) displayTotals() {
 
 	hours, minutes := minsToHoursAndMins(s.Data.Totals.minutes)
 
-	fmt.Printf("Total time logged: %s %s %s %s\n", pterm.Green(hours), pterm.Green("hours"), pterm.Green(minutes), pterm.Green("minutes"))
+	fmt.Printf(
+		"Total time logged: %s %s %s %s\n",
+		pterm.Green(hours),
+		pterm.Green("hours"),
+		pterm.Green(minutes),
+		pterm.Green("minutes"),
+	)
 
 	fmt.Println("Pomodoros completed:", pterm.Green(s.Data.Totals.completed))
 	fmt.Println("Pomodoros abandoned:", pterm.Green(s.Data.Totals.abandoned))
@@ -436,7 +494,9 @@ func (s *Stats) Show() {
 	endDate := s.EndTime.Format("January 02, 2006")
 	timePeriod := startDate + " - " + endDate
 
-	pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgYellow)).WithTextStyle(pterm.NewStyle(pterm.FgBlack)).Printfln(timePeriod)
+	pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgYellow)).
+		WithTextStyle(pterm.NewStyle(pterm.FgBlack)).
+		Printfln(timePeriod)
 
 	s.displayTotals()
 	s.displayAverages()
@@ -468,7 +528,10 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 			sl = append(sl, string(v))
 		}
 
-		return nil, fmt.Errorf("Period must be one of: %s", strings.Join(sl, ", "))
+		return nil, fmt.Errorf(
+			"Period must be one of: %s",
+			strings.Join(sl, ", "),
+		)
 	}
 
 	s.StartTime, s.EndTime = getPeriod(timePeriod(period))
@@ -483,7 +546,16 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 			return nil, errParsingDate
 		}
 
-		s.StartTime = time.Date(v.Year(), v.Month(), v.Day(), 0, 0, 0, 0, v.Location())
+		s.StartTime = time.Date(
+			v.Year(),
+			v.Month(),
+			v.Day(),
+			0,
+			0,
+			0,
+			0,
+			v.Location(),
+		)
 	}
 
 	if end != "" {
@@ -492,7 +564,16 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 			return nil, errParsingDate
 		}
 
-		s.EndTime = time.Date(v.Year(), v.Month(), v.Day(), 23, 59, 59, 0, v.Location())
+		s.EndTime = time.Date(
+			v.Year(),
+			v.Month(),
+			v.Day(),
+			23,
+			59,
+			59,
+			0,
+			v.Location(),
+		)
 	}
 
 	diff := s.EndTime.Sub(s.StartTime)

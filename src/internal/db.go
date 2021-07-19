@@ -16,7 +16,9 @@ const (
 )
 
 const (
-	errSingleInstanceAllowed = Error("Only one instance of Focus can be active at a time")
+	errSingleInstanceAllowed = Error(
+		"Only one instance of Focus can be active at a time",
+	)
 )
 
 type DB interface {
@@ -54,7 +56,11 @@ func (s *Store) init() error {
 
 	var fileMode fs.FileMode = 0600
 
-	db, err := bolt.Open(pathToDB, fileMode, &bolt.Options{Timeout: 1 * time.Second})
+	db, err := bolt.Open(
+		pathToDB,
+		fileMode,
+		&bolt.Options{Timeout: 1 * time.Second},
+	)
 	if err != nil {
 		return err
 	}
@@ -92,7 +98,8 @@ func (s *Store) saveTimerState(timer, sessionKey []byte) error {
 			return err
 		}
 
-		return tx.Bucket([]byte("timer")).Put([]byte("paused_session_key"), sessionKey)
+		return tx.Bucket([]byte("timer")).
+			Put([]byte("paused_session_key"), sessionKey)
 	})
 }
 
@@ -101,7 +108,8 @@ func (s *Store) getTimerState() (timer, session []byte, err error) {
 	err = s.conn.View(func(tx *bolt.Tx) error {
 		timer = tx.Bucket([]byte("timer")).Get([]byte("timer"))
 
-		sessionKey := tx.Bucket([]byte("timer")).Get([]byte("paused_session_key"))
+		sessionKey := tx.Bucket([]byte("timer")).
+			Get([]byte("paused_session_key"))
 
 		session = tx.Bucket([]byte("sessions")).Get(sessionKey)
 
@@ -148,7 +156,8 @@ func NewStore() (*Store, error) {
 
 	err := store.init()
 	if err != nil {
-		if errors.Is(err, bolt.ErrDatabaseOpen) || errors.Is(err, bolt.ErrTimeout) {
+		if errors.Is(err, bolt.ErrDatabaseOpen) ||
+			errors.Is(err, bolt.ErrTimeout) {
 			return nil, errSingleInstanceAllowed
 		}
 

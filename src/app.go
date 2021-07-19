@@ -182,14 +182,18 @@ func GetApp() *cli.App {
 				return err
 			}
 
-			if !ctx.Bool("new") || ctx.NumFlags() == 0 {
+			// Running focus without arguments will attempt
+			// to resume an interrupted session
+			if ctx.NumFlags() == 0 {
 				t := &focus.Timer{
 					Store: store,
 				}
 
 				_, _, err = t.GetInterrupted()
 				if err == nil {
-					pterm.Info.Printfln("Picking up from where you left off...\n")
+					pterm.Info.Printfln(
+						"Picking up from where you left off...\n",
+					)
 					return t.Resume()
 				}
 			}

@@ -73,15 +73,27 @@ func TestStatsTotals(t *testing.T) {
 		s := getStats(t, &v)
 
 		if s.Data.Totals.minutes != v.expected.totalMins {
-			t.Errorf("Expected total minutes to be: %d, but got: %d", v.expected.totalMins, s.Data.Totals.minutes)
+			t.Errorf(
+				"Expected total minutes to be: %d, but got: %d",
+				v.expected.totalMins,
+				s.Data.Totals.minutes,
+			)
 		}
 
 		if s.Data.Totals.completed != v.expected.completed {
-			t.Errorf("Expected completed pomodoros to be: %d, but got: %d", v.expected.completed, s.Data.Totals.completed)
+			t.Errorf(
+				"Expected completed pomodoros to be: %d, but got: %d",
+				v.expected.completed,
+				s.Data.Totals.completed,
+			)
 		}
 
 		if s.Data.Totals.abandoned != v.expected.abandoned {
-			t.Errorf("Expected abandoned pomodoros to be: %d, but got: %d", v.expected.abandoned, s.Data.Totals.abandoned)
+			t.Errorf(
+				"Expected abandoned pomodoros to be: %d, but got: %d",
+				v.expected.abandoned,
+				s.Data.Totals.abandoned,
+			)
 		}
 	}
 }
