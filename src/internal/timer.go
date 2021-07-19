@@ -21,7 +21,9 @@ func (e Error) Error() string { return string(e) }
 
 const (
 	errUnableToSaveSession = Error("Unable to persist interrupted session")
-	errNoPausedSession     = Error("A previously interrupted session was not found. Please start a new session")
+	errNoPausedSession     = Error(
+		"A previously interrupted session was not found. Please start a new session",
+	)
 )
 
 type countdown struct {
@@ -84,21 +86,24 @@ func (s *session) validateEndTime() {
 	elapsed := s.getElapsedTime()
 
 	if elapsed > s.Duration*60 {
-		var num int
+		// seconds represents the number of seconds elapsed
+		// without the concluding part of the session timeline
+		var seconds int
 
 		for i := 0; i < len(s.Timeline)-1; i++ {
 			v := s.Timeline[i]
-			num += int(v.EndTime.Sub(v.StartTime).Seconds())
+			seconds += int(v.EndTime.Sub(v.StartTime).Seconds())
 		}
 
-		if num == 0 {
-			num = 60 * s.Duration
+		// For sessions that have only one part
+		if seconds == 0 {
+			seconds = 60 * s.Duration
 		}
 
 		lastIndex := len(s.Timeline) - 1
-		start := s.Timeline[lastIndex]
+		lastPart := s.Timeline[lastIndex]
 
-		end := start.StartTime.Add(time.Duration(num) * time.Second)
+		end := lastPart.StartTime.Add(time.Duration(seconds * int(time.Second)))
 		s.Timeline[lastIndex].EndTime = end
 		s.EndTime = end
 		s.Completed = true
@@ -144,12 +149,28 @@ func (t *Timer) nextSession() sessionType {
 	return next
 }
 
+// endSession marks a session as completed
+// and updates it in the database.
+func (t *Timer) endSession(endTime time.Time) {
+	t.Session.Completed = true
+	t.Session.EndTime = endTime
+
+	lastIndex := len(t.Session.Timeline) - 1
+	t.Session.Timeline[lastIndex].EndTime = endTime
+
+	err := t.saveSession()
+	if err != nil {
+		pterm.Error.Printfln("%s\n", err)
+	}
+
+	t.notify()
+}
+
 // getTimeRemaining subtracts the endTime from the currentTime
 // and returns the total number of hours, minutes and seconds
 // left.
 func (t *Timer) getTimeRemaining(endTime time.Time) countdown {
-	currentTime := time.Now()
-	difference := endTime.Sub(currentTime)
+	difference := time.Until(endTime)
 	total := int(difference.Seconds())
 	minutes := total / 60
 	seconds := total % 60
@@ -246,7 +267,9 @@ func (t *Timer) notify() {
 
 		err := beeep.Notify(msg, t.Msg[t.nextSession()], pathToIcon)
 		if err != nil {
-			pterm.Error.Println(fmt.Errorf("Unable to display notification: %w", err))
+			pterm.Error.Println(
+				fmt.Errorf("Unable to display notification: %w", err),
+			)
 		}
 	}
 }
@@ -269,13 +292,19 @@ func (t *Timer) handleInterruption() {
 
 		err := t.saveSession()
 		if err != nil {
-			pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
+			pterm.Error.Printfln(
+				"%s",
+				fmt.Errorf("%s: %w", errUnableToSaveSession, err),
+			)
 			os.Exit(1)
 		}
 
 		timerBytes, err := json.Marshal(t)
 		if err != nil {
-			pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
+			pterm.Error.Printfln(
+				"%s",
+				fmt.Errorf("%s: %w", errUnableToSaveSession, err),
+			)
 			os.Exit(1)
 		}
 
@@ -283,7 +312,10 @@ func (t *Timer) handleInterruption() {
 
 		err = t.Store.saveTimerState(timerBytes, sessionKey)
 		if err != nil {
-			pterm.Error.Printfln("%s", fmt.Errorf("%s: %w", errUnableToSaveSession, err))
+			pterm.Error.Printfln(
+				"%s",
+				fmt.Errorf("%s: %w", errUnableToSaveSession, err),
+			)
 			os.Exit(1)
 		}
 
@@ -393,7 +425,8 @@ func (t *Timer) initSession() (time.Time, error) {
 	}
 
 	startTime := time.Now()
-	endTime := time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute)
+	endTime := startTime.
+		Add(time.Duration(t.Kind[t.SessionType] * int(time.Minute)))
 
 	t.Session = session{
 		Name:      t.SessionType,
@@ -434,20 +467,7 @@ func (t *Timer) start(endTime time.Time) {
 			timeRemaining = t.getTimeRemaining(endTime)
 
 			if timeRemaining.t <= 0 {
-				t.Session.Completed = true
-				end := time.Now()
-				t.Session.EndTime = end
-
-				lastIndex := len(t.Session.Timeline) - 1
-				t.Session.Timeline[lastIndex].EndTime = end
-
-				err := t.saveSession()
-				if err != nil {
-					pterm.Error.Printfln("%s\n", err)
-				}
-
-				t.notify()
-
+				t.endSession(endTime)
 				break
 			}
 
@@ -486,7 +506,11 @@ func (t *Timer) start(endTime time.Time) {
 // countdown prints the time remaining until the end of
 // the current session.
 func (t *Timer) countdown(timeRemaining countdown) {
-	fmt.Printf("🕒%s:%s", pterm.Yellow(fmt.Sprintf("%02d", timeRemaining.m)), pterm.Yellow(fmt.Sprintf("%02d", timeRemaining.s)))
+	fmt.Printf(
+		"🕒%s:%s",
+		pterm.Yellow(fmt.Sprintf("%02d", timeRemaining.m)),
+		pterm.Yellow(fmt.Sprintf("%02d", timeRemaining.s)),
+	)
 }
 
 // setOptions configures the Timer instance based

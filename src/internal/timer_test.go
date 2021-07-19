@@ -31,17 +31,14 @@ func (d *DBMock) updateSession(key, value []byte) error {
 	return nil
 }
 
-func setupDB(t *testing.T) {
-	t.Helper()
-}
-
+// TestTimerInitSession confirms that the endtime
+// is perfectly distanced from the start time
+// by the specified amount of minutes.
 func TestTimerInitSession(t *testing.T) {
-	setupDB(t)
-
 	table := []struct {
 		duration int
 	}{
-		{10}, {25}, {45}, {75},
+		{1}, {10}, {25}, {45}, {75}, {90}, {120},
 	}
 
 	for _, v := range table {
@@ -51,17 +48,17 @@ func TestTimerInitSession(t *testing.T) {
 		timer.Kind[timer.SessionType] = v.duration
 		timer.Store = &DBMock{}
 
-		now := time.Now()
-
 		endTime, err := timer.initSession()
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		got := int(endTime.Sub(now).Minutes())
+		startTime := timer.Session.StartTime
 
-		if v.duration != got {
-			t.Errorf("Expected: %d, but got: %d", v.duration, got)
+		got := endTime.Sub(startTime).Minutes()
+
+		if float64(v.duration) != got {
+			t.Errorf("Expected: %d, but got: %f", v.duration, got)
 		}
 	}
 }
