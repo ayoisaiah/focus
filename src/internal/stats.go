@@ -6,7 +6,6 @@ import (
 	"math"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -30,14 +29,6 @@ const (
 
 const (
 	barChartChar = "▇"
-)
-
-type statsSort string
-
-const (
-	sortMinutes   statsSort = "minutes"
-	sortCompleted statsSort = "completed"
-	sortAbandoned statsSort = "abandoned"
 )
 
 type timePeriod string
@@ -72,20 +63,6 @@ func contains(s []timePeriod, e timePeriod) bool {
 	}
 
 	return false
-}
-
-func printTable(title string, data [][]string) {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader(
-		[]string{title, "total minutes", "total completed", "total abandoned"},
-	)
-	table.SetAutoWrapText(false)
-
-	for _, v := range data {
-		table.Append(v)
-	}
-
-	table.Render()
 }
 
 // getPeriod returns the start and end time according to the
@@ -262,7 +239,6 @@ type Stats struct {
 	EndTime   time.Time
 	Sessions  []session
 	store     DB
-	sortValue statsSort
 	Data      *Data
 	HoursDiff int
 }
@@ -292,7 +268,7 @@ func (s *Stats) getSessions(start, end time.Time) {
 // displayHourlyBreakdown prints the hourly breakdown
 // for the current time period.
 func (s *Stats) displayHourlyBreakdown() {
-	fmt.Printf("\n%s", pterm.Blue("Hourly breakdown (minutes)"))
+	fmt.Printf("\n%s", pterm.LightBlue("Hourly breakdown (minutes)"))
 
 	type keyValue struct {
 		key   int
@@ -338,7 +314,7 @@ func (s *Stats) displayPomodoroHistory() {
 		return
 	}
 
-	fmt.Printf("\n%s", pterm.Blue("Pomodoro history (minutes)"))
+	fmt.Printf("\n%s", pterm.LightBlue("Pomodoro history (minutes)"))
 
 	type keyValue struct {
 		key   string
@@ -388,7 +364,7 @@ func (s *Stats) displayPomodoroHistory() {
 // displayWeeklyBreakdown prints the weekly breakdown
 // for the current time period.
 func (s *Stats) displayWeeklyBreakdown() {
-	fmt.Printf("\n%s\n", pterm.Blue("Weekly breakdown"))
+	fmt.Printf("\n%s\n", pterm.LightBlue("Weekly breakdown (minutes)"))
 
 	type keyValue struct {
 		key   time.Weekday
@@ -400,47 +376,36 @@ func (s *Stats) displayWeeklyBreakdown() {
 		sl = append(sl, keyValue{k, v})
 	}
 
-	switch s.sortValue {
-	case sortMinutes:
-		sort.SliceStable(sl, func(i, j int) bool {
-			return sl[i].value.minutes > sl[j].value.minutes
-		})
-	case sortCompleted:
-		sort.SliceStable(sl, func(i, j int) bool {
-			return sl[i].value.completed > sl[j].value.completed
-		})
-	case sortAbandoned:
-		sort.SliceStable(sl, func(i, j int) bool {
-			return sl[i].value.abandoned > sl[j].value.abandoned
-		})
-	default:
-		sort.SliceStable(sl, func(i, j int) bool {
-			return int(sl[i].key) < int(sl[j].key)
-		})
-	}
+	sort.SliceStable(sl, func(i, j int) bool {
+		return int(sl[i].key) < int(sl[j].key)
+	})
 
-	var data = make([][]string, len(sl))
+	var bars pterm.Bars
 
 	for _, v := range sl {
 		val := s.Data.Weekday[v.key]
-		completed := strconv.Itoa(val.completed)
-		abandoned := strconv.Itoa(val.abandoned)
-		total := strconv.Itoa(val.minutes)
 
-		data = append(
-			data,
-			[]string{v.key.String(), total, completed, abandoned},
-		)
+		bars = append(bars, pterm.Bar{
+			Label: v.key.String(),
+			Value: val.minutes,
+		})
 	}
 
-	printTable("weekday", data)
+	err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).
+		WithHorizontal().
+		WithShowValue().
+		WithBars(bars).
+		Render()
+	if err != nil {
+		pterm.Error.Println(err)
+	}
 }
 
 func (s *Stats) displayAverages() {
 	hoursDiff := roundTime(s.EndTime.Sub(s.StartTime).Hours())
 
 	if hoursDiff > hoursInADay {
-		fmt.Printf("\n%s\n", pterm.Blue("Averages"))
+		fmt.Printf("\n%s\n", pterm.LightBlue("Averages"))
 
 		hours, minutes := minsToHoursAndMins(s.Data.Averages.minutes)
 
@@ -463,7 +428,7 @@ func (s *Stats) displayAverages() {
 }
 
 func (s *Stats) displayTotals() {
-	fmt.Printf("%s\n", pterm.Blue("Totals"))
+	fmt.Printf("%s\n", pterm.LightBlue("Totals"))
 
 	hours, minutes := minsToHoursAndMins(s.Data.Totals.minutes)
 
@@ -484,6 +449,47 @@ func (s *Stats) compute() {
 	s.Data.computeAverages(s.StartTime, s.EndTime)
 }
 
+func printTable(data [][]string) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"#", "Start date", "End date", "Status"})
+	table.SetAutoWrapText(false)
+
+	for _, v := range data {
+		table.Append(v)
+	}
+
+	table.Render()
+}
+
+func (s *Stats) List() {
+	s.getSessions(s.StartTime, s.EndTime)
+
+	data := make([][]string, len(s.Sessions))
+
+	for i, v := range s.Sessions {
+		statusText := PrintColor("green", "completed")
+		if !v.Completed {
+			statusText = PrintColor("red", "abandoned")
+		}
+
+		endDate := v.EndTime.Format("Jan 02, 2006 03:04 PM")
+		if v.EndTime.IsZero() {
+			endDate = ""
+		}
+
+		sl := []string{
+			fmt.Sprintf("%d", i+1),
+			v.StartTime.Format("Jan 02, 2006 03:04 PM"),
+			endDate,
+			statusText,
+		}
+
+		data = append(data, sl)
+	}
+
+	printTable(data)
+}
+
 // Show displays the relevant statistics for the
 // set time period.
 func (s *Stats) Show() {
@@ -492,7 +498,7 @@ func (s *Stats) Show() {
 
 	startDate := s.StartTime.Format("January 02, 2006")
 	endDate := s.EndTime.Format("January 02, 2006")
-	timePeriod := startDate + " - " + endDate
+	timePeriod := "Reporting period: " + startDate + " - " + endDate
 
 	pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgYellow)).
 		WithTextStyle(pterm.NewStyle(pterm.FgBlack)).
@@ -500,11 +506,12 @@ func (s *Stats) Show() {
 
 	s.displayTotals()
 	s.displayAverages()
-	s.displayWeeklyBreakdown()
 
 	if s.HoursDiff > hoursInADay {
 		s.displayPomodoroHistory()
 	}
+
+	s.displayWeeklyBreakdown()
 
 	s.displayHourlyBreakdown()
 }
@@ -515,7 +522,6 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 	s := &Stats{}
 	s.store = store
 
-	s.sortValue = statsSort(ctx.String("sort"))
 	period := ctx.String("period")
 
 	if int(s.EndTime.Sub(s.StartTime).Seconds()) < 0 {

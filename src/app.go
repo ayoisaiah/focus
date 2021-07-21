@@ -110,15 +110,19 @@ func GetApp() *cli.App {
 						return err
 					}
 
+					if ctx.Bool("list") {
+						stats.List()
+						return nil
+					}
+
 					stats.Show()
 
 					return nil
 				},
 				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:  "sort",
-						Usage: "Sort the weekly and hourly tables. Possible values are: default, minutes, completed, abandoned",
-						Value: "minutes",
+					&cli.BoolFlag{
+						Name:  "list",
+						Usage: "List the pomodoro sessions for a time period",
 					},
 					&cli.StringFlag{
 						Name:    "period",
