@@ -1,6 +1,8 @@
 package focus
 
 import (
+	"encoding/json"
+	"os"
 	"testing"
 	"time"
 )
@@ -12,7 +14,34 @@ func (d *DBMock) init() error {
 }
 
 func (d *DBMock) getSessions(startTime, endTime time.Time) ([][]byte, error) {
-	return nil, nil
+	jsonFile, err := os.ReadFile("../../testdata/pomodoro.json")
+	if err != nil {
+		return nil, err
+	}
+
+	var sessions []session
+
+	err = json.Unmarshal(jsonFile, &sessions)
+	if err != nil {
+		return nil, err
+	}
+
+	result := [][]byte{}
+
+	for _, v := range sessions {
+		if v.StartTime.Before(startTime) || v.StartTime.After(endTime) {
+			continue
+		}
+
+		b, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, b)
+	}
+
+	return result, nil
 }
 
 func (d *DBMock) deleteTimerState() error {
