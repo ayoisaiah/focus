@@ -110,6 +110,10 @@ func GetApp() *cli.App {
 						return err
 					}
 
+					if ctx.Bool("delete") {
+						return stats.Delete()
+					}
+
 					if ctx.Bool("list") {
 						stats.List()
 						return nil
@@ -121,8 +125,12 @@ func GetApp() *cli.App {
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
+						Name:  "delete",
+						Usage: "Delete the pomodoro sessions within a specified time period",
+					},
+					&cli.BoolFlag{
 						Name:  "list",
-						Usage: "List the pomodoro sessions for a time period",
+						Usage: "List all the pomodoro sessions within the a time period",
 					},
 					&cli.StringFlag{
 						Name:    "period",
@@ -133,12 +141,12 @@ func GetApp() *cli.App {
 					&cli.StringFlag{
 						Name:    "start",
 						Aliases: []string{"s"},
-						Usage:   "The reporting start date (format: YYYY-MM-DD)",
+						Usage:   "The reporting start date (format: YYYY-MM-DD [HH:MM:SS PM])",
 					},
 					&cli.StringFlag{
 						Name:    "end",
 						Aliases: []string{"e"},
-						Usage:   "The reporting end date (format: YYYY-MM-DD)",
+						Usage:   "The reporting end date (format: YYYY-MM-DD [HH:MM:SS PM])",
 					},
 				},
 			},

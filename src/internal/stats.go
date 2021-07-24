@@ -1,6 +1,7 @@
 package focus
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -15,9 +16,9 @@ import (
 )
 
 const (
-	errParsingDate      = Error("The date format must be: YYYY-MM-DD")
+	errParsingDate      = Error("The specified date format must be: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS PM")
 	errInvalidDateRange = Error(
-		"The end date must not be less than the start date",
+		"The end date must not be earlier than the start date",
 	)
 )
 
@@ -461,8 +462,29 @@ func printTable(data [][]string) {
 	table.Render()
 }
 
+func (s *Stats) Delete() error {
+	s.List()
+
+	if len(s.Sessions) == 0 {
+		return nil
+	}
+
+	pterm.Warning.Print("The above sessions will be deleted permanently. Press ENTER to proceed")
+
+	reader := bufio.NewReader(os.Stdin)
+
+	_, _ = reader.ReadString('\n')
+
+	return s.store.deleteSessions(s.StartTime, s.EndTime)
+}
+
 func (s *Stats) List() {
 	s.getSessions(s.StartTime, s.EndTime)
+
+	if len(s.Sessions) == 0 {
+		pterm.Info.Println("No sessions found for the time range")
+		return
+	}
 
 	data := make([][]string, len(s.Sessions))
 
@@ -493,6 +515,8 @@ func (s *Stats) List() {
 // Show displays the relevant statistics for the
 // set time period.
 func (s *Stats) Show() {
+	defer s.store.close()
+
 	s.getSessions(s.StartTime, s.EndTime)
 	s.compute()
 
@@ -524,10 +548,6 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 
 	period := ctx.String("period")
 
-	if int(s.EndTime.Sub(s.StartTime).Seconds()) < 0 {
-		return nil, errInvalidDateRange
-	}
-
 	if !contains(statsPeriod, timePeriod(period)) {
 		var sl []string
 		for _, v := range statsPeriod {
@@ -543,43 +563,40 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 	s.StartTime, s.EndTime = getPeriod(timePeriod(period))
 
 	// start and end arguments override the set period
-	start := ctx.String("start")
-	end := ctx.String("end")
+	start := strings.TrimSpace(ctx.String("start"))
+	end := strings.TrimSpace(ctx.String("end"))
+
+	timeFormatLength := 10 // for YYYY-MM-DD
 
 	if start != "" {
-		v, err := time.Parse("2006-01-02", start)
+		if len(start) == timeFormatLength {
+			start += " 12:00:00 AM"
+		}
+
+		v, err := time.Parse("2006-1-2 3:4:5 PM", start)
 		if err != nil {
+			fmt.Println(err)
 			return nil, errParsingDate
 		}
 
-		s.StartTime = time.Date(
-			v.Year(),
-			v.Month(),
-			v.Day(),
-			0,
-			0,
-			0,
-			0,
-			v.Location(),
-		)
+		s.StartTime = v
 	}
 
 	if end != "" {
-		v, err := time.Parse("2006-01-02", end)
+		if len(end) == timeFormatLength {
+			end += " 11:59:59 PM"
+		}
+
+		v, err := time.Parse("2006-1-2 3:4:5 PM", end)
 		if err != nil {
 			return nil, errParsingDate
 		}
 
-		s.EndTime = time.Date(
-			v.Year(),
-			v.Month(),
-			v.Day(),
-			23,
-			59,
-			59,
-			0,
-			v.Location(),
-		)
+		s.EndTime = v
+	}
+
+	if int(s.EndTime.Sub(s.StartTime).Seconds()) < 0 {
+		return nil, errInvalidDateRange
 	}
 
 	diff := s.EndTime.Sub(s.StartTime)

@@ -23,11 +23,13 @@ const (
 
 type DB interface {
 	init() error
-	getSessions(start, end time.Time) ([][]byte, error)
+	getSessions(startTime, endTime time.Time) ([][]byte, error)
 	deleteTimerState() error
 	getTimerState() ([]byte, []byte, error)
 	saveTimerState(timer, sessionKey []byte) error
 	updateSession(key, value []byte) error
+	deleteSessions(startTime, endTime time.Time) error
+	close() error
 }
 
 // Store is a wrapper for a BoltDB connection.
@@ -117,6 +119,31 @@ func (s *Store) getTimerState() (timer, session []byte, err error) {
 	})
 
 	return timer, session, err
+}
+
+// deleteSessions deletes a session from the database.
+func (s *Store) deleteSessions(startTime, endTime time.Time) error {
+	id := startTime.Format(time.RFC3339)
+
+	return s.conn.Update(func(tx *bolt.Tx) error {
+		c := tx.Bucket([]byte("sessions")).Cursor()
+		min := []byte(startTime.Format(time.RFC3339))
+		max := []byte(endTime.Format(time.RFC3339))
+
+		for k, _ := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, _ = c.Seek(min) {
+			err := c.Delete()
+			if err != nil {
+				return err
+			}
+		}
+
+		return tx.Bucket([]byte("sessions")).Delete([]byte(id))
+	})
+}
+
+// close closes the db connection to release file lock.
+func (s *Store) close() error {
+	return s.conn.Close()
 }
 
 // deleteTimerState removes the stored timer and session key.

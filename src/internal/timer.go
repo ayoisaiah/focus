@@ -319,6 +319,8 @@ func (t *Timer) handleInterruption() {
 			os.Exit(1)
 		}
 
+		_ = t.Store.close()
+
 		os.Exit(0)
 	}()
 }

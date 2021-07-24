@@ -11,7 +11,7 @@ func (d *DBMock) init() error {
 	return nil
 }
 
-func (d *DBMock) getSessions(start, end time.Time) ([][]byte, error) {
+func (d *DBMock) getSessions(startTime, endTime time.Time) ([][]byte, error) {
 	return nil, nil
 }
 
@@ -28,6 +28,14 @@ func (d *DBMock) saveTimerState(timer, sessionKey []byte) error {
 }
 
 func (d *DBMock) updateSession(key, value []byte) error {
+	return nil
+}
+
+func (d *DBMock) deleteSessions(startTime, endTime time.Time) error {
+	return nil
+}
+
+func (d *DBMock) close() error {
 	return nil
 }
 
