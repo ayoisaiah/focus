@@ -246,11 +246,10 @@ type Stats struct {
 
 // getSessions retrieves the pomodoro sessions
 // for the specified time period.
-func (s *Stats) getSessions(start, end time.Time) {
+func (s *Stats) getSessions(start, end time.Time) error {
 	b, err := s.store.getSessions(start, end)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
 	for _, v := range b {
@@ -258,12 +257,13 @@ func (s *Stats) getSessions(start, end time.Time) {
 
 		err = json.Unmarshal(v, &sess)
 		if err != nil {
-			fmt.Println(err)
-			return
+			return err
 		}
 
 		s.Sessions = append(s.Sessions, sess)
 	}
+
+	return nil
 }
 
 // displayHourlyBreakdown prints the hourly breakdown
@@ -463,7 +463,10 @@ func printTable(data [][]string) {
 }
 
 func (s *Stats) Delete() error {
-	s.List()
+	err := s.List()
+	if err != nil {
+		return err
+	}
 
 	if len(s.Sessions) == 0 {
 		return nil
@@ -478,12 +481,15 @@ func (s *Stats) Delete() error {
 	return s.store.deleteSessions(s.StartTime, s.EndTime)
 }
 
-func (s *Stats) List() {
-	s.getSessions(s.StartTime, s.EndTime)
+func (s *Stats) List() error {
+	err := s.getSessions(s.StartTime, s.EndTime)
+	if err != nil {
+		return err
+	}
 
 	if len(s.Sessions) == 0 {
 		pterm.Info.Println("No sessions found for the time range")
-		return
+		return nil
 	}
 
 	data := make([][]string, len(s.Sessions))
@@ -510,14 +516,20 @@ func (s *Stats) List() {
 	}
 
 	printTable(data)
+
+	return nil
 }
 
 // Show displays the relevant statistics for the
 // set time period.
-func (s *Stats) Show() {
+func (s *Stats) Show() error {
 	defer s.store.close()
 
-	s.getSessions(s.StartTime, s.EndTime)
+	err := s.getSessions(s.StartTime, s.EndTime)
+	if err != nil {
+		return err
+	}
+
 	s.compute()
 
 	startDate := s.StartTime.Format("January 02, 2006")
@@ -538,6 +550,8 @@ func (s *Stats) Show() {
 	s.displayWeeklyBreakdown()
 
 	s.displayHourlyBreakdown()
+
+	return nil
 }
 
 // NewStats returns an instance of Stats constructed

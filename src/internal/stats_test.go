@@ -36,7 +36,10 @@ func getStats(t *testing.T, test *test) *Stats {
 	s.HoursDiff = int(diff.Hours())
 	s.Data = initData(s.StartTime, s.EndTime, s.HoursDiff)
 
-	s.getSessions(s.StartTime, s.EndTime)
+	err := s.getSessions(s.StartTime, s.EndTime)
+	if err != nil {
+		t.Fatalf("Unexpected error while retrieving sessions: %s", err.Error())
+	}
 
 	s.compute()
 

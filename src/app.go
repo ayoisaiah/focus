@@ -115,13 +115,10 @@ func GetApp() *cli.App {
 					}
 
 					if ctx.Bool("list") {
-						stats.List()
-						return nil
+						return stats.List()
 					}
 
-					stats.Show()
-
-					return nil
+					return stats.Show()
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
