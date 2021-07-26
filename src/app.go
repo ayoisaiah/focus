@@ -98,7 +98,7 @@ func GetApp() *cli.App {
 		Commands: []*cli.Command{
 			{
 				Name:  "stats",
-				Usage: "Calculates and displays statistics for pomodoro sessions. Defaults to a reporting period of 7 days",
+				Usage: "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days",
 				Action: func(ctx *cli.Context) error {
 					store, err := focus.NewStore()
 					if err != nil {
@@ -123,27 +123,27 @@ func GetApp() *cli.App {
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "delete",
-						Usage: "Delete the pomodoro sessions within a specified time period",
+						Usage: "Delete the all pomodoro sessions within the specified time period",
 					},
 					&cli.BoolFlag{
 						Name:  "list",
-						Usage: "List all the pomodoro sessions within the a time period",
+						Usage: "List all the pomodoro sessions within the specified time period",
 					},
 					&cli.StringFlag{
 						Name:    "period",
 						Aliases: []string{"p"},
-						Usage:   "The reporting time period (default: 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days",
+						Usage:   "Specify a time period for (defaults to 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time",
 						Value:   "7days",
 					},
 					&cli.StringFlag{
 						Name:    "start",
 						Aliases: []string{"s"},
-						Usage:   "The reporting start date (format: YYYY-MM-DD [HH:MM:SS PM])",
+						Usage:   "Specify a start date in the following format: YYYY-MM-DD [HH:MM:SS PM]",
 					},
 					&cli.StringFlag{
 						Name:    "end",
 						Aliases: []string{"e"},
-						Usage:   "The reporting end date (format: YYYY-MM-DD [HH:MM:SS PM])",
+						Usage:   "Specify an end date in the following format: YYYY-MM-DD [HH:MM:SS PM] (defaults to the current time)",
 					},
 				},
 			},
@@ -177,12 +177,12 @@ func GetApp() *cli.App {
 			&cli.BoolFlag{
 				Name:    "disable-notifications",
 				Aliases: []string{"d"},
-				Usage:   "Disable system notification after a session is completed",
+				Usage:   "Disable the system notification after a session is completed",
 			},
 			&cli.BoolFlag{
 				Name:    "new",
 				Aliases: []string{"n"},
-				Usage:   "Always start a new focus session",
+				Usage:   "Start a new focus session. Using this option prevents the attempt to resume a previously halted session",
 			},
 		},
 		Action: func(ctx *cli.Context) error {
@@ -200,9 +200,6 @@ func GetApp() *cli.App {
 
 				_, _, err = t.GetInterrupted()
 				if err == nil {
-					pterm.Info.Printfln(
-						"Picking up from where you left off...\n",
-					)
 					return t.Resume()
 				}
 			}
@@ -213,9 +210,8 @@ func GetApp() *cli.App {
 			}
 
 			t := focus.NewTimer(ctx, config, store)
-			t.Run()
 
-			return nil
+			return t.Run()
 		},
 	}
 }

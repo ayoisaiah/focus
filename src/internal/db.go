@@ -2,6 +2,7 @@ package focus
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io/fs"
 	"os"
@@ -38,8 +39,8 @@ type Store struct {
 }
 
 // init initialises a BoltDB connection
-// and creates the buckets for storing data
-// if necessary.
+// and creates the necessary buckets for storing data
+// if they do not exist already.
 func (s *Store) init() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -69,6 +70,7 @@ func (s *Store) init() error {
 
 	s.conn = db
 
+	// Create the buckets
 	err = s.conn.Update(func(tx *bolt.Tx) error {
 		_, err = tx.CreateBucketIfNotExists([]byte("sessions"))
 		if err != nil {
@@ -92,7 +94,7 @@ func (s *Store) updateSession(key, value []byte) error {
 }
 
 // saveTimerState persists the current timer settings,
-// and the key of the paused session to the database.
+// and the key of the interrupted session to the database.
 func (s *Store) saveTimerState(timer, sessionKey []byte) error {
 	return s.conn.Update(func(tx *bolt.Tx) error {
 		err := tx.Bucket([]byte("timer")).Put([]byte("timer"), timer)
@@ -101,17 +103,18 @@ func (s *Store) saveTimerState(timer, sessionKey []byte) error {
 		}
 
 		return tx.Bucket([]byte("timer")).
-			Put([]byte("paused_session_key"), sessionKey)
+			Put([]byte("interrrupted_session_key"), sessionKey)
 	})
 }
 
-// getTimerState retrieves the stored timer and session key.
+// getTimerState retrieves the state of the timer as of when it was
+// last interrupted, and the corresponding pomodoro session (if any).
 func (s *Store) getTimerState() (timer, session []byte, err error) {
 	err = s.conn.View(func(tx *bolt.Tx) error {
 		timer = tx.Bucket([]byte("timer")).Get([]byte("timer"))
 
 		sessionKey := tx.Bucket([]byte("timer")).
-			Get([]byte("paused_session_key"))
+			Get([]byte("interrrupted_session_key"))
 
 		session = tx.Bucket([]byte("sessions")).Get(sessionKey)
 
@@ -146,7 +149,8 @@ func (s *Store) close() error {
 	return s.conn.Close()
 }
 
-// deleteTimerState removes the stored timer and session key.
+// deleteTimerState removes the stored timer state and session key.
+// from the database to signify a successful resumption of the session.
 func (s *Store) deleteTimerState() error {
 	return s.conn.Update(func(tx *bolt.Tx) error {
 		err := tx.Bucket([]byte("timer")).Delete([]byte("timer"))
@@ -154,7 +158,7 @@ func (s *Store) deleteTimerState() error {
 			return err
 		}
 
-		return tx.Bucket([]byte("timer")).Delete([]byte("paused_session_key"))
+		return tx.Bucket([]byte("timer")).Delete([]byte("interrrupted_session_key"))
 	})
 }
 
@@ -168,7 +172,30 @@ func (s *Store) getSessions(startTime, endTime time.Time) ([][]byte, error) {
 		min := []byte(startTime.Format(time.RFC3339))
 		max := []byte(endTime.Format(time.RFC3339))
 
-		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
+		//nolint:ineffassign,staticcheck // due to how boltdb works
+		sk, sv := c.Seek(min)
+		// get the previous session so as to check if
+		// it was ended within the specified time bounds
+		pk, pv := c.Prev()
+		if pk != nil {
+			var sess session
+			err := json.Unmarshal(pv, &sess)
+			if err != nil {
+				return err
+			}
+
+			// include session in results if it was ended
+			// in the bounds of the specified time period
+			if !sess.EndTime.Before(startTime) {
+				sk, sv = pk, pv
+			} else {
+				sk, sv = c.Next()
+			}
+		} else {
+			sk, sv = c.Seek(min)
+		}
+
+		for k, v := sk, sv; k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
 			b = append(b, v)
 		}
 
@@ -178,6 +205,7 @@ func (s *Store) getSessions(startTime, endTime time.Time) ([][]byte, error) {
 	return b, err
 }
 
+// NewStore returns a wrapper to a BoltDB connection or an error.
 func NewStore() (*Store, error) {
 	store := &Store{}
 

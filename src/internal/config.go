@@ -17,10 +17,9 @@ const (
 	errReadingInput = Error(
 		"An error occurred while reading input. Please try again",
 	)
-	errExpectedNumber        = Error("Expected a number")
-	errExpectPositiveInteger = Error("Number must be greater than zero")
-	errInitFailed            = Error(
-		"Unable to initialise Focus settings from configuration file",
+	errExpectedInteger = Error("Expected an integer that must be greater than zero")
+	errInitFailed      = Error(
+		"Unable to initialise Focus settings from the configuration file",
 	)
 )
 
@@ -72,11 +71,11 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 
 	num, err := strconv.Atoi(input)
 	if err != nil {
-		return 0, errExpectedNumber
+		return 0, errExpectedInteger
 	}
 
 	if num <= 0 {
-		return 0, errExpectPositiveInteger
+		return 0, errExpectedInteger
 	}
 
 	return num, nil
@@ -285,7 +284,7 @@ func NewConfig() (*Config, error) {
 
 	err := c.init()
 	if err != nil {
-		pterm.Error.Println(errInitFailed, err)
+		return nil, fmt.Errorf("%s: %w", errInitFailed.Error(), err)
 	}
 
 	return c, nil

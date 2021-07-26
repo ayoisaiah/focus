@@ -68,9 +68,9 @@ type session struct {
 	Completed bool `json:"completed"`
 }
 
-// getElapsedTime returns the elapsed time for the session
-// in seconds.
-func (s *session) getElapsedTime() int {
+// getElapsedTimeInSeconds returns the time elapsed
+// for the current session in seconds.
+func (s *session) getElapsedTimeInSeconds() int {
 	var elapsedTimeInSeconds int
 	for _, v := range s.Timeline {
 		elapsedTimeInSeconds += int(v.EndTime.Sub(v.StartTime).Seconds())
@@ -80,30 +80,39 @@ func (s *session) getElapsedTime() int {
 }
 
 // validate ensures that the end time for the current
-// session is does not exceed what is required to
-// complete the session.
+// session does not exceed what is required to
+// complete the session. It mostly helps with normalising
+// the end time when the system is hibernated with
+// a session in progress, and resumed at a later
+// time in the future that surpasses the normal end time.
 func (s *session) validateEndTime() {
-	elapsed := s.getElapsedTime()
+	elapsed := s.getElapsedTimeInSeconds()
 
+	// If the elapsed time is greater than the duration
+	// of the session, the end time must be normalised
+	// to a time that will fulfill the exact duration
+	// of the session
 	if elapsed > s.Duration*60 {
-		// seconds represents the number of seconds elapsed
-		// without the concluding part of the session timeline
-		var seconds int
+		// secondsBeforeLastPart represents the number of seconds
+		// elapsed without including the concluding part of the
+		// session timeline
+		var secondsBeforeLastPart int
 
 		for i := 0; i < len(s.Timeline)-1; i++ {
 			v := s.Timeline[i]
-			seconds += int(v.EndTime.Sub(v.StartTime).Seconds())
+			secondsBeforeLastPart += int(v.EndTime.Sub(v.StartTime).Seconds())
 		}
 
 		// For sessions that have only one part
-		if seconds == 0 {
-			seconds = 60 * s.Duration
+		// secondsBeforeLastPart will be zero
+		if secondsBeforeLastPart == 0 {
+			secondsBeforeLastPart = 60 * s.Duration
 		}
 
 		lastIndex := len(s.Timeline) - 1
 		lastPart := s.Timeline[lastIndex]
 
-		end := lastPart.StartTime.Add(time.Duration(seconds * int(time.Second)))
+		end := lastPart.StartTime.Add(time.Duration(secondsBeforeLastPart * int(time.Second)))
 		s.Timeline[lastIndex].EndTime = end
 		s.EndTime = end
 		s.Completed = true
@@ -151,7 +160,7 @@ func (t *Timer) nextSession() sessionType {
 
 // endSession marks a session as completed
 // and updates it in the database.
-func (t *Timer) endSession(endTime time.Time) {
+func (t *Timer) endSession(endTime time.Time) error {
 	t.Session.Completed = true
 	t.Session.EndTime = endTime
 
@@ -160,15 +169,16 @@ func (t *Timer) endSession(endTime time.Time) {
 
 	err := t.saveSession()
 	if err != nil {
-		pterm.Error.Printfln("%s\n", err)
+		return err
 	}
 
 	t.notify()
+
+	return nil
 }
 
 // getTimeRemaining subtracts the endTime from the currentTime
-// and returns the total number of hours, minutes and seconds
-// left.
+// and returns the total number of minutes and seconds left.
 func (t *Timer) getTimeRemaining(endTime time.Time) countdown {
 	difference := time.Until(endTime)
 	total := int(difference.Seconds())
@@ -234,14 +244,14 @@ func (t *Timer) printSession(endTime time.Time) {
 		text = PrintColor(blue, "[Long break]") + ": " + t.Msg[longBreak]
 	}
 
-	var tf string
+	var timeFormat string
 	if t.TwentyFourHourClock {
-		tf = "15:04:05"
+		timeFormat = "15:04:05"
 	} else {
-		tf = "03:04:05 PM"
+		timeFormat = "03:04:05 PM"
 	}
 
-	fmt.Printf("%s (until %s)\n", text, endTime.Format(tf))
+	fmt.Printf("%s (until %s)\n", text, endTime.Format(timeFormat))
 }
 
 // notify indicates the completion of the session
@@ -275,7 +285,8 @@ func (t *Timer) notify() {
 }
 
 // handleInterruption is used to save the current state
-// of the timer if a pomodoro session is active.
+// of the timer if a pomodoro session is halted before.
+// completion.
 func (t *Timer) handleInterruption() {
 	c := make(chan os.Signal, 1)
 
@@ -325,30 +336,29 @@ func (t *Timer) handleInterruption() {
 	}()
 }
 
-func (t *Timer) Run() {
+func (t *Timer) Run() error {
 	t.handleInterruption()
 
 	if t.SessionType == "" {
 		t.SessionType = pomodoro
 	}
 
-	var endTime time.Time
+	endTime := t.Session.EndTime
 
 	if t.Session.EndTime.IsZero() {
 		var err error
 
 		endTime, err = t.initSession()
 		if err != nil {
-			pterm.Error.Println(err)
-			os.Exit(1)
+			return err
 		}
-	} else {
-		endTime = t.Session.EndTime
 	}
 
-	t.start(endTime)
+	return t.start(endTime)
 }
 
+// GetInterrupted returns a previously stored pomodoro
+// session that was interrupted before completion.
 func (t *Timer) GetInterrupted() (timerBytes, sessionBytes []byte, err error) {
 	timerBytes, sessionBytes, err = t.Store.getTimerState()
 	if err != nil {
@@ -362,10 +372,10 @@ func (t *Timer) GetInterrupted() (timerBytes, sessionBytes []byte, err error) {
 	return
 }
 
-// Resume attempts to continue an interrupted pomodoro session
+// Resume attempts to continue an interrupted session
 // from where it left off. If the interrupted session is not
 // pomodoro, it skips right to the next pomodoro session
-// in the cycle and starts from there.
+// in the cycle, and continues normally from there.
 func (t *Timer) Resume() error {
 	timerBytes, sessionBytes, err := t.GetInterrupted()
 	if err != nil {
@@ -389,9 +399,9 @@ func (t *Timer) Resume() error {
 		// Set to zero value so that a new session is initialised
 		t.Session.EndTime = time.Time{}
 	} else {
-		// Calculate new end time for an interrupted pomodoro
-		// session
-		elapsedTimeInSeconds := t.Session.getElapsedTime()
+		// Calculate a new end time for the interrupted pomodoro
+		// session by
+		elapsedTimeInSeconds := t.Session.getElapsedTimeInSeconds()
 		newEndTime := time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute).Add(-time.Second * time.Duration(elapsedTimeInSeconds))
 
 		t.Session.EndTime = newEndTime
@@ -404,12 +414,10 @@ func (t *Timer) Resume() error {
 
 	err = t.Store.deleteTimerState()
 	if err != nil {
-		pterm.Error.Println(err)
+		return err
 	}
 
-	t.Run()
-
-	return nil
+	return t.Run()
 }
 
 // initSession initialises a new session and saves it
@@ -451,8 +459,12 @@ func (t *Timer) initSession() (time.Time, error) {
 	return endTime, nil
 }
 
-// start begins a new session.
-func (t *Timer) start(endTime time.Time) {
+// start begins a new session.and loops forever,
+// alternating between pomodoro and break sessions
+// unless a maximum number of pomodoro sessions
+// is set, or the current session is terminated
+// manually.
+func (t *Timer) start(endTime time.Time) error {
 	for {
 		t.printSession(endTime)
 
@@ -469,7 +481,11 @@ func (t *Timer) start(endTime time.Time) {
 			timeRemaining = t.getTimeRemaining(endTime)
 
 			if timeRemaining.t <= 0 {
-				t.endSession(endTime)
+				err := t.endSession(endTime)
+				if err != nil {
+					return err
+				}
+
 				break
 			}
 
@@ -477,7 +493,7 @@ func (t *Timer) start(endTime time.Time) {
 		}
 
 		if t.Counter == t.MaxPomodoros {
-			return
+			return nil
 		}
 
 		if t.SessionType != pomodoro && !t.AutoStartPomodoro ||
@@ -499,8 +515,7 @@ func (t *Timer) start(endTime time.Time) {
 
 		endTime, err = t.initSession()
 		if err != nil {
-			pterm.Error.Println(err)
-			os.Exit(1)
+			return err
 		}
 	}
 }
@@ -565,7 +580,7 @@ func NewTimer(ctx *cli.Context, c *Config, store *Store) *Timer {
 		Store:               store,
 	}
 
-	// Command-line flags will override the configuration
+	// Command-line options will override the configuration
 	// file
 	t.setOptions(ctx)
 

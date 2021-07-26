@@ -32,6 +32,8 @@ func init() {
 		os.Exit(1)
 	}
 
+	// copy the application icon to the config folder
+	// if it doesn't exist already
 	pathToIcon := filepath.Join(pathToConfigDir, "icon.png")
 	_, err = os.Stat(pathToIcon)
 
