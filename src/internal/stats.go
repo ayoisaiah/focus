@@ -24,7 +24,8 @@ const (
 
 const (
 	hoursInADay      = 24
-	maxHoursInAMonth = 744 // 31 day months
+	maxHoursInAMonth = 744  // 31 day months
+	maxHoursInAYear  = 8784 // Leap years
 	minutesInAnHour  = 60
 )
 
@@ -48,22 +49,10 @@ const (
 
 var statsPeriod = []timePeriod{periodAllTime, periodToday, periodYesterday, period7Days, period14Days, period30Days, period90Days, period180Days, period365Days}
 
-type pomo struct {
+type quantity struct {
 	minutes   int
 	completed int
 	abandoned int
-}
-
-// contains checks if a string is present in
-// a string slice.
-func contains(s []timePeriod, e timePeriod) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-
-	return false
 }
 
 // getPeriod returns the start and end time according to the
@@ -108,37 +97,45 @@ func getPeriod(period timePeriod) (start, end time.Time) {
 	), end
 }
 
+// Data represents the computed statistics data
+// for the current time period.
 type Data struct {
-	Weekday          map[time.Weekday]*pomo
-	HourofDay        map[int]*pomo
-	History          map[string]*pomo
+	Weekday          map[time.Weekday]*quantity
+	HourofDay        map[int]*quantity
+	History          map[string]*quantity
 	HistoryKeyFormat string
-	Totals           pomo
-	Averages         pomo
+	Totals           quantity
+	Averages         quantity
 }
 
+// initData creates an instance of Data with
+// all its values initialised properly.
 func initData(start, end time.Time, hoursDiff int) *Data {
 	d := &Data{}
 
-	d.Weekday = make(map[time.Weekday]*pomo)
-	d.History = make(map[string]*pomo)
-	d.HourofDay = make(map[int]*pomo)
+	d.Weekday = make(map[time.Weekday]*quantity)
+	d.History = make(map[string]*quantity)
+	d.HourofDay = make(map[int]*quantity)
 
 	for i := 0; i <= 6; i++ {
-		d.Weekday[time.Weekday(i)] = &pomo{}
+		d.Weekday[time.Weekday(i)] = &quantity{}
 	}
 
 	for i := 0; i <= 23; i++ {
-		d.HourofDay[i] = &pomo{}
+		d.HourofDay[i] = &quantity{}
 	}
 
+	// Decide whether to compute the pomodoro history
+	// in terms of days, or months
 	d.HistoryKeyFormat = "January 2006"
 	if hoursDiff > hoursInADay && hoursDiff <= maxHoursInAMonth {
 		d.HistoryKeyFormat = "January 02, 2006"
+	} else if hoursDiff > maxHoursInAYear {
+		d.HistoryKeyFormat = "2006"
 	}
 
 	for date := start; !date.After(end); date = date.Add(time.Duration(hoursInADay) * time.Hour) {
-		d.History[date.Format(d.HistoryKeyFormat)] = &pomo{}
+		d.History[date.Format(d.HistoryKeyFormat)] = &quantity{}
 	}
 
 	return d
@@ -173,63 +170,95 @@ func (d *Data) computeAverages(start, end time.Time) {
 	)
 }
 
-// computeTotals calculates the the computeTotals minutes, completed pomodoros,
-// and abandoned pomodoros per day for the current time period.
-func (d *Data) computeTotals(sessions []session) {
-	for _, v := range sessions {
-		if v.EndTime.IsZero() {
+// calculateSessionDuration returns the session duration in seconds.
+// It ensures that minutes that are not within the bounds of the
+// reporting period, are not included.
+func (d *Data) calculateSessionDuration(s *session, statsStart, statsEnd time.Time) float64 {
+	var seconds float64
+
+	hourly := map[int]float64{}
+	weekday := map[time.Weekday]float64{}
+	daily := map[string]float64{}
+
+	for _, v := range s.Timeline {
+		var durationAdded bool
+
+		for date := v.StartTime; !date.After(v.EndTime); date = date.Add(1 * time.Minute) {
+			// prevent minutes that fall outside the specified bounds
+			// from being included
+			if date.Before(statsStart) || date.After(statsEnd) {
+				continue
+			}
+
+			var end time.Time
+			if date.Add(1 * time.Minute).After(v.EndTime) {
+				end = v.EndTime
+			} else {
+				end = date.Add(1 * time.Minute)
+			}
+
+			secs := end.Sub(date).Seconds()
+
+			hourly[date.Hour()] += secs
+			weekday[date.Weekday()] += secs
+			daily[date.Format(d.HistoryKeyFormat)] += secs
+
+			if !durationAdded {
+				durationAdded = true
+				seconds += v.EndTime.Sub(date).Seconds()
+			}
+		}
+	}
+
+	for k, val := range weekday {
+		d.Weekday[k].minutes += roundTime(val / float64(minutesInAnHour))
+	}
+
+	for k, val := range hourly {
+		d.HourofDay[k].minutes += roundTime(val / float64(minutesInAnHour))
+	}
+
+	for k, val := range daily {
+		if _, exists := d.History[k]; exists {
+			d.History[k].minutes += roundTime(val / float64(minutesInAnHour))
+		}
+	}
+
+	return seconds
+}
+
+// computeTotals calculates the total minutes, completed pomodoros,
+// and abandoned pomodoros for the current time period.
+func (d *Data) computeTotals(sessions []session, startTime, endTime time.Time) {
+	for i := range sessions {
+		s := sessions[i]
+
+		if s.EndTime.IsZero() {
 			continue
 		}
 
-		if v.Completed {
-			d.Weekday[v.StartTime.Weekday()].completed++
-			d.HourofDay[v.StartTime.Hour()].completed++
-			d.History[v.StartTime.Format(d.HistoryKeyFormat)].completed++
+		duration := roundTime(d.calculateSessionDuration(&s, startTime, endTime) / float64(minutesInAnHour))
+
+		if s.Completed {
+			d.Weekday[s.StartTime.Weekday()].completed++
+			d.HourofDay[s.StartTime.Hour()].completed++
+
+			if _, exists := d.History[s.StartTime.Format(d.HistoryKeyFormat)]; exists {
+				d.History[s.StartTime.Format(d.HistoryKeyFormat)].completed++
+			}
+
 			d.Totals.completed++
-			d.Totals.minutes += v.Duration
+			d.Totals.minutes += duration
 		} else {
-			d.Weekday[v.StartTime.Weekday()].abandoned++
-			d.HourofDay[v.StartTime.Hour()].abandoned++
-			d.History[v.StartTime.Format(d.HistoryKeyFormat)].abandoned++
+			d.Weekday[s.StartTime.Weekday()].abandoned++
+			d.HourofDay[s.StartTime.Hour()].abandoned++
+
+			if _, exists := d.History[s.StartTime.Format(d.HistoryKeyFormat)]; exists {
+				d.History[s.StartTime.Format(d.HistoryKeyFormat)].abandoned++
+			}
+
 			d.Totals.abandoned++
-
-			var elapsedTimeInSeconds int
-			for _, v2 := range v.Timeline {
-				elapsedTimeInSeconds += int(v2.EndTime.Sub(v2.StartTime).Seconds())
-			}
-			d.Totals.minutes += roundTime(float64(elapsedTimeInSeconds) / float64(minutesInAnHour))
-		}
-
-		hourly := map[int]float64{}
-		weekday := map[time.Weekday]float64{}
-		daily := map[string]float64{}
-
-		for _, v2 := range v.Timeline {
-			for date := v2.StartTime; !date.After(v2.EndTime); date = date.Add(1 * time.Minute) {
-				var end time.Time
-				if date.Add(1 * time.Minute).After(v2.EndTime) {
-					end = v2.EndTime
-				} else {
-					end = date.Add(1 * time.Minute)
-				}
-
-				hourly[date.Hour()] += end.Sub(date).Seconds()
-				weekday[date.Weekday()] += end.Sub(date).Seconds()
-				daily[date.Format(d.HistoryKeyFormat)] += end.Sub(date).
-					Seconds()
-			}
-		}
-
-		for k, val := range weekday {
-			d.Weekday[k].minutes += roundTime(val / float64(minutesInAnHour))
-		}
-
-		for k, val := range hourly {
-			d.HourofDay[k].minutes += roundTime(val / float64(minutesInAnHour))
-		}
-
-		for k, val := range daily {
-			d.History[k].minutes += roundTime(val / float64(minutesInAnHour))
+			d.Totals.minutes += duration
 		}
 	}
 }
@@ -273,7 +302,7 @@ func (s *Stats) displayHourlyBreakdown() {
 
 	type keyValue struct {
 		key   int
-		value *pomo
+		value *quantity
 	}
 
 	sl := make([]keyValue, 0, len(s.Data.HourofDay))
@@ -319,7 +348,7 @@ func (s *Stats) displayPomodoroHistory() {
 
 	type keyValue struct {
 		key   string
-		value *pomo
+		value *quantity
 	}
 
 	sl := make([]keyValue, 0, len(s.Data.History))
@@ -369,7 +398,7 @@ func (s *Stats) displayWeeklyBreakdown() {
 
 	type keyValue struct {
 		key   time.Weekday
-		value *pomo
+		value *quantity
 	}
 
 	sl := make([]keyValue, 0, len(s.Data.Weekday))
@@ -428,8 +457,8 @@ func (s *Stats) displayAverages() {
 	}
 }
 
-func (s *Stats) displayTotals() {
-	fmt.Printf("%s\n", pterm.LightBlue("Totals"))
+func (s *Stats) displaySummary() {
+	fmt.Printf("%s\n", pterm.LightBlue("Summary"))
 
 	hours, minutes := minsToHoursAndMins(s.Data.Totals.minutes)
 
@@ -446,7 +475,7 @@ func (s *Stats) displayTotals() {
 }
 
 func (s *Stats) compute() {
-	s.Data.computeTotals(s.Sessions)
+	s.Data.computeTotals(s.Sessions, s.StartTime, s.EndTime)
 	s.Data.computeAverages(s.StartTime, s.EndTime)
 }
 
@@ -462,6 +491,10 @@ func printTable(data [][]string) {
 	table.Render()
 }
 
+// Delete attempts to delete all sessions that fall
+// in the specified time range. It requests for
+// confirmation before proceeding with the permanent
+// removal of the sessions from the database.
 func (s *Stats) Delete() error {
 	err := s.List()
 	if err != nil {
@@ -481,6 +514,8 @@ func (s *Stats) Delete() error {
 	return s.store.deleteSessions(s.StartTime, s.EndTime)
 }
 
+// List prints out a table of all the sessions that
+// were created within the specified time range.
 func (s *Stats) List() error {
 	err := s.getSessions(s.StartTime, s.EndTime)
 	if err != nil {
@@ -488,7 +523,7 @@ func (s *Stats) List() error {
 	}
 
 	if len(s.Sessions) == 0 {
-		pterm.Info.Println("No sessions found for the time range")
+		pterm.Info.Println("No sessions found for the specified time range")
 		return nil
 	}
 
@@ -521,7 +556,7 @@ func (s *Stats) List() error {
 }
 
 // Show displays the relevant statistics for the
-// set time period.
+// set time period after making the necessary calculations.
 func (s *Stats) Show() error {
 	defer s.store.close()
 
@@ -530,17 +565,27 @@ func (s *Stats) Show() error {
 		return err
 	}
 
+	if s.StartTime.IsZero() && len(s.Sessions) > 0 {
+		fs := s.Sessions[0].StartTime
+		s.StartTime = time.Date(fs.Year(), fs.Month(), fs.Day(), 0, 0, 0, 0, fs.Location())
+	}
+
+	diff := s.EndTime.Sub(s.StartTime)
+	s.HoursDiff = int(diff.Hours())
+
+	s.Data = initData(s.StartTime, s.EndTime, s.HoursDiff)
+
 	s.compute()
 
-	startDate := s.StartTime.Format("January 02, 2006")
-	endDate := s.EndTime.Format("January 02, 2006")
-	timePeriod := "Reporting period: " + startDate + " - " + endDate
+	reportingStart := s.StartTime.Format("January 02, 2006")
+	reportingEnd := s.EndTime.Format("January 02, 2006")
+	timePeriod := "Reporting period: " + reportingStart + " - " + reportingEnd
 
 	pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgYellow)).
 		WithTextStyle(pterm.NewStyle(pterm.FgBlack)).
 		Printfln(timePeriod)
 
-	s.displayTotals()
+	s.displaySummary()
 	s.displayAverages()
 
 	if s.HoursDiff > hoursInADay {
@@ -576,7 +621,7 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 
 	s.StartTime, s.EndTime = getPeriod(timePeriod(period))
 
-	// start and end arguments override the set period
+	// start and end options will override the set period
 	start := strings.TrimSpace(ctx.String("start"))
 	end := strings.TrimSpace(ctx.String("end"))
 
@@ -589,7 +634,6 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 
 		v, err := time.Parse("2006-1-2 3:4:5 PM", start)
 		if err != nil {
-			fmt.Println(err)
 			return nil, errParsingDate
 		}
 
@@ -613,11 +657,6 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 		return nil, errInvalidDateRange
 	}
 
-	diff := s.EndTime.Sub(s.StartTime)
-	s.HoursDiff = int(diff.Hours())
-
-	s.Data = initData(s.StartTime, s.EndTime, s.HoursDiff)
-
 	return s, nil
 }
 
@@ -633,4 +672,16 @@ func minsToHoursAndMins(val int) (hrs, mins int) {
 	mins = val % minutesInAnHour
 
 	return
+}
+
+// contains checks if a string is present in
+// a string slice.
+func contains(s []timePeriod, e timePeriod) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+
+	return false
 }

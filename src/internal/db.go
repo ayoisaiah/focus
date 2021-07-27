@@ -124,7 +124,8 @@ func (s *Store) getTimerState() (timer, session []byte, err error) {
 	return timer, session, err
 }
 
-// deleteSessions deletes a session from the database.
+// deleteSessions deletes all sessions within the
+// specified bounds from the database.
 func (s *Store) deleteSessions(startTime, endTime time.Time) error {
 	id := startTime.Format(time.RFC3339)
 
@@ -163,7 +164,10 @@ func (s *Store) deleteTimerState() error {
 }
 
 // getSessions retrieves the saved pomodoro sessions
-// within the specified time period.
+// within the specified time period. It checks the previous
+// pomodoro session just before the `startTime` to see if
+// its end time is within the specified bounds. If so, it
+// is included in the output.
 func (s *Store) getSessions(startTime, endTime time.Time) ([][]byte, error) {
 	var b [][]byte
 
