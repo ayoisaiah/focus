@@ -99,3 +99,56 @@ func TestTimerInitSession(t *testing.T) {
 		}
 	}
 }
+
+func TestSessionValidateEndTime(t *testing.T) {
+	type testCase struct {
+		startTime      string
+		correctEndTime string
+	}
+
+	cases := []testCase{
+		{
+			startTime:      "2021-03-24T06:43:00Z",
+			correctEndTime: "2021-03-24T09:25:00Z",
+		},
+		{
+			startTime:      "2021-04-27T07:27:00Z",
+			correctEndTime: "2021-04-27T08:10:00Z",
+		},
+		{
+			startTime:      "2021-02-05T08:48:00Z",
+			correctEndTime: "2021-02-05T12:41:00Z",
+		},
+		{
+			startTime:      "2021-04-20T09:16:00Z",
+			correctEndTime: "2021-04-20T10:04:00Z",
+		},
+	}
+
+	for _, v := range cases {
+		t.Run(v.startTime, func(t *testing.T) {
+			b, err := os.ReadFile("../../testdata/bad_end_time.json")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			ss := []session{}
+
+			err = json.Unmarshal(b, &ss)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, v2 := range ss {
+				if v.startTime == v2.StartTime.Format(time.RFC3339) {
+					v2.validateEndTime()
+
+					got := v2.EndTime.Format(time.RFC3339)
+					if got != v.correctEndTime {
+						t.Fatalf("Expected end time to be: %s, but got: %s", v.correctEndTime, got)
+					}
+				}
+			}
+		})
+	}
+}

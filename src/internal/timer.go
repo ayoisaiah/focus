@@ -103,16 +103,11 @@ func (s *session) validateEndTime() {
 			secondsBeforeLastPart += int(v.EndTime.Sub(v.StartTime).Seconds())
 		}
 
-		// For sessions that have only one part
-		// secondsBeforeLastPart will be zero
-		if secondsBeforeLastPart == 0 {
-			secondsBeforeLastPart = 60 * s.Duration
-		}
-
 		lastIndex := len(s.Timeline) - 1
 		lastPart := s.Timeline[lastIndex]
 
-		end := lastPart.StartTime.Add(time.Duration(secondsBeforeLastPart * int(time.Second)))
+		secondsLeft := (60 * s.Duration) - secondsBeforeLastPart
+		end := lastPart.StartTime.Add(time.Duration(secondsLeft * int(time.Second)))
 		s.Timeline[lastIndex].EndTime = end
 		s.EndTime = end
 		s.Completed = true
