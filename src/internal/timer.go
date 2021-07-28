@@ -176,7 +176,7 @@ func (t *Timer) endSession(endTime time.Time) error {
 // and returns the total number of minutes and seconds left.
 func (t *Timer) getTimeRemaining(endTime time.Time) countdown {
 	difference := time.Until(endTime)
-	total := int(difference.Seconds())
+	total := roundTime(difference.Seconds())
 	minutes := total / 60
 	seconds := total % 60
 

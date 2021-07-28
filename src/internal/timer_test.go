@@ -3,6 +3,7 @@ package focus
 import (
 	"encoding/json"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -96,6 +97,29 @@ func TestTimerInitSession(t *testing.T) {
 
 		if float64(v.duration) != got {
 			t.Errorf("Expected: %d, but got: %f", v.duration, got)
+		}
+	}
+}
+
+func TestTimerGetTimeRemaining(t *testing.T) {
+	cases := []countdown{
+		{1827, 30, 27},
+		{3232, 53, 52},
+		{100, 1, 40},
+		{360, 6, 0},
+		{0, 0, 0},
+		{-20, 0, -20},
+		{-765, -12, -45},
+	}
+
+	for _, v := range cases {
+		timer := &Timer{}
+		endTime := time.Now().Add(time.Duration(v.t * int(time.Second)))
+
+		got := timer.getTimeRemaining(endTime)
+
+		if !reflect.DeepEqual(v, got) {
+			t.Fatalf("Expected: %v, but got: %v", v, got)
 		}
 	}
 }
