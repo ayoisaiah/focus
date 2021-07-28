@@ -394,7 +394,7 @@ func (s *Stats) displayPomodoroHistory() {
 // displayWeeklyBreakdown prints the weekly breakdown
 // for the current time period.
 func (s *Stats) displayWeeklyBreakdown() {
-	fmt.Printf("\n%s\n", pterm.LightBlue("Weekly breakdown (minutes)"))
+	fmt.Printf("\n%s", pterm.LightBlue("Weekly breakdown (minutes)"))
 
 	type keyValue struct {
 		key   time.Weekday
@@ -637,7 +637,9 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 			return nil, errParsingDate
 		}
 
-		s.StartTime = v
+		// Using time.Date allows setting the correct time zone
+		// instead of UTC time
+		s.StartTime = time.Date(v.Year(), v.Month(), v.Day(), v.Hour(), v.Minute(), v.Second(), 0, time.Now().Location())
 	}
 
 	if end != "" {
@@ -650,7 +652,7 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 			return nil, errParsingDate
 		}
 
-		s.EndTime = v
+		s.EndTime = time.Date(v.Year(), v.Month(), v.Day(), v.Hour(), v.Minute(), v.Second(), 0, time.Now().Location())
 	}
 
 	if int(s.EndTime.Sub(s.StartTime).Seconds()) < 0 {
