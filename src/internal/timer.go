@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -156,6 +157,8 @@ func (t *Timer) nextSession() sessionType {
 // endSession marks a session as completed
 // and updates it in the database.
 func (t *Timer) endSession(endTime time.Time) error {
+	fmt.Printf("Session completed!\n\n")
+
 	t.Session.Completed = true
 	t.Session.EndTime = endTime
 
@@ -167,7 +170,9 @@ func (t *Timer) endSession(endTime time.Time) error {
 		return err
 	}
 
-	t.notify()
+	if t.ShowNotification {
+		t.notify()
+	}
 
 	return nil
 }
@@ -211,7 +216,7 @@ func (t *Timer) saveSession() error {
 
 // printSession writes the details of the current
 // session to the standard output.
-func (t *Timer) printSession(endTime time.Time) {
+func (t *Timer) printSession(endTime time.Time, w io.Writer) {
 	var text string
 
 	switch t.SessionType {
@@ -246,36 +251,31 @@ func (t *Timer) printSession(endTime time.Time) {
 		timeFormat = "03:04:05 PM"
 	}
 
-	fmt.Printf("%s (until %s)\n", text, endTime.Format(timeFormat))
+	fmt.Fprintf(w, "%s (until %s)\n", text, endTime.Format(timeFormat))
 }
 
-// notify indicates the completion of the session
-// and sends a desktop notification if enabled.
+// notify sends a desktop notification.
 func (t *Timer) notify() {
-	fmt.Printf("Session completed!\n\n")
-
 	m := map[sessionType]string{
 		pomodoro:   "Pomodoro",
 		shortBreak: "Short break",
 		longBreak:  "Long break",
 	}
 
-	if t.ShowNotification {
-		msg := m[t.SessionType] + " is finished"
+	msg := m[t.SessionType] + " is finished"
 
-		var pathToIcon string
+	var pathToIcon string
 
-		homeDir, _ := os.UserHomeDir()
-		if homeDir != "" {
-			pathToIcon = filepath.Join(homeDir, configPath, "icon.png")
-		}
+	homeDir, _ := os.UserHomeDir()
+	if homeDir != "" {
+		pathToIcon = filepath.Join(homeDir, configPath, "icon.png")
+	}
 
-		err := beeep.Notify(msg, t.Msg[t.nextSession()], pathToIcon)
-		if err != nil {
-			pterm.Error.Println(
-				fmt.Errorf("Unable to display notification: %w", err),
-			)
-		}
+	err := beeep.Notify(msg, t.Msg[t.nextSession()], pathToIcon)
+	if err != nil {
+		pterm.Error.Println(
+			fmt.Errorf("Unable to display notification: %w", err),
+		)
 	}
 }
 
@@ -461,7 +461,7 @@ func (t *Timer) initSession() (time.Time, error) {
 // manually.
 func (t *Timer) start(endTime time.Time) error {
 	for {
-		t.printSession(endTime)
+		t.printSession(endTime, os.Stdout)
 
 		fmt.Print("\033[s")
 

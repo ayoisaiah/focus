@@ -1,9 +1,12 @@
 package focus
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -69,10 +72,10 @@ func (d *DBMock) close() error {
 	return nil
 }
 
-// TestTimerInitSession confirms that the endtime
+// TestTimer_InitSession confirms that the endtime
 // is perfectly distanced from the start time
 // by the specified amount of minutes.
-func TestTimerInitSession(t *testing.T) {
+func TestTimer_InitSession(t *testing.T) {
 	table := []struct {
 		duration int
 	}{
@@ -101,7 +104,90 @@ func TestTimerInitSession(t *testing.T) {
 	}
 }
 
-func TestTimerGetTimeRemaining(t *testing.T) {
+func TestTimer_GetNextSession(t *testing.T) {
+	type testCase struct {
+		input             sessionType
+		output            sessionType
+		longBreakInterval int
+		pomodoroCycle     int
+	}
+
+	cases := []testCase{
+		{pomodoro, shortBreak, 4, 2},
+		{shortBreak, pomodoro, 4, 1},
+		{longBreak, pomodoro, 4, 4},
+		{pomodoro, longBreak, 4, 4},
+	}
+
+	for _, v := range cases {
+		timer := &Timer{
+			LongBreakInterval: v.longBreakInterval,
+			PomodoroCycle:     v.pomodoroCycle,
+			SessionType:       v.input,
+		}
+
+		got := timer.nextSession()
+
+		if got != v.output {
+			t.Fatalf("Expected next session to be: %s, but got: %s", v.output, got)
+		}
+	}
+}
+
+func TestTimer_PrintSession(t *testing.T) {
+	type testCase struct {
+		endTime             string
+		sessionType         sessionType
+		maxPomodoros        int
+		pomodoroCycle       int
+		longBreakInterval   int
+		twentyFourHourClock bool
+		expected            string
+	}
+
+	c := &Config{}
+	c.defaults(false)
+
+	cases := []testCase{
+		{"2021-06-13T13:50:00Z", pomodoro, 0, 2, 4, false, fmt.Sprintf("%s: %s (until 01:50:00 PM)", PrintColor(green, "[Pomodoro 2/4]"), c.PomodoroMessage)},
+		{"2021-06-18T20:00:00Z", pomodoro, 8, 4, 4, true, fmt.Sprintf("%s: %s (until 20:00:00)", PrintColor(green, "[Pomodoro 4/8]"), c.PomodoroMessage)},
+		{"2021-07-01T00:10:00Z", shortBreak, 0, 1, 4, false, fmt.Sprintf("%s: %s (until 12:10:00 AM)", PrintColor(yellow, "[Short break]"), c.ShortBreakMessage)},
+		{"2021-07-01T15:43:00Z", longBreak, 0, 4, 4, false, fmt.Sprintf("%s: %s (until 03:43:00 PM)", PrintColor(blue, "[Long break]"), c.LongBreakMessage)},
+	}
+
+	for _, v := range cases {
+		timer := &Timer{
+			MaxPomodoros:        v.maxPomodoros,
+			LongBreakInterval:   v.longBreakInterval,
+			PomodoroCycle:       v.pomodoroCycle,
+			Counter:             v.pomodoroCycle,
+			TwentyFourHourClock: v.twentyFourHourClock,
+			SessionType:         v.sessionType,
+			Msg: message{
+				pomodoro:   c.PomodoroMessage,
+				shortBreak: c.ShortBreakMessage,
+				longBreak:  c.LongBreakMessage,
+			},
+		}
+
+		endTime, err := time.Parse(time.RFC3339, v.endTime)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var buf bytes.Buffer
+
+		timer.printSession(endTime, &buf)
+
+		got := strings.TrimSpace(buf.String())
+
+		if got != v.expected {
+			t.Fatalf("Expected print session output to be: '%s', but got: '%s'", v.expected, got)
+		}
+	}
+}
+
+func TestTimer_GetTimeRemaining(t *testing.T) {
 	cases := []countdown{
 		{1827, 30, 27},
 		{3232, 53, 52},
@@ -124,7 +210,7 @@ func TestTimerGetTimeRemaining(t *testing.T) {
 	}
 }
 
-func TestSessionValidateEndTime(t *testing.T) {
+func TestSession_ValidateEndTime(t *testing.T) {
 	type testCase struct {
 		startTime      string
 		correctEndTime string
