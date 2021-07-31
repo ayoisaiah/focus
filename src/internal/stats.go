@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"sort"
@@ -433,38 +434,41 @@ func (s *Stats) displayWeeklyBreakdown() {
 	}
 }
 
-func (s *Stats) displayAverages() {
+func (s *Stats) displayAverages(w io.Writer) {
 	hoursDiff := roundTime(s.EndTime.Sub(s.StartTime).Hours())
 
 	if hoursDiff > hoursInADay {
-		fmt.Printf("\n%s\n", pterm.LightBlue("Averages"))
+		fmt.Fprintf(w, "\n%s\n", pterm.LightBlue("Averages"))
 
 		hours, minutes := minsToHoursAndMins(s.Data.Averages.minutes)
 
-		fmt.Println(
-			"Averaged time logged:",
+		fmt.Fprintln(
+			w,
+			"Average time logged per day:",
 			pterm.Green(hours),
 			pterm.Green("hours"),
 			pterm.Green(minutes),
 			pterm.Green("minutes"),
 		)
-		fmt.Println(
+		fmt.Fprintln(
+			w,
 			"Completed pomodoros per day:",
 			pterm.Green(s.Data.Averages.completed),
 		)
-		fmt.Println(
+		fmt.Fprintln(
+			w,
 			"Abandoned pomodoros per day:",
 			pterm.Green(s.Data.Averages.abandoned),
 		)
 	}
 }
 
-func (s *Stats) displaySummary() {
-	fmt.Printf("%s\n", pterm.LightBlue("Summary"))
+func (s *Stats) displaySummary(w io.Writer) {
+	fmt.Fprintf(w, "%s\n", pterm.LightBlue("Summary"))
 
 	hours, minutes := minsToHoursAndMins(s.Data.Totals.minutes)
 
-	fmt.Printf(
+	fmt.Fprintf(w,
 		"Total time logged: %s %s %s %s\n",
 		pterm.Green(hours),
 		pterm.Green("hours"),
@@ -472,8 +476,8 @@ func (s *Stats) displaySummary() {
 		pterm.Green("minutes"),
 	)
 
-	fmt.Println("Pomodoros completed:", pterm.Green(s.Data.Totals.completed))
-	fmt.Println("Pomodoros abandoned:", pterm.Green(s.Data.Totals.abandoned))
+	fmt.Fprintln(w, "Pomodoros completed:", pterm.Green(s.Data.Totals.completed))
+	fmt.Fprintln(w, "Pomodoros abandoned:", pterm.Green(s.Data.Totals.abandoned))
 }
 
 func (s *Stats) compute() {
@@ -587,8 +591,8 @@ func (s *Stats) Show() error {
 		WithTextStyle(pterm.NewStyle(pterm.FgBlack)).
 		Printfln(timePeriod)
 
-	s.displaySummary()
-	s.displayAverages()
+	s.displaySummary(os.Stdout)
+	s.displayAverages(os.Stdout)
 
 	if s.HoursDiff > hoursInADay {
 		s.displayPomodoroHistory()
