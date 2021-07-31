@@ -58,27 +58,29 @@ type quantity struct {
 // getPeriod returns the start and end time according to the
 // specified time period.
 func getPeriod(period timePeriod) (start, end time.Time) {
-	end = time.Now()
+	now := time.Now()
+
+	end = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
 
 	switch period {
 	case periodToday:
-		start = time.Now()
+		start = now
 	case periodYesterday:
-		start = time.Now().AddDate(0, 0, -1)
+		start = now.AddDate(0, 0, -1)
 		year, month, day := start.Date()
 		end = time.Date(year, month, day, 23, 59, 59, 0, start.Location())
 	case period7Days:
-		start = time.Now().AddDate(0, 0, -6)
+		start = now.AddDate(0, 0, -6)
 	case period14Days:
-		start = time.Now().AddDate(0, 0, -13)
+		start = now.AddDate(0, 0, -13)
 	case period30Days:
-		start = time.Now().AddDate(0, 0, -29)
+		start = now.AddDate(0, 0, -29)
 	case period90Days:
-		start = time.Now().AddDate(0, 0, -89)
+		start = now.AddDate(0, 0, -89)
 	case period180Days:
-		start = time.Now().AddDate(0, 0, -179)
+		start = now.AddDate(0, 0, -179)
 	case period365Days:
-		start = time.Now().AddDate(0, 0, -364)
+		start = now.AddDate(0, 0, -364)
 	case periodAllTime:
 		return start, end
 	default:

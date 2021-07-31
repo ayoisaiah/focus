@@ -111,3 +111,62 @@ func TestStats(t *testing.T) {
 		}
 	}
 }
+
+func TestGetPeriod(t *testing.T) {
+	type testCase struct {
+		period   timePeriod
+		minsDiff int
+	}
+
+	zero := time.Time{}
+	now := time.Now()
+
+	cases := []testCase{
+		{
+			periodAllTime,
+			roundTime(now.Sub(zero).Minutes()),
+		},
+		{
+			periodToday,
+			1440,
+		},
+		{
+			periodYesterday,
+			1440,
+		},
+		{
+			period7Days,
+			10080,
+		},
+		{
+			period14Days,
+			20160,
+		},
+		{
+			period30Days,
+			43200,
+		},
+		{
+			period90Days,
+			129600,
+		},
+		{
+			period180Days,
+			259200,
+		},
+		{
+			period365Days,
+			525600,
+		},
+	}
+
+	for _, v := range cases {
+		start, end := getPeriod(v.period)
+
+		got := roundTime(end.Sub(start).Minutes())
+
+		if got != v.minsDiff {
+			t.Fatalf("Expected period '%s' to yield: %d but got: %d", v.period, v.minsDiff, got)
+		}
+	}
+}
