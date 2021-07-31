@@ -536,9 +536,9 @@ func (s *Stats) List() error {
 	data := make([][]string, len(s.Sessions))
 
 	for i, v := range s.Sessions {
-		statusText := PrintColor("green", "completed")
+		statusText := pterm.Green("completed")
 		if !v.Completed {
-			statusText = PrintColor("red", "abandoned")
+			statusText = pterm.Red("abandoned")
 		}
 
 		endDate := v.EndTime.Format("Jan 02, 2006 03:04 PM")

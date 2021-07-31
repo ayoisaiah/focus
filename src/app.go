@@ -77,7 +77,7 @@ func checkForUpdates(app *cli.App) {
 			app.Name,
 		)
 	} else {
-		pterm.Info.Printf("%s: %s at %s\n", focus.PrintColor("green", "Update available"), version, resp.Request.URL.String())
+		pterm.Info.Printf("%s: %s at %s\n", pterm.LightGreen("Update available"), version, resp.Request.URL.String())
 	}
 }
 

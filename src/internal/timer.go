@@ -234,14 +234,14 @@ func (t *Timer) printSession(endTime time.Time, w io.Writer) {
 		}
 
 		text = fmt.Sprintf(
-			PrintColor(green, "[Pomodoro %d/%d]"),
+			pterm.Green("[Pomodoro %d/%d]"),
 			count,
 			total,
 		) + ": " + t.Msg[pomodoro]
 	case shortBreak:
-		text = PrintColor(yellow, "[Short break]") + ": " + t.Msg[shortBreak]
+		text = pterm.LightBlue("[Short break]") + ": " + t.Msg[shortBreak]
 	case longBreak:
-		text = PrintColor(blue, "[Long break]") + ": " + t.Msg[longBreak]
+		text = pterm.LightMagenta("[Long break]") + ": " + t.Msg[longBreak]
 	}
 
 	var timeFormat string

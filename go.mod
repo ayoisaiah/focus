@@ -5,7 +5,6 @@ go 1.16
 require (
 	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
-	github.com/gookit/color v1.4.2
 	github.com/gopherjs/gopherjs v0.0.0-20210707094841-eea289f08d45 // indirect
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pterm/pterm v0.12.28
