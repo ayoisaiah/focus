@@ -50,26 +50,26 @@ func TestStats(t *testing.T) {
 	cases := []test{
 		{
 			period: "all-time",
-			totals: totals{21400, 257, 243},
+			totals: totals{18611, 391, 109},
 			count:  500,
 		},
 		{
 			start:  time.Date(2021, 1, 1, 0, 0, 0, 0, &time.Location{}),
 			end:    time.Date(2021, 1, 31, 23, 59, 59, 0, &time.Location{}),
-			count:  85,
-			totals: totals{3576, 50, 35},
+			count:  96,
+			totals: totals{3584, 76, 20},
 		},
 		{
 			start:  time.Date(2021, 3, 7, 0, 0, 0, 0, &time.Location{}),
 			end:    time.Date(2021, 3, 15, 23, 59, 59, 0, &time.Location{}),
-			count:  19,
-			totals: totals{696, 10, 9},
+			count:  24,
+			totals: totals{1000, 23, 1},
 		},
 		{
 			start:  time.Date(2021, 6, 1, 0, 0, 0, 0, &time.Location{}),
 			end:    time.Date(2021, 7, 15, 23, 59, 59, 0, &time.Location{}),
-			count:  83,
-			totals: totals{3419, 39, 44},
+			count:  77,
+			totals: totals{2854, 59, 18},
 		},
 	}
 
