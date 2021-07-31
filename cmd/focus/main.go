@@ -17,6 +17,10 @@ const configPath = ".config/focus"
 var icon []byte
 
 func init() {
+	if _, ok := os.LookupEnv("NO_COLOR"); ok {
+		pterm.DisableColor()
+	}
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		pterm.Error.Println(err)
