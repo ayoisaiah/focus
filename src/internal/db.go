@@ -159,7 +159,8 @@ func (s *Store) deleteTimerState() error {
 			return err
 		}
 
-		return tx.Bucket([]byte("timer")).Delete([]byte("interrrupted_session_key"))
+		return tx.Bucket([]byte("timer")).
+			Delete([]byte("interrrupted_session_key"))
 	})
 }
 

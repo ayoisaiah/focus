@@ -129,7 +129,11 @@ func TestTimer_GetNextSession(t *testing.T) {
 		got := timer.nextSession()
 
 		if got != v.output {
-			t.Fatalf("Expected next session to be: %s, but got: %s", v.output, got)
+			t.Fatalf(
+				"Expected next session to be: %s, but got: %s",
+				v.output,
+				got,
+			)
 		}
 	}
 }
@@ -149,10 +153,54 @@ func TestTimer_PrintSession(t *testing.T) {
 	c.defaults(false)
 
 	cases := []testCase{
-		{"2021-06-13T13:50:00Z", pomodoro, 0, 2, 4, false, fmt.Sprintf("[Pomodoro 2/4]: %s (until 01:50:00 PM)", c.PomodoroMessage)},
-		{"2021-06-18T20:00:00Z", pomodoro, 8, 4, 4, true, fmt.Sprintf("[Pomodoro 4/8]: %s (until 20:00:00)", c.PomodoroMessage)},
-		{"2021-07-01T00:10:00Z", shortBreak, 0, 1, 4, false, fmt.Sprintf("[Short break]: %s (until 12:10:00 AM)", c.ShortBreakMessage)},
-		{"2021-07-01T15:43:00Z", longBreak, 0, 4, 4, false, fmt.Sprintf("[Long break]: %s (until 03:43:00 PM)", c.LongBreakMessage)},
+		{
+			"2021-06-13T13:50:00Z",
+			pomodoro,
+			0,
+			2,
+			4,
+			false,
+			fmt.Sprintf(
+				"[Pomodoro 2/4]: %s (until 01:50:00 PM)",
+				c.PomodoroMessage,
+			),
+		},
+		{
+			"2021-06-18T20:00:00Z",
+			pomodoro,
+			8,
+			4,
+			4,
+			true,
+			fmt.Sprintf(
+				"[Pomodoro 4/8]: %s (until 20:00:00)",
+				c.PomodoroMessage,
+			),
+		},
+		{
+			"2021-07-01T00:10:00Z",
+			shortBreak,
+			0,
+			1,
+			4,
+			false,
+			fmt.Sprintf(
+				"[Short break]: %s (until 12:10:00 AM)",
+				c.ShortBreakMessage,
+			),
+		},
+		{
+			"2021-07-01T15:43:00Z",
+			longBreak,
+			0,
+			4,
+			4,
+			false,
+			fmt.Sprintf(
+				"[Long break]: %s (until 03:43:00 PM)",
+				c.LongBreakMessage,
+			),
+		},
 	}
 
 	for _, v := range cases {
@@ -182,7 +230,11 @@ func TestTimer_PrintSession(t *testing.T) {
 		got := strings.TrimSpace(buf.String())
 
 		if got != v.expected {
-			t.Fatalf("Expected print session output to be: '%s', but got: '%s'", v.expected, got)
+			t.Fatalf(
+				"Expected print session output to be: '%s', but got: '%s'",
+				v.expected,
+				got,
+			)
 		}
 	}
 }
@@ -255,7 +307,11 @@ func TestSession_ValidateEndTime(t *testing.T) {
 
 					got := v2.EndTime.Format(time.RFC3339)
 					if got != v.correctEndTime {
-						t.Fatalf("Expected end time to be: %s, but got: %s", v.correctEndTime, got)
+						t.Fatalf(
+							"Expected end time to be: %s, but got: %s",
+							v.correctEndTime,
+							got,
+						)
 					}
 				}
 			}

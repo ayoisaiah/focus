@@ -275,14 +275,20 @@ func TestStats_Show(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		header := "Reporting period: " + s.StartTime.Format("January 02, 2006") + " - " + s.EndTime.Format("January 02, 2006") + "\n\n"
+		header := "Reporting period: " + s.StartTime.Format(
+			"January 02, 2006",
+		) + " - " + s.EndTime.Format(
+			"January 02, 2006",
+		) + "\n\n"
 		summary := getSummary(&v)
 		averages := getAverages(&v)
 		history := getHistory(s)
 		weekly := getWeekly(s)
 		hourly := getHourly(s)
 
-		expected := strings.TrimSpace(fmt.Sprint(header, summary, averages, history, weekly, hourly))
+		expected := strings.TrimSpace(
+			fmt.Sprint(header, summary, averages, history, weekly, hourly),
+		)
 
 		got := strings.TrimSpace(buf.String())
 

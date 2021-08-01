@@ -17,8 +17,10 @@ const (
 	errReadingInput = Error(
 		"An error occurred while reading input. Please try again",
 	)
-	errExpectedInteger = Error("Expected an integer that must be greater than zero")
-	errInitFailed      = Error(
+	errExpectedInteger = Error(
+		"Expected an integer that must be greater than zero",
+	)
+	errInitFailed = Error(
 		"Unable to initialise Focus settings from the configuration file",
 	)
 )
