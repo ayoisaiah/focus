@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	focus "github.com/ayoisaiah/focus/src/internal"
@@ -111,14 +112,14 @@ func GetApp() *cli.App {
 					}
 
 					if ctx.Bool("delete") {
-						return stats.Delete()
+						return stats.Delete(os.Stdout, os.Stdin)
 					}
 
 					if ctx.Bool("list") {
-						return stats.List()
+						return stats.List(os.Stdout)
 					}
 
-					return stats.Show()
+					return stats.Show(os.Stdout)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{

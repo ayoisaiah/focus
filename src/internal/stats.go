@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/pterm/pterm"
-	"github.com/urfave/cli/v2"
 )
 
 const (
-	errParsingDate      = Error("The specified date format must be: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS PM")
+	errParsingDate = Error(
+		"The specified date format must be: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS PM",
+	)
 	errInvalidDateRange = Error(
 		"The end date must not be earlier than the start date",
 	)
@@ -61,7 +61,16 @@ type quantity struct {
 func getPeriod(period timePeriod) (start, end time.Time) {
 	now := time.Now()
 
-	end = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+	end = time.Date(
+		now.Year(),
+		now.Month(),
+		now.Day(),
+		23,
+		59,
+		59,
+		0,
+		now.Location(),
+	)
 
 	switch period {
 	case periodToday:
@@ -176,7 +185,10 @@ func (d *Data) computeAverages(start, end time.Time) {
 // calculateSessionDuration returns the session duration in seconds.
 // It ensures that minutes that are not within the bounds of the
 // reporting period, are not included.
-func (d *Data) calculateSessionDuration(s *session, statsStart, statsEnd time.Time) float64 {
+func (d *Data) calculateSessionDuration(
+	s *session,
+	statsStart, statsEnd time.Time,
+) float64 {
 	var seconds float64
 
 	hourly := map[int]float64{}
@@ -240,7 +252,15 @@ func (d *Data) computeTotals(sessions []session, startTime, endTime time.Time) {
 			continue
 		}
 
-		duration := roundTime(d.calculateSessionDuration(&s, startTime, endTime) / float64(minutesInAnHour))
+		duration := roundTime(
+			d.calculateSessionDuration(
+				&s,
+				startTime,
+				endTime,
+			) / float64(
+				minutesInAnHour,
+			),
+		)
 
 		if s.Completed {
 			d.Weekday[s.StartTime.Weekday()].completed++
@@ -300,8 +320,8 @@ func (s *Stats) getSessions(start, end time.Time) error {
 
 // displayHourlyBreakdown prints the hourly breakdown
 // for the current time period.
-func (s *Stats) displayHourlyBreakdown() {
-	fmt.Printf("\n%s", pterm.LightBlue("Hourly breakdown (minutes)"))
+func (s *Stats) displayHourlyBreakdown(w io.Writer) {
+	fmt.Fprintf(w, "\n%s", pterm.LightBlue("Hourly breakdown (minutes)"))
 
 	type keyValue struct {
 		key   int
@@ -330,24 +350,27 @@ func (s *Stats) displayHourlyBreakdown() {
 		})
 	}
 
-	err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).
+	chart, err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).
 		WithHorizontal().
 		WithShowValue().
 		WithBars(bars).
-		Render()
+		Srender()
 	if err != nil {
 		pterm.Error.Println(err)
+		return
 	}
+
+	fmt.Fprintln(w, chart)
 }
 
 // displayPomodoroHistory prints the appropriate bar graph
 // for the current time period.
-func (s *Stats) displayPomodoroHistory() {
+func (s *Stats) displayPomodoroHistory(w io.Writer) {
 	if s.Data.Totals.minutes == 0 {
 		return
 	}
 
-	fmt.Printf("\n%s", pterm.LightBlue("Pomodoro history (minutes)"))
+	fmt.Fprintf(w, "\n%s", pterm.LightBlue("Pomodoro history (minutes)"))
 
 	type keyValue struct {
 		key   string
@@ -384,20 +407,23 @@ func (s *Stats) displayPomodoroHistory() {
 		})
 	}
 
-	err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).
+	chart, err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).
 		WithHorizontal().
 		WithShowValue().
 		WithBars(bars).
-		Render()
+		Srender()
 	if err != nil {
 		pterm.Error.Println(err)
+		return
 	}
+
+	fmt.Fprintln(w, chart)
 }
 
 // displayWeeklyBreakdown prints the weekly breakdown
 // for the current time period.
-func (s *Stats) displayWeeklyBreakdown() {
-	fmt.Printf("\n%s", pterm.LightBlue("Weekly breakdown (minutes)"))
+func (s *Stats) displayWeeklyBreakdown(w io.Writer) {
+	fmt.Fprintf(w, "\n%s", pterm.LightBlue("Weekly breakdown (minutes)"))
 
 	type keyValue struct {
 		key   time.Weekday
@@ -424,14 +450,17 @@ func (s *Stats) displayWeeklyBreakdown() {
 		})
 	}
 
-	err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).
+	chart, err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).
 		WithHorizontal().
 		WithShowValue().
 		WithBars(bars).
-		Render()
+		Srender()
 	if err != nil {
 		pterm.Error.Println(err)
+		return
 	}
+
+	fmt.Fprintln(w, chart)
 }
 
 func (s *Stats) displayAverages(w io.Writer) {
@@ -476,8 +505,16 @@ func (s *Stats) displaySummary(w io.Writer) {
 		pterm.Green("minutes"),
 	)
 
-	fmt.Fprintln(w, "Pomodoros completed:", pterm.Green(s.Data.Totals.completed))
-	fmt.Fprintln(w, "Pomodoros abandoned:", pterm.Green(s.Data.Totals.abandoned))
+	fmt.Fprintln(
+		w,
+		"Pomodoros completed:",
+		pterm.Green(s.Data.Totals.completed),
+	)
+	fmt.Fprintln(
+		w,
+		"Pomodoros abandoned:",
+		pterm.Green(s.Data.Totals.abandoned),
+	)
 }
 
 func (s *Stats) compute() {
@@ -485,8 +522,8 @@ func (s *Stats) compute() {
 	s.Data.computeAverages(s.StartTime, s.EndTime)
 }
 
-func printTable(data [][]string) {
-	table := tablewriter.NewWriter(os.Stdout)
+func printTable(data [][]string, w io.Writer) {
+	table := tablewriter.NewWriter(w)
 	table.SetHeader([]string{"#", "Start date", "End date", "Status"})
 	table.SetAutoWrapText(false)
 
@@ -501,8 +538,8 @@ func printTable(data [][]string) {
 // in the specified time range. It requests for
 // confirmation before proceeding with the permanent
 // removal of the sessions from the database.
-func (s *Stats) Delete() error {
-	err := s.List()
+func (s *Stats) Delete(w io.Writer, r io.Reader) error {
+	err := s.List(w)
 	if err != nil {
 		return err
 	}
@@ -511,9 +548,12 @@ func (s *Stats) Delete() error {
 		return nil
 	}
 
-	pterm.Warning.Print("The above sessions will be deleted permanently. Press ENTER to proceed")
+	warning := pterm.Warning.Sprint(
+		"The above sessions will be deleted permanently. Press ENTER to proceed",
+	)
+	fmt.Fprint(w, warning)
 
-	reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewReader(r)
 
 	_, _ = reader.ReadString('\n')
 
@@ -522,7 +562,7 @@ func (s *Stats) Delete() error {
 
 // List prints out a table of all the sessions that
 // were created within the specified time range.
-func (s *Stats) List() error {
+func (s *Stats) List(w io.Writer) error {
 	err := s.getSessions(s.StartTime, s.EndTime)
 	if err != nil {
 		return err
@@ -556,14 +596,14 @@ func (s *Stats) List() error {
 		data = append(data, sl)
 	}
 
-	printTable(data)
+	printTable(data, w)
 
 	return nil
 }
 
 // Show displays the relevant statistics for the
 // set time period after making the necessary calculations.
-func (s *Stats) Show() error {
+func (s *Stats) Show(w io.Writer) error {
 	defer s.store.close()
 
 	err := s.getSessions(s.StartTime, s.EndTime)
@@ -573,7 +613,16 @@ func (s *Stats) Show() error {
 
 	if s.StartTime.IsZero() && len(s.Sessions) > 0 {
 		fs := s.Sessions[0].StartTime
-		s.StartTime = time.Date(fs.Year(), fs.Month(), fs.Day(), 0, 0, 0, 0, fs.Location())
+		s.StartTime = time.Date(
+			fs.Year(),
+			fs.Month(),
+			fs.Day(),
+			0,
+			0,
+			0,
+			0,
+			fs.Location(),
+		)
 	}
 
 	diff := s.EndTime.Sub(s.StartTime)
@@ -587,33 +636,39 @@ func (s *Stats) Show() error {
 	reportingEnd := s.EndTime.Format("January 02, 2006")
 	timePeriod := "Reporting period: " + reportingStart + " - " + reportingEnd
 
-	pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgYellow)).
+	header := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgYellow)).
 		WithTextStyle(pterm.NewStyle(pterm.FgBlack)).
-		Printfln(timePeriod)
+		Sprintfln(timePeriod)
 
-	s.displaySummary(os.Stdout)
-	s.displayAverages(os.Stdout)
+	fmt.Fprintln(w, header)
+
+	s.displaySummary(w)
+	s.displayAverages(w)
 
 	if s.HoursDiff > hoursInADay {
-		s.displayPomodoroHistory()
+		s.displayPomodoroHistory(w)
 	}
 
-	s.displayWeeklyBreakdown()
+	s.displayWeeklyBreakdown(w)
 
-	s.displayHourlyBreakdown()
+	s.displayHourlyBreakdown(w)
 
 	return nil
 }
 
+type statsCtx interface {
+	String(name string) string
+}
+
 // NewStats returns an instance of Stats constructed
 // from command-line arguments.
-func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
+func NewStats(ctx statsCtx, store DB) (*Stats, error) {
 	s := &Stats{}
 	s.store = store
 
 	period := ctx.String("period")
 
-	if !contains(statsPeriod, timePeriod(period)) {
+	if period != "" && !contains(statsPeriod, timePeriod(period)) {
 		var sl []string
 		for _, v := range statsPeriod {
 			sl = append(sl, string(v))
@@ -645,7 +700,16 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 
 		// Using time.Date allows setting the correct time zone
 		// instead of UTC time
-		s.StartTime = time.Date(v.Year(), v.Month(), v.Day(), v.Hour(), v.Minute(), v.Second(), 0, time.Now().Location())
+		s.StartTime = time.Date(
+			v.Year(),
+			v.Month(),
+			v.Day(),
+			v.Hour(),
+			v.Minute(),
+			v.Second(),
+			0,
+			time.Now().Location(),
+		)
 	}
 
 	if end != "" {
@@ -658,7 +722,16 @@ func NewStats(ctx *cli.Context, store *Store) (*Stats, error) {
 			return nil, errParsingDate
 		}
 
-		s.EndTime = time.Date(v.Year(), v.Month(), v.Day(), v.Hour(), v.Minute(), v.Second(), 0, time.Now().Location())
+		s.EndTime = time.Date(
+			v.Year(),
+			v.Month(),
+			v.Day(),
+			v.Hour(),
+			v.Minute(),
+			v.Second(),
+			0,
+			time.Now().Location(),
+		)
 	}
 
 	if int(s.EndTime.Sub(s.StartTime).Seconds()) < 0 {
