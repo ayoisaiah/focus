@@ -640,7 +640,7 @@ func (s *Stats) Show(w io.Writer) error {
 		WithTextStyle(pterm.NewStyle(pterm.FgBlack)).
 		Sprintfln(timePeriod)
 
-	fmt.Fprintln(w, header)
+	fmt.Fprint(w, header)
 
 	s.displaySummary(w)
 	s.displayAverages(w)

@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/adrg/xdg"
 	"github.com/gen2brain/beeep"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
@@ -266,12 +267,8 @@ func (t *Timer) notify() {
 
 	msg := m[t.SessionType] + " is finished"
 
-	var pathToIcon string
-
-	homeDir, _ := os.UserHomeDir()
-	if homeDir != "" {
-		pathToIcon = filepath.Join(homeDir, configPath, "icon.png")
-	}
+	// pathToIcon will be an empty string if file is not found
+	pathToIcon, _ := xdg.SearchDataFile(filepath.Join(configDir, "icon.png"))
 
 	err := beeep.Notify(msg, t.Msg[t.nextSession()], pathToIcon)
 	if err != nil {

@@ -2,13 +2,13 @@ package focus
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/adrg/xdg"
 	"github.com/pterm/pterm"
 	"gopkg.in/yaml.v2"
 )
@@ -54,7 +54,7 @@ const (
 	shortBreakMinutes = 5
 	longBreakMinutes  = 15
 	longBreakInterval = 4
-	configPath        = ".config/focus"
+	configDir         = "focus"
 	configFileName    = "config.yml"
 )
 
@@ -198,22 +198,15 @@ func (c *Config) save(path string) error {
 // If the config file does not exist,.it prompts the user
 // and saves the inputted preferences in a config file.
 func (c *Config) init() error {
-	homeDir, err := os.UserHomeDir()
+	relPath := filepath.Join(configDir, configFileName)
+
+	pathToConfigFile, err := xdg.ConfigFile(relPath)
 	if err != nil {
 		return err
 	}
 
-	pathToConfigDir := filepath.Join(homeDir, configPath)
-	pathToConfigFile := filepath.Join(pathToConfigDir, configFileName)
-
-	// Ensure the config directory exists
-	err = os.MkdirAll(pathToConfigDir, 0750)
+	_, err = xdg.SearchConfigFile(relPath)
 	if err != nil {
-		return err
-	}
-
-	_, err = os.Stat(pathToConfigFile)
-	if err != nil && !errors.Is(err, os.ErrExist) {
 		return c.create(pathToConfigFile)
 	}
 

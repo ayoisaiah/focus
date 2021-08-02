@@ -1,17 +1,19 @@
 package main
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 
 	_ "embed"
 
+	"github.com/adrg/xdg"
 	cmd "github.com/ayoisaiah/focus/src"
 	"github.com/pterm/pterm"
 )
 
-const configPath = ".config/focus"
+const (
+	configDir = "focus"
+)
 
 //go:embed assets/focus-clock.png
 var icon []byte
@@ -21,27 +23,17 @@ func init() {
 		pterm.DisableColor()
 	}
 
-	homeDir, err := os.UserHomeDir()
+	relPath := filepath.Join(configDir, "icon.png")
+
+	pathToIcon, err := xdg.DataFile(relPath)
 	if err != nil {
 		pterm.Error.Println(err)
 		os.Exit(1)
 	}
 
-	pathToConfigDir := filepath.Join(homeDir, configPath)
-
-	// Ensure the config directory exists
-	err = os.MkdirAll(pathToConfigDir, 0750)
-	if err != nil {
-		pterm.Error.Println(err)
-		os.Exit(1)
-	}
-
-	// copy the application icon to the config folder
+	// copy the application icon to the data folder
 	// if it doesn't exist already
-	pathToIcon := filepath.Join(pathToConfigDir, "icon.png")
-	_, err = os.Stat(pathToIcon)
-
-	if err != nil && errors.Is(err, os.ErrNotExist) {
+	if _, err := xdg.SearchDataFile(relPath); err != nil {
 		_ = os.WriteFile(pathToIcon, icon, os.ModePerm)
 	}
 }

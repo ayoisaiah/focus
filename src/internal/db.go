@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/adrg/xdg"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -42,20 +42,10 @@ type Store struct {
 // and creates the necessary buckets for storing data
 // if they do not exist already.
 func (s *Store) init() error {
-	homeDir, err := os.UserHomeDir()
+	pathToDB, err := xdg.DataFile(filepath.Join(configDir, dbFile))
 	if err != nil {
 		return err
 	}
-
-	pathToConfigDir := filepath.Join(homeDir, configPath)
-
-	// Ensure the config directory exists
-	err = os.MkdirAll(pathToConfigDir, 0750)
-	if err != nil {
-		return err
-	}
-
-	pathToDB := filepath.Join(pathToConfigDir, dbFile)
 
 	var fileMode fs.FileMode = 0600
 

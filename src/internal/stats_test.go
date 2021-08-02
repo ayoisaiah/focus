@@ -279,7 +279,7 @@ func TestStats_Show(t *testing.T) {
 			"January 02, 2006",
 		) + " - " + s.EndTime.Format(
 			"January 02, 2006",
-		) + "\n\n"
+		) + "\n"
 		summary := getSummary(&v)
 		averages := getAverages(&v)
 		history := getHistory(s)
