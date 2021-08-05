@@ -13,31 +13,7 @@ import (
 
 func init() {
 	// Override the default help template
-	cli.AppHelpTemplate = `DESCRIPTION:
-	{{.Usage}}
-
-USAGE:
-   {{.HelpName}} {{if .UsageText}}{{ .UsageText }}{{end}}
-{{if len .Authors}}
-AUTHOR:
-   {{range .Authors}}{{ . }}{{end}}{{end}}
-{{if .Version}}
-VERSION:
-	 {{.Version}}{{end}}
-{{if .Commands}}
-COMMANDS:
-{{range .Commands}}{{if not .HideHelp}}   {{join .Names ", "}}{{ "\t"}}{{.Usage}}{{ "\n" }}{{end}}{{end}}{{end}}
-{{if .VisibleFlags}}
-OPTIONS:{{range .VisibleFlags}}{{ if not (eq .Name "find" "replace" "undo") }}
-		 {{if .Aliases}}-{{range $element := .Aliases}}{{$element}},{{end}}{{end}} --{{.Name}} {{ .DefaultText }}
-				 {{.Usage}}
-		 {{end}}{{end}}{{end}}
-DOCUMENTATION:
-	https://github.com/ayoisaiah/focus/wiki
-
-WEBSITE:
-	https://github.com/ayoisaiah/focus
-`
+	cli.AppHelpTemplate = helpText()
 
 	// Override the default version printer
 	oldVersionPrinter := cli.VersionPrinter
@@ -45,12 +21,41 @@ WEBSITE:
 		oldVersionPrinter(c)
 		checkForUpdates(GetApp())
 	}
+
+	// Disable colour output if NO_COLOR is set
+	if _, exists := os.LookupEnv("NO_COLOR"); exists {
+		disableStyling()
+	}
+
+	// Disable colour output if FOCUS_NO_COLOR is set
+	if _, exists := os.LookupEnv("FOCUS_NO_COLOR"); exists {
+		disableStyling()
+	}
+
+	pterm.Error.MessageStyle = pterm.NewStyle(pterm.FgRed)
+	pterm.Error.Prefix = pterm.Prefix{
+		Text:  "ERROR",
+		Style: pterm.NewStyle(pterm.BgRed, pterm.FgBlack),
+	}
 }
 
-func checkForUpdates(app *cli.App) {
-	fmt.Println("Checking for updates...")
+// disableStyling disables all styling provided by pterm.
+func disableStyling() {
+	pterm.DisableColor()
+	pterm.DisableStyling()
+	pterm.Debug.Prefix.Text = ""
+	pterm.Info.Prefix.Text = ""
+	pterm.Success.Prefix.Text = ""
+	pterm.Warning.Prefix.Text = ""
+	pterm.Error.Prefix.Text = ""
+	pterm.Fatal.Prefix.Text = ""
+}
 
-	c := http.Client{Timeout: 20 * time.Second}
+// checkForUpdates alerts the user if there is
+// an updated version of Focus from the one currently installed.
+func checkForUpdates(app *cli.App) {
+	spinner, _ := pterm.DefaultSpinner.Start("Checking for updates...")
+	c := http.Client{Timeout: 10 * time.Second}
 
 	resp, err := c.Get("https://github.com/ayoisaiah/focus/releases/latest")
 	if err != nil {
@@ -73,12 +78,17 @@ func checkForUpdates(app *cli.App) {
 	}
 
 	if version == app.Version {
-		pterm.Info.Printf(
-			"Congratulations, you are using the latest version of %s\n",
+		text := pterm.Sprintf(
+			"Congratulations, you are using the latest version of %s",
 			app.Name,
 		)
+		spinner.Success(text)
 	} else {
-		pterm.Info.Printf("%s: %s at %s\n", pterm.LightGreen("Update available"), version, resp.Request.URL.String())
+		pterm.Warning.Prefix = pterm.Prefix{
+			Text:  "UPDATE AVAILABLE",
+			Style: pterm.NewStyle(pterm.BgYellow, pterm.FgBlack),
+		}
+		pterm.Warning.Printfln("A new release of Focus is available: %s at %s", version, resp.Request.URL.String())
 	}
 }
 
@@ -92,15 +102,19 @@ func GetApp() *cli.App {
 				Email: "ayo@freshman.tech",
 			},
 		},
-		Usage:                "Focus is a cross-platform pomodoro timer application for the command line",
+		Usage:                "Focus is a cross-platform pomodoro timer application for the command line.",
 		UsageText:            "[COMMAND] [OPTIONS]",
 		Version:              "v0.1.0",
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{
 				Name:  "stats",
-				Usage: "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days",
+				Usage: "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days.",
 				Action: func(ctx *cli.Context) error {
+					if ctx.Bool("no-color") {
+						pterm.DisableColor()
+					}
+
 					store, err := focus.NewStore()
 					if err != nil {
 						return err
@@ -124,27 +138,31 @@ func GetApp() *cli.App {
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "delete",
-						Usage: "Delete the all pomodoro sessions within the specified time period",
+						Usage: "Delete the all pomodoro sessions within the specified time period.",
 					},
 					&cli.BoolFlag{
 						Name:  "list",
-						Usage: "List all the pomodoro sessions within the specified time period",
+						Usage: "List all the pomodoro sessions within the specified time period.",
 					},
 					&cli.StringFlag{
 						Name:    "period",
 						Aliases: []string{"p"},
-						Usage:   "Specify a time period for (defaults to 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time",
+						Usage:   "Specify a time period for (defaults to 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time.",
 						Value:   "7days",
 					},
 					&cli.StringFlag{
 						Name:    "start",
 						Aliases: []string{"s"},
-						Usage:   "Specify a start date in the following format: YYYY-MM-DD [HH:MM:SS PM]",
+						Usage:   "Specify a start date in the following format: YYYY-MM-DD [HH:MM:SS PM].",
 					},
 					&cli.StringFlag{
 						Name:    "end",
 						Aliases: []string{"e"},
-						Usage:   "Specify an end date in the following format: YYYY-MM-DD [HH:MM:SS PM] (defaults to the current time)",
+						Usage:   "Specify an end date in the following format: YYYY-MM-DD [HH:MM:SS PM] (defaults to the current time).",
+					},
+					&cli.BoolFlag{
+						Name:  "no-color",
+						Usage: "Disable coloured output.",
 					},
 				},
 			},
@@ -152,41 +170,49 @@ func GetApp() *cli.App {
 		Flags: []cli.Flag{
 			&cli.UintFlag{
 				Name:    "long-break",
-				Usage:   "Long break duration in minutes (default: 15)",
+				Usage:   "Long break duration in minutes (default: 15).",
 				Aliases: []string{"l"},
 			},
 			&cli.UintFlag{
 				Name:    "short-break",
-				Usage:   "Short break duration in minutes (default: 5)",
+				Usage:   "Short break duration in minutes (default: 5).",
 				Aliases: []string{"s"},
 			},
 			&cli.UintFlag{
 				Name:    "pomodoro",
-				Usage:   "Pomodoro duration in minutes (default: 25)",
+				Usage:   "Pomodoro duration in minutes (default: 25).",
 				Aliases: []string{"p"},
 			},
 			&cli.UintFlag{
 				Name:    "long-break-interval",
 				Aliases: []string{"int"},
-				Usage:   "The number of pomodoro sessions before a long break (default: 4)",
+				Usage:   "The number of pomodoro sessions before a long break (default: 4).",
 			},
 			&cli.UintFlag{
 				Name:    "max-pomodoros",
 				Aliases: []string{"max"},
-				Usage:   "The maximum number of pomodoro sessions (unlimited by default)",
+				Usage:   "The maximum number of pomodoro sessions (unlimited by default).",
 			},
 			&cli.BoolFlag{
 				Name:    "disable-notifications",
 				Aliases: []string{"d"},
-				Usage:   "Disable the system notification after a session is completed",
+				Usage:   "Disable the system notification after a session is completed.",
 			},
 			&cli.BoolFlag{
 				Name:    "new",
 				Aliases: []string{"n"},
-				Usage:   "Start a new focus session. Using this option prevents the attempt to resume a previously halted session",
+				Usage:   "Start a brand new focus session.",
+			},
+			&cli.BoolFlag{
+				Name:  "no-color",
+				Usage: "Disable coloured output.",
 			},
 		},
 		Action: func(ctx *cli.Context) error {
+			if ctx.Bool("no-color") {
+				disableStyling()
+			}
+
 			store, err := focus.NewStore()
 			if err != nil {
 				return err

@@ -19,10 +19,6 @@ const (
 var icon []byte
 
 func init() {
-	if _, ok := os.LookupEnv("NO_COLOR"); ok {
-		pterm.DisableColor()
-	}
-
 	relPath := filepath.Join(configDir, "icon.png")
 
 	pathToIcon, err := xdg.DataFile(relPath)
