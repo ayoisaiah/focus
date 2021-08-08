@@ -25,6 +25,10 @@ jobs:
       with:
         go-version: '1.16'
 
+    - name: Install libasound2-dev
+      run: sudo apt install libasound2-dev
+      if: matrix.os == 'ubuntu-latest'
+
     # Tests
     - name: Run testing
       run: go test ./... -race
