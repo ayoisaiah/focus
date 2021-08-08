@@ -1,6 +1,7 @@
 name: Release focus
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
