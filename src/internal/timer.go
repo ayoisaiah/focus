@@ -13,9 +13,11 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/faiface/beep"
+	"github.com/faiface/beep/flac"
 	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
 	"github.com/faiface/beep/vorbis"
+	"github.com/faiface/beep/wav"
 	"github.com/gen2brain/beeep"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
@@ -336,6 +338,7 @@ func (t *Timer) handleInterruption() {
 	}()
 }
 
+// playSound starts the specified ambient sound.
 func (t *Timer) playSound(done chan bool) {
 	ext := filepath.Ext(t.Sound)
 	// without extension, treat as OGG file
@@ -366,6 +369,10 @@ func (t *Timer) playSound(done chan bool) {
 		streamer, format, err = vorbis.Decode(f)
 	case ".mp3":
 		streamer, format, err = mp3.Decode(f)
+	case ".flac":
+		streamer, format, err = flac.Decode(f)
+	case ".wav":
+		streamer, format, err = wav.Decode(f)
 	}
 
 	if err != nil {
