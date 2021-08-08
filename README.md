@@ -157,6 +157,8 @@ $ focus --sound 'airplane.wav'
 $ focus --sound 'stadium_noise.flac'
 ```
 
+By default, ambient sounds are played only during work sessions. They are paused during break sessions, and resumed again in the next work session. If you'd like to retain the ambient sound during a break session, set the `sound_on_break` config option to `true`, or use the `--sound-on-break` or `-sob` cli option.
+
 ## Statistics & History
 
 ```
