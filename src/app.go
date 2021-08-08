@@ -108,6 +108,37 @@ func GetApp() *cli.App {
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{
+				Name:  "resume",
+				Usage: "Resume a previously interrupted work session",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "no-color",
+						Usage: "Disable coloured output.",
+					},
+				},
+				Action: func(ctx *cli.Context) error {
+					if ctx.Bool("no-color") {
+						disableStyling()
+					}
+
+					store, err := focus.NewStore()
+					if err != nil {
+						return err
+					}
+
+					t := &focus.Timer{
+						Store: store,
+					}
+
+					_, _, err = t.GetInterrupted()
+					if err != nil {
+						return err
+					}
+
+					return t.Resume()
+				},
+			},
+			{
 				Name:  "stats",
 				Usage: "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days.",
 				Action: func(ctx *cli.Context) error {
@@ -169,9 +200,9 @@ func GetApp() *cli.App {
 		},
 		Flags: []cli.Flag{
 			&cli.UintFlag{
-				Name:    "long-break",
-				Usage:   "Long break duration in minutes (default: 15).",
-				Aliases: []string{"l"},
+				Name:    "work",
+				Usage:   "Work duration in minutes (default: 25).",
+				Aliases: []string{"w"},
 			},
 			&cli.UintFlag{
 				Name:    "short-break",
@@ -179,9 +210,9 @@ func GetApp() *cli.App {
 				Aliases: []string{"s"},
 			},
 			&cli.UintFlag{
-				Name:    "work",
-				Usage:   "Work duration in minutes (default: 25).",
-				Aliases: []string{"w"},
+				Name:    "long-break",
+				Usage:   "Long break duration in minutes (default: 15).",
+				Aliases: []string{"l"},
 			},
 			&cli.UintFlag{
 				Name:    "long-break-interval",
@@ -198,15 +229,6 @@ func GetApp() *cli.App {
 				Aliases: []string{"d"},
 				Usage:   "Disable the system notification after a session is completed.",
 			},
-			&cli.BoolFlag{
-				Name:    "new",
-				Aliases: []string{"n"},
-				Usage:   "Start a brand new focus session.",
-			},
-			&cli.BoolFlag{
-				Name:  "no-color",
-				Usage: "Disable coloured output.",
-			},
 			&cli.StringFlag{
 				Name:  "sound",
 				Usage: "Play ambient sounds continuously during a session. Valid options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground.",
@@ -215,6 +237,10 @@ func GetApp() *cli.App {
 				Name:    "sound-on-break",
 				Aliases: []string{"sob"},
 				Usage:   "Play sounds during break session.",
+			},
+			&cli.BoolFlag{
+				Name:  "no-color",
+				Usage: "Disable coloured output.",
 			},
 		},
 		Action: func(ctx *cli.Context) error {
@@ -225,19 +251,6 @@ func GetApp() *cli.App {
 			store, err := focus.NewStore()
 			if err != nil {
 				return err
-			}
-
-			// Running focus without arguments will attempt
-			// to resume an interrupted session
-			if ctx.NumFlags() == 0 {
-				t := &focus.Timer{
-					Store: store,
-				}
-
-				_, _, err = t.GetInterrupted()
-				if err == nil {
-					return t.Resume()
-				}
 			}
 
 			config, err := focus.NewConfig()
