@@ -245,7 +245,7 @@ func (c *Config) defaults(willPrompt bool) {
 		c.LongBreakInterval = longBreakInterval
 	}
 
-	c.AutoStartBreak = false
+	c.AutoStartBreak = true
 	c.AutoStartWork = false
 	c.Notify = true
 	c.WorkMessage = "Focus on your task"
