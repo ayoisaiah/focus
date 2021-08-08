@@ -29,6 +29,7 @@ func (e Error) Error() string { return string(e) }
 
 const (
 	errUnableToSaveSession = Error("Unable to persist interrupted session")
+	errInvalidSoundFormat  = Error("Invalid file format. Only MP3, OGG, FLAC, and WAV files are supported")
 	errNoPausedSession     = Error(
 		"A previously interrupted session was not found. Please start a new session",
 	)
@@ -377,6 +378,8 @@ func (t *Timer) playSound(done chan bool) {
 		streamer, format, err = flac.Decode(f)
 	case ".wav":
 		streamer, format, err = wav.Decode(f)
+	default:
+		exitFunc(errInvalidSoundFormat)
 	}
 
 	if err != nil {
