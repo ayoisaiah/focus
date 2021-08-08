@@ -1,6 +1,6 @@
 [
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -17,7 +17,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -34,7 +34,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -47,7 +47,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {

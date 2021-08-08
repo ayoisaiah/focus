@@ -18,7 +18,7 @@ func (d *DBMock) init() error {
 }
 
 func (d *DBMock) getSessions(startTime, endTime time.Time) ([][]byte, error) {
-	jsonFile, err := os.ReadFile("../../testdata/pomodoro.json")
+	jsonFile, err := os.ReadFile("../../testdata/work.json")
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func TestTimer_InitSession(t *testing.T) {
 
 	for _, v := range table {
 		timer := &Timer{}
-		timer.SessionType = pomodoro
+		timer.SessionType = work
 		timer.Kind = make(kind)
 		timer.Kind[timer.SessionType] = v.duration
 		timer.Store = &DBMock{}
@@ -109,20 +109,20 @@ func TestTimer_GetNextSession(t *testing.T) {
 		input             sessionType
 		output            sessionType
 		longBreakInterval int
-		pomodoroCycle     int
+		workCycle         int
 	}
 
 	cases := []testCase{
-		{pomodoro, shortBreak, 4, 2},
-		{shortBreak, pomodoro, 4, 1},
-		{longBreak, pomodoro, 4, 4},
-		{pomodoro, longBreak, 4, 4},
+		{work, shortBreak, 4, 2},
+		{shortBreak, work, 4, 1},
+		{longBreak, work, 4, 4},
+		{work, longBreak, 4, 4},
 	}
 
 	for _, v := range cases {
 		timer := &Timer{
 			LongBreakInterval: v.longBreakInterval,
-			PomodoroCycle:     v.pomodoroCycle,
+			WorkCycle:         v.workCycle,
 			SessionType:       v.input,
 		}
 
@@ -142,8 +142,8 @@ func TestTimer_PrintSession(t *testing.T) {
 	type testCase struct {
 		endTime             string
 		sessionType         sessionType
-		maxPomodoros        int
-		pomodoroCycle       int
+		maxSessions         int
+		workCycle           int
 		longBreakInterval   int
 		twentyFourHourClock bool
 		expected            string
@@ -155,26 +155,26 @@ func TestTimer_PrintSession(t *testing.T) {
 	cases := []testCase{
 		{
 			"2021-06-13T13:50:00Z",
-			pomodoro,
+			work,
 			0,
 			2,
 			4,
 			false,
 			fmt.Sprintf(
-				"[Pomodoro 2/4]: %s (until 01:50:00 PM)",
-				c.PomodoroMessage,
+				"[Work 2/4]: %s (until 01:50:00 PM)",
+				c.WorkMessage,
 			),
 		},
 		{
 			"2021-06-18T20:00:00Z",
-			pomodoro,
+			work,
 			8,
 			4,
 			4,
 			true,
 			fmt.Sprintf(
-				"[Pomodoro 4/8]: %s (until 20:00:00)",
-				c.PomodoroMessage,
+				"[Work 4/8]: %s (until 20:00:00)",
+				c.WorkMessage,
 			),
 		},
 		{
@@ -205,14 +205,14 @@ func TestTimer_PrintSession(t *testing.T) {
 
 	for _, v := range cases {
 		timer := &Timer{
-			MaxSessions:         v.maxPomodoros,
+			MaxSessions:         v.maxSessions,
 			LongBreakInterval:   v.longBreakInterval,
-			PomodoroCycle:       v.pomodoroCycle,
-			Counter:             v.pomodoroCycle,
+			WorkCycle:           v.workCycle,
+			Counter:             v.workCycle,
 			TwentyFourHourClock: v.twentyFourHourClock,
 			SessionType:         v.sessionType,
 			Msg: message{
-				pomodoro:   c.PomodoroMessage,
+				work:       c.WorkMessage,
 				shortBreak: c.ShortBreakMessage,
 				longBreak:  c.LongBreakMessage,
 			},

@@ -36,15 +36,15 @@ const ascii = `
 
 // Config represents the user's preferences.
 type Config struct {
-	PomodoroMinutes     int    `yaml:"pomodoro_mins"`
-	PomodoroMessage     string `yaml:"pomodoro_msg"`
+	WorkMinutes         int    `yaml:"work_mins"`
+	WorkMessage         string `yaml:"work_msg"`
 	ShortBreakMinutes   int    `yaml:"short_break_mins"`
 	ShortBreakMessage   string `yaml:"short_break_msg"`
 	LongBreakMinutes    int    `yaml:"long_break_mins"`
 	LongBreakMessage    string `yaml:"long_break_msg"`
 	LongBreakInterval   int    `yaml:"long_break_interval"`
 	Notify              bool   `yaml:"notify"`
-	AutoStartPomorodo   bool   `yaml:"auto_start_pomodoro"`
+	AutoStartWork       bool   `yaml:"auto_start_work"`
 	AutoStartBreak      bool   `yaml:"auto_start_break"`
 	TwentyFourHourClock bool   `yaml:"24hr_clock"`
 	Sound               string `yaml:"sound"`
@@ -52,7 +52,7 @@ type Config struct {
 }
 
 const (
-	pomodoroMinutes   = 25
+	workMinutes       = 25
 	shortBreakMinutes = 5
 	longBreakMinutes  = 15
 	longBreakInterval = 4
@@ -103,19 +103,19 @@ Edit the configuration file to change any settings, or use command line argument
 	_, _ = reader.ReadString('\n')
 
 	for {
-		if c.PomodoroMinutes == 0 {
+		if c.WorkMinutes == 0 {
 			fmt.Printf(
-				"\nPomodoro length in minutes (default: %s): ",
-				pterm.Green(pomodoroMinutes),
+				"\nWork length in minutes (default: %s): ",
+				pterm.Green(workMinutes),
 			)
 
-			num, err := numberPrompt(reader, pomodoroMinutes)
+			num, err := numberPrompt(reader, workMinutes)
 			if err != nil {
 				pterm.Error.Println(err)
 				continue
 			}
 
-			c.PomodoroMinutes = num
+			c.WorkMinutes = num
 		}
 
 		if c.ShortBreakMinutes == 0 {
@@ -150,7 +150,7 @@ Edit the configuration file to change any settings, or use command line argument
 
 		if c.LongBreakInterval == 0 {
 			fmt.Printf(
-				"Pomodoro cycles before long break (default: %s): ",
+				"Work sessions before long break (default: %s): ",
 				pterm.Green(longBreakInterval),
 			)
 
@@ -239,16 +239,16 @@ func (c *Config) get(pathToConfig string) error {
 // values that.are requested in the prompt.
 func (c *Config) defaults(willPrompt bool) {
 	if !willPrompt {
-		c.PomodoroMinutes = pomodoroMinutes
+		c.WorkMinutes = workMinutes
 		c.ShortBreakMinutes = shortBreakMinutes
 		c.LongBreakMinutes = longBreakMinutes
 		c.LongBreakInterval = longBreakInterval
 	}
 
 	c.AutoStartBreak = false
-	c.AutoStartPomorodo = false
+	c.AutoStartWork = false
 	c.Notify = true
-	c.PomodoroMessage = "Focus on your task"
+	c.WorkMessage = "Focus on your task"
 	c.ShortBreakMessage = "Take a breather"
 	c.LongBreakMessage = "Take a long break"
 	c.TwentyFourHourClock = false

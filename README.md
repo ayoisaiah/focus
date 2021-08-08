@@ -4,7 +4,9 @@
 
 # Focus on your task
 
-Focus is a cross-platform pomodoro timer for the command line.
+Focus is a cross-platform productivity timer for the command line. It is based
+on the [Pomodoro Technique](https://en.wikipedia.org/wiki/Pomodoro_Technique), a
+time management method developed by Francesco Cirillo in the late 1980s
 
 ## Contribute
 

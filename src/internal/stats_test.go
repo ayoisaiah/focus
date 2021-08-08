@@ -158,7 +158,7 @@ func TestStats_Compute(t *testing.T) {
 
 		if s.Data.Totals.completed != v.totals.completed {
 			t.Fatalf(
-				"Expected total completed pomodoros to be: %d, but got: %d",
+				"Expected total completed sessions to be: %d, but got: %d",
 				v.totals.completed,
 				s.Data.Totals.completed,
 			)
@@ -166,7 +166,7 @@ func TestStats_Compute(t *testing.T) {
 
 		if s.Data.Totals.abandoned != v.totals.abandoned {
 			t.Fatalf(
-				"Expected total abandoned pomodoros to be: %d, but got: %d",
+				"Expected total abandoned sessions to be: %d, but got: %d",
 				v.totals.abandoned,
 				s.Data.Totals.abandoned,
 			)
@@ -182,7 +182,7 @@ func TestStats_Compute(t *testing.T) {
 
 		if s.Data.Averages.completed != v.averages.completed {
 			t.Fatalf(
-				"Expected average completed pomodoros to be: %d, but got: %d",
+				"Expected average completed sessions to be: %d, but got: %d",
 				v.averages.completed,
 				s.Data.Averages.completed,
 			)
@@ -190,7 +190,7 @@ func TestStats_Compute(t *testing.T) {
 
 		if s.Data.Averages.abandoned != v.averages.abandoned {
 			t.Fatalf(
-				"Expected average abandoned pomodoros to be: %d, but got: %d",
+				"Expected average abandoned sessions to be: %d, but got: %d",
 				v.averages.abandoned,
 				s.Data.Averages.abandoned,
 			)
@@ -305,7 +305,7 @@ func TestStats_Show(t *testing.T) {
 func getSummary(v *statsCase) string {
 	hours, minutes := minsToHoursAndMins(v.totals.minutes)
 	expected := fmt.Sprintf(
-		"Summary\nTotal time logged: %d hours %d minutes\nPomodoros completed: %d\nPomodoros abandoned: %d\n",
+		"Summary\nTotal time logged: %d hours %d minutes\nWork sessions completed: %d\nWork sessions abandoned: %d\n",
 		hours,
 		minutes,
 		v.totals.completed,
@@ -319,7 +319,7 @@ func getAverages(v *statsCase) string {
 	hours, minutes := minsToHoursAndMins(v.averages.minutes)
 
 	expected := fmt.Sprintf(
-		"\nAverages\nAverage time logged per day: %d hours %d minutes\nCompleted pomodoros per day: %d\nAbandoned pomodoros per day: %d\n",
+		"\nAverages\nAverage time logged per day: %d hours %d minutes\nCompleted sessions per day: %d\nAbandoned sessions per day: %d\n",
 		hours,
 		minutes,
 		v.averages.completed,
@@ -354,7 +354,7 @@ func getHistory(s *Stats) string {
 		return iTime.Before(jTime)
 	})
 
-	expected := "\nPomodoro history (minutes)"
+	expected := "\nWork history (minutes)"
 
 	for _, v := range sl {
 		expected += fmt.Sprintf("%s: %d\n", v.key, v.value.minutes)

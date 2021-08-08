@@ -137,7 +137,7 @@ func initData(start, end time.Time, hoursDiff int) *Data {
 		d.HourofDay[i] = &quantity{}
 	}
 
-	// Decide whether to compute the pomodoro history
+	// Decide whether to compute the work history
 	// in terms of days, or months
 	d.HistoryKeyFormat = "January 2006"
 	if hoursDiff > hoursInADay && hoursDiff <= maxHoursInAMonth {
@@ -153,8 +153,8 @@ func initData(start, end time.Time, hoursDiff int) *Data {
 	return d
 }
 
-// computeAverages calculates the average minutes, completed pomodoros,
-// and abandoned pomodoros per day for the specified time period.
+// computeAverages calculates the average minutes, completed sessions,
+// and abandoned sessions per day for the specified time period.
 func (d *Data) computeAverages(start, end time.Time) {
 	end = time.Date(
 		end.Year(),
@@ -242,8 +242,8 @@ func (d *Data) calculateSessionDuration(
 	return seconds
 }
 
-// computeTotals calculates the total minutes, completed pomodoros,
-// and abandoned pomodoros for the current time period.
+// computeTotals calculates the total minutes, completed sessions,
+// and abandoned sessions for the current time period.
 func (d *Data) computeTotals(sessions []session, startTime, endTime time.Time) {
 	for i := range sessions {
 		s := sessions[i]
@@ -296,7 +296,7 @@ type Stats struct {
 	HoursDiff int
 }
 
-// getSessions retrieves the pomodoro sessions
+// getSessions retrieves the work sessions
 // for the specified time period.
 func (s *Stats) getSessions(start, end time.Time) error {
 	b, err := s.store.getSessions(start, end)
@@ -363,14 +363,14 @@ func (s *Stats) displayHourlyBreakdown(w io.Writer) {
 	fmt.Fprintln(w, chart)
 }
 
-// displayPomodoroHistory prints the appropriate bar graph
+// displayWorkHistory prints the appropriate bar graph
 // for the current time period.
-func (s *Stats) displayPomodoroHistory(w io.Writer) {
+func (s *Stats) displayWorkHistory(w io.Writer) {
 	if s.Data.Totals.minutes == 0 {
 		return
 	}
 
-	fmt.Fprintf(w, "\n%s", pterm.LightBlue("Pomodoro history (minutes)"))
+	fmt.Fprintf(w, "\n%s", pterm.LightBlue("Work history (minutes)"))
 
 	type keyValue struct {
 		key   string
@@ -481,12 +481,12 @@ func (s *Stats) displayAverages(w io.Writer) {
 		)
 		fmt.Fprintln(
 			w,
-			"Completed pomodoros per day:",
+			"Completed sessions per day:",
 			pterm.Green(s.Data.Averages.completed),
 		)
 		fmt.Fprintln(
 			w,
-			"Abandoned pomodoros per day:",
+			"Abandoned sessions per day:",
 			pterm.Green(s.Data.Averages.abandoned),
 		)
 	}
@@ -507,12 +507,12 @@ func (s *Stats) displaySummary(w io.Writer) {
 
 	fmt.Fprintln(
 		w,
-		"Pomodoros completed:",
+		"Work sessions completed:",
 		pterm.Green(s.Data.Totals.completed),
 	)
 	fmt.Fprintln(
 		w,
-		"Pomodoros abandoned:",
+		"Work sessions abandoned:",
 		pterm.Green(s.Data.Totals.abandoned),
 	)
 }
@@ -646,7 +646,7 @@ func (s *Stats) Show(w io.Writer) error {
 	s.displayAverages(w)
 
 	if s.HoursDiff > hoursInADay {
-		s.displayPomodoroHistory(w)
+		s.displayWorkHistory(w)
 	}
 
 	s.displayWeeklyBreakdown(w)

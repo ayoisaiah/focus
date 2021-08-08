@@ -1,6 +1,6 @@
 [
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -13,7 +13,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 28,
     "timeline": [
       {
@@ -26,7 +26,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -43,7 +43,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -56,7 +56,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -73,7 +73,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -86,7 +86,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -99,7 +99,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -112,7 +112,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -129,7 +129,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -146,7 +146,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -163,7 +163,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -180,7 +180,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -193,7 +193,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -206,7 +206,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -223,7 +223,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 31,
     "timeline": [
       {
@@ -240,7 +240,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -257,7 +257,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -270,7 +270,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -287,7 +287,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -300,7 +300,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -317,7 +317,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 52,
     "timeline": [
       {
@@ -330,7 +330,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -347,7 +347,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -364,7 +364,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -381,7 +381,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -394,7 +394,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -407,7 +407,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -420,7 +420,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -437,7 +437,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 59,
     "timeline": [
       {
@@ -450,7 +450,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -463,7 +463,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -480,7 +480,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 28,
     "timeline": [
       {
@@ -493,7 +493,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -510,7 +510,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -527,7 +527,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -544,7 +544,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -561,7 +561,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -574,7 +574,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -587,7 +587,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -604,7 +604,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -621,7 +621,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -634,7 +634,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -647,7 +647,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -664,7 +664,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -677,7 +677,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -694,7 +694,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -707,7 +707,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -720,7 +720,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -733,7 +733,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 56,
     "timeline": [
       {
@@ -746,7 +746,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -759,7 +759,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -776,7 +776,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 28,
     "timeline": [
       {
@@ -793,7 +793,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -810,7 +810,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -823,7 +823,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 31,
     "timeline": [
       {
@@ -836,7 +836,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -853,7 +853,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -866,7 +866,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -879,7 +879,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -896,7 +896,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -913,7 +913,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 56,
     "timeline": [
       {
@@ -926,7 +926,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -939,7 +939,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -956,7 +956,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -969,7 +969,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -982,7 +982,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 31,
     "timeline": [
       {
@@ -999,7 +999,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -1012,7 +1012,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -1029,7 +1029,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -1046,7 +1046,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 56,
     "timeline": [
       {
@@ -1059,7 +1059,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -1076,7 +1076,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -1089,7 +1089,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 42,
     "timeline": [
       {
@@ -1102,7 +1102,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -1119,7 +1119,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -1136,7 +1136,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 59,
     "timeline": [
       {
@@ -1149,7 +1149,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -1166,7 +1166,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -1183,7 +1183,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 42,
     "timeline": [
       {
@@ -1196,7 +1196,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -1213,7 +1213,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -1230,7 +1230,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -1247,7 +1247,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -1260,7 +1260,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -1273,7 +1273,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -1286,7 +1286,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -1303,7 +1303,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -1316,7 +1316,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -1333,7 +1333,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -1346,7 +1346,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -1363,7 +1363,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -1380,7 +1380,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -1397,7 +1397,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 42,
     "timeline": [
       {
@@ -1410,7 +1410,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 37,
     "timeline": [
       {
@@ -1423,7 +1423,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -1436,7 +1436,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -1449,7 +1449,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 42,
     "timeline": [
       {
@@ -1466,7 +1466,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -1479,7 +1479,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -1496,7 +1496,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -1513,7 +1513,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -1530,7 +1530,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -1543,7 +1543,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -1556,7 +1556,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -1569,7 +1569,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -1582,7 +1582,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -1599,7 +1599,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 53,
     "timeline": [
       {
@@ -1612,7 +1612,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -1625,7 +1625,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -1642,7 +1642,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -1659,7 +1659,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 56,
     "timeline": [
       {
@@ -1676,7 +1676,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 37,
     "timeline": [
       {
@@ -1689,7 +1689,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -1706,7 +1706,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -1719,7 +1719,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -1736,7 +1736,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 59,
     "timeline": [
       {
@@ -1749,7 +1749,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -1766,7 +1766,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -1783,7 +1783,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -1800,7 +1800,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -1813,7 +1813,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -1826,7 +1826,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -1839,7 +1839,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -1856,7 +1856,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -1873,7 +1873,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -1886,7 +1886,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -1899,7 +1899,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -1912,7 +1912,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -1929,7 +1929,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -1942,7 +1942,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -1955,7 +1955,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -1968,7 +1968,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -1981,7 +1981,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 59,
     "timeline": [
       {
@@ -1994,7 +1994,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -2007,7 +2007,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -2024,7 +2024,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -2037,7 +2037,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 38,
     "timeline": [
       {
@@ -2054,7 +2054,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 53,
     "timeline": [
       {
@@ -2067,7 +2067,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -2080,7 +2080,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -2097,7 +2097,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -2110,7 +2110,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -2123,7 +2123,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 59,
     "timeline": [
       {
@@ -2136,7 +2136,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -2149,7 +2149,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -2166,7 +2166,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -2179,7 +2179,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -2196,7 +2196,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -2209,7 +2209,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -2222,7 +2222,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 37,
     "timeline": [
       {
@@ -2235,7 +2235,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -2252,7 +2252,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -2269,7 +2269,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -2286,7 +2286,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 59,
     "timeline": [
       {
@@ -2299,7 +2299,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 28,
     "timeline": [
       {
@@ -2312,7 +2312,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -2325,7 +2325,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -2338,7 +2338,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -2351,7 +2351,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 38,
     "timeline": [
       {
@@ -2368,7 +2368,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -2385,7 +2385,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -2402,7 +2402,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -2419,7 +2419,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -2436,7 +2436,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -2449,7 +2449,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 38,
     "timeline": [
       {
@@ -2462,7 +2462,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -2475,7 +2475,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -2488,7 +2488,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -2501,7 +2501,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -2514,7 +2514,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -2527,7 +2527,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 56,
     "timeline": [
       {
@@ -2540,7 +2540,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -2557,7 +2557,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -2574,7 +2574,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -2591,7 +2591,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -2604,7 +2604,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -2621,7 +2621,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 52,
     "timeline": [
       {
@@ -2638,7 +2638,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -2651,7 +2651,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -2664,7 +2664,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -2677,7 +2677,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -2694,7 +2694,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 56,
     "timeline": [
       {
@@ -2711,7 +2711,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -2724,7 +2724,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 46,
     "timeline": [
       {
@@ -2737,7 +2737,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -2754,7 +2754,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -2767,7 +2767,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -2780,7 +2780,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -2797,7 +2797,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -2810,7 +2810,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -2823,7 +2823,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -2840,7 +2840,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -2853,7 +2853,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 38,
     "timeline": [
       {
@@ -2866,7 +2866,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -2883,7 +2883,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -2896,7 +2896,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -2909,7 +2909,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -2922,7 +2922,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -2939,7 +2939,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 42,
     "timeline": [
       {
@@ -2952,7 +2952,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 42,
     "timeline": [
       {
@@ -2969,7 +2969,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 28,
     "timeline": [
       {
@@ -2982,7 +2982,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -2995,7 +2995,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -3008,7 +3008,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -3025,7 +3025,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -3038,7 +3038,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -3051,7 +3051,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -3068,7 +3068,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -3085,7 +3085,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 37,
     "timeline": [
       {
@@ -3098,7 +3098,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 56,
     "timeline": [
       {
@@ -3115,7 +3115,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -3132,7 +3132,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -3149,7 +3149,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 31,
     "timeline": [
       {
@@ -3162,7 +3162,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -3175,7 +3175,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -3188,7 +3188,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 31,
     "timeline": [
       {
@@ -3201,7 +3201,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -3218,7 +3218,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -3235,7 +3235,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -3252,7 +3252,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 59,
     "timeline": [
       {
@@ -3265,7 +3265,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -3282,7 +3282,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -3299,7 +3299,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -3316,7 +3316,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 52,
     "timeline": [
       {
@@ -3333,7 +3333,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -3346,7 +3346,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 38,
     "timeline": [
       {
@@ -3363,7 +3363,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -3380,7 +3380,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 37,
     "timeline": [
       {
@@ -3397,7 +3397,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 53,
     "timeline": [
       {
@@ -3410,7 +3410,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -3427,7 +3427,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -3440,7 +3440,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -3457,7 +3457,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -3474,7 +3474,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 53,
     "timeline": [
       {
@@ -3491,7 +3491,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -3504,7 +3504,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -3521,7 +3521,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 52,
     "timeline": [
       {
@@ -3534,7 +3534,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -3551,7 +3551,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -3568,7 +3568,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -3581,7 +3581,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 31,
     "timeline": [
       {
@@ -3594,7 +3594,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -3611,7 +3611,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -3624,7 +3624,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -3637,7 +3637,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -3650,7 +3650,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -3663,7 +3663,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 52,
     "timeline": [
       {
@@ -3680,7 +3680,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -3697,7 +3697,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -3710,7 +3710,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -3727,7 +3727,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 52,
     "timeline": [
       {
@@ -3744,7 +3744,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 31,
     "timeline": [
       {
@@ -3761,7 +3761,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -3774,7 +3774,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 46,
     "timeline": [
       {
@@ -3791,7 +3791,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -3808,7 +3808,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -3825,7 +3825,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -3842,7 +3842,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -3859,7 +3859,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 53,
     "timeline": [
       {
@@ -3872,7 +3872,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -3889,7 +3889,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 31,
     "timeline": [
       {
@@ -3902,7 +3902,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -3919,7 +3919,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -3936,7 +3936,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -3949,7 +3949,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 42,
     "timeline": [
       {
@@ -3966,7 +3966,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 28,
     "timeline": [
       {
@@ -3979,7 +3979,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -3992,7 +3992,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -4009,7 +4009,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -4022,7 +4022,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -4035,7 +4035,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -4052,7 +4052,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -4069,7 +4069,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -4086,7 +4086,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -4103,7 +4103,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -4116,7 +4116,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -4133,7 +4133,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -4150,7 +4150,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -4167,7 +4167,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 37,
     "timeline": [
       {
@@ -4184,7 +4184,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -4197,7 +4197,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -4210,7 +4210,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -4227,7 +4227,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 53,
     "timeline": [
       {
@@ -4244,7 +4244,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -4261,7 +4261,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -4278,7 +4278,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 28,
     "timeline": [
       {
@@ -4295,7 +4295,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -4308,7 +4308,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -4321,7 +4321,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -4338,7 +4338,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -4351,7 +4351,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -4364,7 +4364,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -4377,7 +4377,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -4394,7 +4394,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -4407,7 +4407,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -4424,7 +4424,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -4437,7 +4437,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -4454,7 +4454,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -4471,7 +4471,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -4484,7 +4484,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -4501,7 +4501,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -4514,7 +4514,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -4531,7 +4531,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -4548,7 +4548,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -4565,7 +4565,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -4582,7 +4582,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -4599,7 +4599,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -4612,7 +4612,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -4625,7 +4625,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -4638,7 +4638,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -4651,7 +4651,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -4664,7 +4664,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 52,
     "timeline": [
       {
@@ -4677,7 +4677,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 53,
     "timeline": [
       {
@@ -4690,7 +4690,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -4707,7 +4707,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -4720,7 +4720,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 31,
     "timeline": [
       {
@@ -4737,7 +4737,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -4754,7 +4754,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 46,
     "timeline": [
       {
@@ -4771,7 +4771,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 38,
     "timeline": [
       {
@@ -4784,7 +4784,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 37,
     "timeline": [
       {
@@ -4797,7 +4797,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -4810,7 +4810,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 56,
     "timeline": [
       {
@@ -4827,7 +4827,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -4840,7 +4840,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -4857,7 +4857,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -4874,7 +4874,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -4891,7 +4891,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -4904,7 +4904,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -4917,7 +4917,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -4930,7 +4930,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -4943,7 +4943,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -4956,7 +4956,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -4969,7 +4969,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -4982,7 +4982,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -4995,7 +4995,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -5008,7 +5008,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -5021,7 +5021,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 56,
     "timeline": [
       {
@@ -5034,7 +5034,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -5051,7 +5051,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -5064,7 +5064,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 37,
     "timeline": [
       {
@@ -5081,7 +5081,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -5098,7 +5098,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -5115,7 +5115,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 59,
     "timeline": [
       {
@@ -5128,7 +5128,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -5141,7 +5141,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -5158,7 +5158,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 28,
     "timeline": [
       {
@@ -5175,7 +5175,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -5192,7 +5192,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -5209,7 +5209,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -5222,7 +5222,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -5235,7 +5235,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 46,
     "timeline": [
       {
@@ -5252,7 +5252,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -5269,7 +5269,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -5286,7 +5286,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 38,
     "timeline": [
       {
@@ -5299,7 +5299,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 42,
     "timeline": [
       {
@@ -5312,7 +5312,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 37,
     "timeline": [
       {
@@ -5329,7 +5329,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -5342,7 +5342,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -5355,7 +5355,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 31,
     "timeline": [
       {
@@ -5368,7 +5368,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -5381,7 +5381,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -5398,7 +5398,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 42,
     "timeline": [
       {
@@ -5415,7 +5415,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -5428,7 +5428,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -5441,7 +5441,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -5454,7 +5454,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -5471,7 +5471,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -5488,7 +5488,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -5501,7 +5501,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -5514,7 +5514,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -5527,7 +5527,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -5544,7 +5544,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -5557,7 +5557,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -5574,7 +5574,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -5591,7 +5591,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -5608,7 +5608,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 38,
     "timeline": [
       {
@@ -5621,7 +5621,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -5638,7 +5638,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -5651,7 +5651,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -5668,7 +5668,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -5685,7 +5685,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 46,
     "timeline": [
       {
@@ -5698,7 +5698,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -5715,7 +5715,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -5732,7 +5732,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -5749,7 +5749,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -5766,7 +5766,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -5779,7 +5779,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -5796,7 +5796,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 28,
     "timeline": [
       {
@@ -5809,7 +5809,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -5822,7 +5822,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -5839,7 +5839,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -5852,7 +5852,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -5869,7 +5869,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -5886,7 +5886,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -5903,7 +5903,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -5916,7 +5916,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -5929,7 +5929,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 31,
     "timeline": [
       {
@@ -5942,7 +5942,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 46,
     "timeline": [
       {
@@ -5959,7 +5959,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -5976,7 +5976,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -5989,7 +5989,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -6002,7 +6002,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -6015,7 +6015,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -6028,7 +6028,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -6045,7 +6045,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -6062,7 +6062,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -6079,7 +6079,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -6096,7 +6096,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 59,
     "timeline": [
       {
@@ -6113,7 +6113,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -6126,7 +6126,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -6143,7 +6143,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -6160,7 +6160,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -6173,7 +6173,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -6186,7 +6186,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -6199,7 +6199,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -6216,7 +6216,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -6233,7 +6233,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -6250,7 +6250,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -6263,7 +6263,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -6276,7 +6276,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -6293,7 +6293,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -6306,7 +6306,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -6319,7 +6319,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 34,
     "timeline": [
       {
@@ -6336,7 +6336,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -6349,7 +6349,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -6362,7 +6362,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 53,
     "timeline": [
       {
@@ -6379,7 +6379,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -6396,7 +6396,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -6409,7 +6409,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -6422,7 +6422,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -6435,7 +6435,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 46,
     "timeline": [
       {
@@ -6452,7 +6452,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 54,
     "timeline": [
       {
@@ -6465,7 +6465,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -6478,7 +6478,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -6491,7 +6491,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 50,
     "timeline": [
       {
@@ -6504,7 +6504,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 36,
     "timeline": [
       {
@@ -6521,7 +6521,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 53,
     "timeline": [
       {
@@ -6538,7 +6538,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -6551,7 +6551,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 49,
     "timeline": [
       {
@@ -6564,7 +6564,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -6581,7 +6581,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 35,
     "timeline": [
       {
@@ -6598,7 +6598,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -6611,7 +6611,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 32,
     "timeline": [
       {
@@ -6624,7 +6624,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 56,
     "timeline": [
       {
@@ -6641,7 +6641,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 51,
     "timeline": [
       {
@@ -6654,7 +6654,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 37,
     "timeline": [
       {
@@ -6667,7 +6667,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 37,
     "timeline": [
       {
@@ -6680,7 +6680,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 46,
     "timeline": [
       {
@@ -6697,7 +6697,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -6714,7 +6714,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -6727,7 +6727,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -6744,7 +6744,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 46,
     "timeline": [
       {
@@ -6761,7 +6761,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -6778,7 +6778,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 52,
     "timeline": [
       {
@@ -6791,7 +6791,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 56,
     "timeline": [
       {
@@ -6804,7 +6804,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -6821,7 +6821,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -6838,7 +6838,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -6851,7 +6851,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -6868,7 +6868,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -6881,7 +6881,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -6894,7 +6894,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -6907,7 +6907,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 52,
     "timeline": [
       {
@@ -6920,7 +6920,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -6937,7 +6937,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -6954,7 +6954,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -6971,7 +6971,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -6988,7 +6988,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 33,
     "timeline": [
       {
@@ -7005,7 +7005,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -7022,7 +7022,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -7039,7 +7039,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -7052,7 +7052,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -7069,7 +7069,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -7082,7 +7082,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 57,
     "timeline": [
       {
@@ -7099,7 +7099,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 55,
     "timeline": [
       {
@@ -7112,7 +7112,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -7125,7 +7125,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 30,
     "timeline": [
       {
@@ -7138,7 +7138,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -7151,7 +7151,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 46,
     "timeline": [
       {
@@ -7168,7 +7168,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -7181,7 +7181,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -7198,7 +7198,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 25,
     "timeline": [
       {
@@ -7215,7 +7215,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 48,
     "timeline": [
       {
@@ -7228,7 +7228,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 46,
     "timeline": [
       {
@@ -7245,7 +7245,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 29,
     "timeline": [
       {
@@ -7258,7 +7258,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 59,
     "timeline": [
       {
@@ -7271,7 +7271,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 39,
     "timeline": [
       {
@@ -7284,7 +7284,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -7297,7 +7297,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 41,
     "timeline": [
       {
@@ -7314,7 +7314,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 27,
     "timeline": [
       {
@@ -7327,7 +7327,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 26,
     "timeline": [
       {
@@ -7340,7 +7340,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 44,
     "timeline": [
       {
@@ -7353,7 +7353,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -7370,7 +7370,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 47,
     "timeline": [
       {
@@ -7383,7 +7383,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 60,
     "timeline": [
       {
@@ -7396,7 +7396,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 43,
     "timeline": [
       {
@@ -7409,7 +7409,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 45,
     "timeline": [
       {
@@ -7426,7 +7426,7 @@
     "completed": false
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 58,
     "timeline": [
       {
@@ -7439,7 +7439,7 @@
     "completed": true
   },
   {
-    "name": "pomodoro",
+    "name": "work",
     "duration": 40,
     "timeline": [
       {
@@ -7452,4 +7452,3 @@
     "completed": true
   }
 ]
-

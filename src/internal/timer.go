@@ -41,7 +41,7 @@ type countdown struct {
 type sessionType string
 
 const (
-	pomodoro   sessionType = "pomodoro"
+	work       sessionType = "work"
 	shortBreak sessionType = "short_break"
 	longBreak  sessionType = "long_break"
 )
@@ -55,7 +55,7 @@ type sessionTimeline struct {
 	EndTime time.Time `json:"end_time"`
 }
 
-// session represents a pomodoro or break session.
+// session represents a work or break session.
 type session struct {
 	// Name is the name of a session
 	Name sessionType `json:"name"`
@@ -131,12 +131,12 @@ type Timer struct {
 	SessionType         sessionType `json:"session_type"`
 	Session             session     `json:"-"`
 	Kind                kind        `json:"kind"`
-	AutoStartPomodoro   bool        `json:"auto_start_pomodoro"`
+	AutoStartWork       bool        `json:"auto_start_work"`
 	AutoStartBreak      bool        `json:"auto_start_break"`
 	LongBreakInterval   int         `json:"long_break_interval"`
-	MaxSessions         int         `json:"max_pomodoros"`
+	MaxSessions         int         `json:"max_sessions"`
 	Counter             int         `json:"counter"`
-	PomodoroCycle       int         `json:"iteration"`
+	WorkCycle           int         `json:"iteration"`
 	Msg                 message     `json:"msg"`
 	ShowNotification    bool        `json:"show_notification"`
 	TwentyFourHourClock bool        `json:"24_hour_clock"`
@@ -150,14 +150,14 @@ func (t *Timer) nextSession() sessionType {
 	var next sessionType
 
 	switch t.SessionType {
-	case pomodoro:
-		if t.PomodoroCycle == t.LongBreakInterval {
+	case work:
+		if t.WorkCycle == t.LongBreakInterval {
 			next = longBreak
 		} else {
 			next = shortBreak
 		}
 	case shortBreak, longBreak:
-		next = pomodoro
+		next = work
 	}
 
 	return next
@@ -202,10 +202,10 @@ func (t *Timer) getTimeRemaining(endTime time.Time) countdown {
 }
 
 // saveSession adds or updates the current session in the database.
-// If the current session is not a pomodoro session, it will be
+// If the current session is not a work session, it will be
 // skipped.
 func (t *Timer) saveSession() error {
-	if t.SessionType != pomodoro {
+	if t.SessionType != work {
 		return nil
 	}
 
@@ -229,7 +229,7 @@ func (t *Timer) printSession(endTime time.Time, w io.Writer) {
 	var text string
 
 	switch t.SessionType {
-	case pomodoro:
+	case work:
 		var count int
 
 		var total int
@@ -238,15 +238,15 @@ func (t *Timer) printSession(endTime time.Time, w io.Writer) {
 			count = t.Counter
 			total = t.MaxSessions
 		} else {
-			count = t.PomodoroCycle
+			count = t.WorkCycle
 			total = t.LongBreakInterval
 		}
 
 		text = fmt.Sprintf(
-			pterm.Green("[Pomodoro %d/%d]"),
+			pterm.Green("[Work %d/%d]"),
 			count,
 			total,
-		) + ": " + t.Msg[pomodoro]
+		) + ": " + t.Msg[work]
 	case shortBreak:
 		text = pterm.LightBlue("[Short break]") + ": " + t.Msg[shortBreak]
 	case longBreak:
@@ -266,7 +266,7 @@ func (t *Timer) printSession(endTime time.Time, w io.Writer) {
 // notify sends a desktop notification.
 func (t *Timer) notify() {
 	m := map[sessionType]string{
-		pomodoro:   "Pomodoro",
+		work:       "Work session",
 		shortBreak: "Short break",
 		longBreak:  "Long break",
 	}
@@ -285,7 +285,7 @@ func (t *Timer) notify() {
 }
 
 // handleInterruption is used to save the current state
-// of the timer if a pomodoro session is halted before.
+// of the timer if a work session is halted before.
 // completion.
 func (t *Timer) handleInterruption() {
 	c := make(chan os.Signal, 1)
@@ -373,7 +373,7 @@ func (t *Timer) playSound(done chan bool) {
 		return
 	}
 
-	bufferSize := 10
+	bufferSize := 5
 
 	err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Duration(int(time.Second)/bufferSize)))
 	if err != nil {
@@ -400,7 +400,7 @@ func (t *Timer) Run() error {
 	t.handleInterruption()
 
 	if t.SessionType == "" {
-		t.SessionType = pomodoro
+		t.SessionType = work
 	}
 
 	endTime := t.Session.EndTime
@@ -417,7 +417,7 @@ func (t *Timer) Run() error {
 	return t.start(endTime)
 }
 
-// GetInterrupted returns a previously stored pomodoro
+// GetInterrupted returns a previously stored work
 // session that was interrupted before completion.
 func (t *Timer) GetInterrupted() (timerBytes, sessionBytes []byte, err error) {
 	timerBytes, sessionBytes, err = t.Store.getTimerState()
@@ -434,7 +434,7 @@ func (t *Timer) GetInterrupted() (timerBytes, sessionBytes []byte, err error) {
 
 // Resume attempts to continue an interrupted session
 // from where it left off. If the interrupted session is not
-// pomodoro, it skips right to the next pomodoro session
+// work, it skips right to the next work session
 // in the cycle, and continues normally from there.
 func (t *Timer) Resume() error {
 	timerBytes, sessionBytes, err := t.GetInterrupted()
@@ -454,12 +454,12 @@ func (t *Timer) Resume() error {
 		}
 	}
 
-	if t.Session.Name != pomodoro || t.Session.Completed {
-		t.SessionType = pomodoro
+	if t.Session.Name != work || t.Session.Completed {
+		t.SessionType = work
 		// Set to zero value so that a new session is initialised
 		t.Session.EndTime = time.Time{}
 	} else {
-		// Calculate a new end time for the interrupted pomodoro
+		// Calculate a new end time for the interrupted work
 		// session by
 		elapsedTimeInSeconds := t.Session.getElapsedTimeInSeconds()
 		newEndTime := time.Now().Add(time.Duration(t.Kind[t.SessionType]) * time.Minute).Add(-time.Second * time.Duration(elapsedTimeInSeconds))
@@ -486,11 +486,11 @@ func (t *Timer) Resume() error {
 func (t *Timer) initSession() (time.Time, error) {
 	t.Counter++
 
-	if t.SessionType == pomodoro {
-		if t.PomodoroCycle == t.LongBreakInterval {
-			t.PomodoroCycle = 1
+	if t.SessionType == work {
+		if t.WorkCycle == t.LongBreakInterval {
+			t.WorkCycle = 1
 		} else {
-			t.PomodoroCycle++
+			t.WorkCycle++
 		}
 	}
 
@@ -520,8 +520,8 @@ func (t *Timer) initSession() (time.Time, error) {
 }
 
 // start begins a new session.and loops forever,
-// alternating between pomodoro and break sessions
-// unless a maximum number of pomodoro sessions
+// alternating between work and break sessions
+// unless a maximum number of work sessions
 // is set, or the current session is terminated
 // manually.
 func (t *Timer) start(endTime time.Time) error {
@@ -529,7 +529,7 @@ func (t *Timer) start(endTime time.Time) error {
 
 	for {
 		if t.Sound != "" {
-			if t.SessionType == pomodoro {
+			if t.SessionType == work {
 				go t.playSound(done)
 			} else if !t.SoundOnBreak {
 				done <- true
@@ -566,8 +566,8 @@ func (t *Timer) start(endTime time.Time) error {
 			return nil
 		}
 
-		if t.SessionType != pomodoro && !t.AutoStartPomodoro ||
-			t.SessionType == pomodoro && !t.AutoStartBreak {
+		if t.SessionType != work && !t.AutoStartWork ||
+			t.SessionType == work && !t.AutoStartBreak {
 			// Block until user input before beginning next session
 			reader := bufio.NewReader(os.Stdin)
 
@@ -603,8 +603,8 @@ func (t *Timer) countdown(timeRemaining countdown) {
 // setOptions configures the Timer instance based
 // on command line arguments.
 func (t *Timer) setOptions(ctx *cli.Context) {
-	if ctx.Uint("pomodoro") > 0 {
-		t.Kind[pomodoro] = int(ctx.Uint("pomodoro"))
+	if ctx.Uint("work") > 0 {
+		t.Kind[work] = int(ctx.Uint("work"))
 	}
 
 	if ctx.Uint("short-break") > 0 {
@@ -637,18 +637,18 @@ func (t *Timer) setOptions(ctx *cli.Context) {
 func NewTimer(ctx *cli.Context, c *Config, store *Store) *Timer {
 	t := &Timer{
 		Kind: kind{
-			pomodoro:   c.PomodoroMinutes,
+			work:       c.WorkMinutes,
 			shortBreak: c.ShortBreakMinutes,
 			longBreak:  c.LongBreakMinutes,
 		},
 		LongBreakInterval: c.LongBreakInterval,
 		Msg: message{
-			pomodoro:   c.PomodoroMessage,
+			work:       c.WorkMessage,
 			shortBreak: c.ShortBreakMessage,
 			longBreak:  c.LongBreakMessage,
 		},
 		ShowNotification:    c.Notify,
-		AutoStartPomodoro:   c.AutoStartPomorodo,
+		AutoStartWork:       c.AutoStartWork,
 		AutoStartBreak:      c.AutoStartBreak,
 		TwentyFourHourClock: c.TwentyFourHourClock,
 		Sound:               c.Sound,

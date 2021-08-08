@@ -74,7 +74,7 @@ func (s *Store) init() error {
 	return err
 }
 
-// updateSession creates or updates a pomodoro session
+// updateSession creates or updates a work session
 // in the database. The session is created if it doesn't
 // exist already, or overwritten if it does.
 func (s *Store) updateSession(key, value []byte) error {
@@ -98,7 +98,7 @@ func (s *Store) saveTimerState(timer, sessionKey []byte) error {
 }
 
 // getTimerState retrieves the state of the timer as of when it was
-// last interrupted, and the corresponding pomodoro session (if any).
+// last interrupted, and the corresponding work session (if any).
 func (s *Store) getTimerState() (timer, session []byte, err error) {
 	err = s.conn.View(func(tx *bolt.Tx) error {
 		timer = tx.Bucket([]byte("timer")).Get([]byte("timer"))
@@ -154,9 +154,9 @@ func (s *Store) deleteTimerState() error {
 	})
 }
 
-// getSessions retrieves the saved pomodoro sessions
+// getSessions retrieves the saved work sessions
 // within the specified time period. It checks the previous
-// pomodoro session just before the `startTime` to see if
+// work session just before the `startTime` to see if
 // its end time is within the specified bounds. If so, it
 // is included in the output.
 func (s *Store) getSessions(startTime, endTime time.Time) ([][]byte, error) {

@@ -40,7 +40,11 @@ func init() {
 			}
 
 			if _, err = xdg.SearchDataFile(relPath); err != nil {
-				_ = os.WriteFile(pathToFile, b, os.ModePerm)
+				err = os.WriteFile(pathToFile, b, os.ModePerm)
+				if err != nil {
+					pterm.Error.Println(err)
+					os.Exit(1)
+				}
 			}
 		}
 

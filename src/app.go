@@ -102,7 +102,7 @@ func GetApp() *cli.App {
 				Email: "ayo@freshman.tech",
 			},
 		},
-		Usage:                "Focus is a cross-platform pomodoro timer application for the command line.",
+		Usage:                "Focus is a cross-platform productivity timer for the command-line. It is based on the Pomodoro Technique,\n\t\ta time management method developed by Francesco Cirillo in the late 1980s.",
 		UsageText:            "[COMMAND] [OPTIONS]",
 		Version:              "v0.1.0",
 		EnableBashCompletion: true,
@@ -138,11 +138,11 @@ func GetApp() *cli.App {
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "delete",
-						Usage: "Delete the all pomodoro sessions within the specified time period.",
+						Usage: "Delete the all work sessions within the specified time period.",
 					},
 					&cli.BoolFlag{
 						Name:  "list",
-						Usage: "List all the pomodoro sessions within the specified time period.",
+						Usage: "List all the work sessions within the specified time period.",
 					},
 					&cli.StringFlag{
 						Name:    "period",
@@ -179,19 +179,19 @@ func GetApp() *cli.App {
 				Aliases: []string{"s"},
 			},
 			&cli.UintFlag{
-				Name:    "pomodoro",
-				Usage:   "Pomodoro duration in minutes (default: 25).",
-				Aliases: []string{"p"},
+				Name:    "work",
+				Usage:   "Work duration in minutes (default: 25).",
+				Aliases: []string{"w"},
 			},
 			&cli.UintFlag{
 				Name:    "long-break-interval",
 				Aliases: []string{"int"},
-				Usage:   "The number of pomodoro sessions before a long break (default: 4).",
+				Usage:   "The number of work sessions before a long break (default: 4).",
 			},
 			&cli.UintFlag{
 				Name:    "max-sessions",
 				Aliases: []string{"max"},
-				Usage:   "The maximum number of pomodoro sessions (unlimited by default).",
+				Usage:   "The maximum number of work sessions (unlimited by default).",
 			},
 			&cli.BoolFlag{
 				Name:    "disable-notifications",
@@ -209,7 +209,7 @@ func GetApp() *cli.App {
 			},
 			&cli.StringFlag{
 				Name:  "sound",
-				Usage: "Play a sound continuously during a session. Valid options: coffee_shop, fireplace, rain,\n\t\t\t\twind, white_noise, summer_night.",
+				Usage: "Play ambient sounds continuously during a session. Valid options: coffee_shop, fireplace, rain,\n\t\t\t\twind, forest, summer_night, playground.",
 			},
 			&cli.BoolFlag{
 				Name:    "sound-on-break",
