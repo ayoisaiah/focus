@@ -340,6 +340,12 @@ func (t *Timer) handleInterruption() {
 
 // playSound starts the specified ambient sound.
 func (t *Timer) playSound(done chan bool) {
+	exitFunc := func(err error) {
+		fmt.Println()
+		pterm.Error.Println(err)
+		os.Exit(1)
+	}
+
 	ext := filepath.Ext(t.Sound)
 	// without extension, treat as OGG file
 	if ext == "" {
@@ -348,14 +354,12 @@ func (t *Timer) playSound(done chan bool) {
 
 	pathToFile, err := xdg.SearchDataFile(filepath.Join(configDir, "static", t.Sound))
 	if err != nil {
-		pterm.Error.Println(err)
-		return
+		exitFunc(err)
 	}
 
 	f, err := os.Open(pathToFile)
 	if err != nil {
-		pterm.Error.Println(err)
-		return
+		exitFunc(err)
 	}
 
 	var streamer beep.StreamSeekCloser
@@ -376,24 +380,19 @@ func (t *Timer) playSound(done chan bool) {
 	}
 
 	if err != nil {
-		pterm.Error.Println(err)
-		return
+		exitFunc(err)
 	}
-
-	defer streamer.Close()
 
 	bufferSize := 10
 
 	err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Duration(int(time.Second)/bufferSize)))
 	if err != nil {
-		pterm.Error.Println(err)
-		return
+		exitFunc(err)
 	}
 
 	err = streamer.Seek(0)
 	if err != nil {
-		pterm.Error.Println(err)
-		return
+		exitFunc(err)
 	}
 
 	s := beep.Loop(-1, streamer)
@@ -403,6 +402,8 @@ func (t *Timer) playSound(done chan bool) {
 	})))
 
 	<-done
+
+	streamer.Close()
 
 	speaker.Clear()
 }
@@ -538,12 +539,18 @@ func (t *Timer) initSession() (time.Time, error) {
 func (t *Timer) start(endTime time.Time) error {
 	done := make(chan bool)
 
+	var soundIsPlaying bool
+
 	for {
 		if t.Sound != "" {
-			if t.SessionType == work {
+			if t.SessionType == work && !soundIsPlaying {
 				go t.playSound(done)
+
+				soundIsPlaying = true
 			} else if !t.SoundOnBreak {
 				done <- true
+
+				soundIsPlaying = false
 			}
 		}
 
