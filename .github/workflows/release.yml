@@ -1,4 +1,4 @@
-name: Release Werk
+name: Release focus
 
 on:
   push:
