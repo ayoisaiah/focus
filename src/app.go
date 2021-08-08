@@ -201,18 +201,18 @@ func GetApp() *cli.App {
 		Flags: []cli.Flag{
 			&cli.UintFlag{
 				Name:    "work",
-				Usage:   "Work duration in minutes (default: 25).",
 				Aliases: []string{"w"},
+				Usage:   "Work duration in minutes (default: 25).",
 			},
 			&cli.UintFlag{
 				Name:    "short-break",
-				Usage:   "Short break duration in minutes (default: 5).",
 				Aliases: []string{"s"},
+				Usage:   "Short break duration in minutes (default: 5).",
 			},
 			&cli.UintFlag{
 				Name:    "long-break",
-				Usage:   "Long break duration in minutes (default: 15).",
 				Aliases: []string{"l"},
+				Usage:   "Long break duration in minutes (default: 15).",
 			},
 			&cli.UintFlag{
 				Name:    "long-break-interval",
@@ -231,12 +231,12 @@ func GetApp() *cli.App {
 			},
 			&cli.StringFlag{
 				Name:  "sound",
-				Usage: "Play ambient sounds continuously during a session. Valid options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground.",
+				Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground.",
 			},
 			&cli.BoolFlag{
 				Name:    "sound-on-break",
 				Aliases: []string{"sob"},
-				Usage:   "Play sounds during break session.",
+				Usage:   "Play ambient sounds during a break sessions.",
 			},
 			&cli.BoolFlag{
 				Name:  "no-color",
