@@ -230,7 +230,7 @@ func (c *Config) get(pathToConfig string) error {
 		return err
 	}
 
-	return nil
+	return c.save(pathToConfig)
 }
 
 // defaults sets default values for the config.
