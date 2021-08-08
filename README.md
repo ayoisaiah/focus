@@ -20,20 +20,20 @@ Focus is a cross-platform productivity timer for the command line. It is based o
 
 1. Pick a task you need to accomplish.
 2. Set a timer for 25 minutes and start working without interruptions.
-3. When the timer rings, take a short break or 5 minutes. Do something that is not work related such as stretching or relaxing.
-4. Once you’ve completed four work sessions, you can take a longer 15 minute break.
+3. When the timer rings, take a short break for 5 minutes.
+4. Once you've completed four work sessions, you can take a longer 15 minute break.
 
 ## Main features
 
-- Work and break lengths are customisable.
+- Work and break session lengths are customisable.
 - You can pause and resume work sessions.
+- You can skip break sessions.
 - You can customise the number of sessions before a long break.
 - You can set a maximum number of sessions.
 - Destop notifications are supported on all platforms.
 - You can customise the notification messages.
-- You can skip breaks.
 - Detailed statistics for your work history are provided including charts.
-- Focus provided six built-in ambient sounds that you can play during a session, and you can add your own.
+- Focus provides six built-in ambient sounds that you can play during a session, and you can add your own custom sounds.
 
 ## Screenshots
 
@@ -219,7 +219,7 @@ $ focus stats --delete --start '2021-08-08 06:11:00 PM'
 ```
 
 ## Contribute
-7
+
 Bug reports and feature requests are much welcome! Please open an issue before creating a pull request.
 
 ## Licence
