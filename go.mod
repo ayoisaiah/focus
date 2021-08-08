@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/adrg/xdg v0.3.3
+	github.com/faiface/beep v1.0.2
 	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20210707094841-eea289f08d45 // indirect

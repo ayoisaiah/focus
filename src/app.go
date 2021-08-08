@@ -189,7 +189,7 @@ func GetApp() *cli.App {
 				Usage:   "The number of pomodoro sessions before a long break (default: 4).",
 			},
 			&cli.UintFlag{
-				Name:    "max-pomodoros",
+				Name:    "max-sessions",
 				Aliases: []string{"max"},
 				Usage:   "The maximum number of pomodoro sessions (unlimited by default).",
 			},
@@ -206,6 +206,15 @@ func GetApp() *cli.App {
 			&cli.BoolFlag{
 				Name:  "no-color",
 				Usage: "Disable coloured output.",
+			},
+			&cli.StringFlag{
+				Name:  "sound",
+				Usage: "Play a sound continuously during a session. Valid options: coffee_shop, fireplace, rain,\n\t\t\t\twind, white_noise, summer_night.",
+			},
+			&cli.BoolFlag{
+				Name:    "sound-on-break",
+				Aliases: []string{"sob"},
+				Usage:   "Play sounds during break session.",
 			},
 		},
 		Action: func(ctx *cli.Context) error {

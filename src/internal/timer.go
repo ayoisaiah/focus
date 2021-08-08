@@ -12,6 +12,10 @@ import (
 	"time"
 
 	"github.com/adrg/xdg"
+	"github.com/faiface/beep"
+	"github.com/faiface/beep/mp3"
+	"github.com/faiface/beep/speaker"
+	"github.com/faiface/beep/vorbis"
 	"github.com/gen2brain/beeep"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
@@ -130,13 +134,15 @@ type Timer struct {
 	AutoStartPomodoro   bool        `json:"auto_start_pomodoro"`
 	AutoStartBreak      bool        `json:"auto_start_break"`
 	LongBreakInterval   int         `json:"long_break_interval"`
-	MaxPomodoros        int         `json:"max_pomodoros"`
+	MaxSessions         int         `json:"max_pomodoros"`
 	Counter             int         `json:"counter"`
 	PomodoroCycle       int         `json:"iteration"`
 	Msg                 message     `json:"msg"`
 	ShowNotification    bool        `json:"show_notification"`
 	TwentyFourHourClock bool        `json:"24_hour_clock"`
 	Store               DB          `json:"-"`
+	Sound               string      `json:"sound"`
+	SoundOnBreak        bool        `json:"sound_on_break"`
 }
 
 // nextSession retrieves the next session.
@@ -228,9 +234,9 @@ func (t *Timer) printSession(endTime time.Time, w io.Writer) {
 
 		var total int
 
-		if t.MaxPomodoros != 0 {
+		if t.MaxSessions != 0 {
 			count = t.Counter
-			total = t.MaxPomodoros
+			total = t.MaxSessions
 		} else {
 			count = t.PomodoroCycle
 			total = t.LongBreakInterval
@@ -268,7 +274,7 @@ func (t *Timer) notify() {
 	msg := m[t.SessionType] + " is finished"
 
 	// pathToIcon will be an empty string if file is not found
-	pathToIcon, _ := xdg.SearchDataFile(filepath.Join(configDir, "icon.png"))
+	pathToIcon, _ := xdg.SearchDataFile(filepath.Join(configDir, "static", "icon.png"))
 
 	err := beeep.Notify(msg, t.Msg[t.nextSession()], pathToIcon)
 	if err != nil {
@@ -328,6 +334,66 @@ func (t *Timer) handleInterruption() {
 
 		os.Exit(0)
 	}()
+}
+
+func (t *Timer) playSound(done chan bool) {
+	ext := filepath.Ext(t.Sound)
+	// without extension, treat as OGG file
+	if ext == "" {
+		t.Sound += ".ogg"
+	}
+
+	pathToFile, err := xdg.SearchDataFile(filepath.Join(configDir, "static", t.Sound))
+	if err != nil {
+		pterm.Error.Println(err)
+		return
+	}
+
+	f, err := os.Open(pathToFile)
+	if err != nil {
+		pterm.Error.Println(err)
+		return
+	}
+
+	var streamer beep.StreamSeekCloser
+
+	var format beep.Format
+
+	ext = filepath.Ext(t.Sound)
+
+	switch ext {
+	case ".ogg":
+		streamer, format, err = vorbis.Decode(f)
+	case ".mp3":
+		streamer, format, err = mp3.Decode(f)
+	}
+
+	if err != nil {
+		pterm.Error.Println(err)
+		return
+	}
+
+	bufferSize := 10
+
+	err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Duration(int(time.Second)/bufferSize)))
+	if err != nil {
+		pterm.Error.Println(err)
+		return
+	}
+
+	buffer := beep.NewBuffer(format)
+
+	buffer.Append(streamer)
+
+	streamer.Close()
+
+	s := beep.Loop(-1, buffer.Streamer(0, buffer.Len()))
+
+	speaker.Play(s)
+
+	<-done
+
+	speaker.Clear()
 }
 
 func (t *Timer) Run() error {
@@ -459,7 +525,17 @@ func (t *Timer) initSession() (time.Time, error) {
 // is set, or the current session is terminated
 // manually.
 func (t *Timer) start(endTime time.Time) error {
+	done := make(chan bool)
+
 	for {
+		if t.Sound != "" {
+			if t.SessionType == pomodoro {
+				go t.playSound(done)
+			} else if !t.SoundOnBreak {
+				done <- true
+			}
+		}
+
 		t.printSession(endTime, os.Stdout)
 
 		fmt.Print("\033[s")
@@ -486,7 +562,7 @@ func (t *Timer) start(endTime time.Time) error {
 			t.countdown(timeRemaining)
 		}
 
-		if t.Counter == t.MaxPomodoros {
+		if t.Counter == t.MaxSessions {
 			return nil
 		}
 
@@ -543,12 +619,16 @@ func (t *Timer) setOptions(ctx *cli.Context) {
 		t.LongBreakInterval = int(ctx.Uint("long-break-interval"))
 	}
 
-	if ctx.Uint("max-pomodoros") > 0 {
-		t.MaxPomodoros = int(ctx.Uint("max-pomodoros"))
+	if ctx.Uint("max-sessions") > 0 {
+		t.MaxSessions = int(ctx.Uint("max-sessions"))
 	}
 
 	if ctx.Bool("disable-notifications") {
 		t.ShowNotification = false
+	}
+
+	if ctx.String("sound") != "" {
+		t.Sound = ctx.String("sound")
 	}
 }
 
@@ -571,6 +651,8 @@ func NewTimer(ctx *cli.Context, c *Config, store *Store) *Timer {
 		AutoStartPomodoro:   c.AutoStartPomorodo,
 		AutoStartBreak:      c.AutoStartBreak,
 		TwentyFourHourClock: c.TwentyFourHourClock,
+		Sound:               c.Sound,
+		SoundOnBreak:        c.SoundOnBreak,
 		Store:               store,
 	}
 

@@ -1,10 +1,10 @@
 package main
 
 import (
+	"embed"
+	"io/fs"
 	"os"
 	"path/filepath"
-
-	_ "embed"
 
 	"github.com/adrg/xdg"
 	cmd "github.com/ayoisaiah/focus/src"
@@ -15,23 +15,37 @@ const (
 	configDir = "focus"
 )
 
-//go:embed assets/focus-clock.png
-var icon []byte
+//go:embed static/*
+var static embed.FS
 
 func init() {
-	relPath := filepath.Join(configDir, "icon.png")
+	_ = fs.WalkDir(static, "static", func(path string, d fs.DirEntry, err error) error {
+		if !d.IsDir() {
+			var b []byte
 
-	pathToIcon, err := xdg.DataFile(relPath)
-	if err != nil {
-		pterm.Error.Println(err)
-		os.Exit(1)
-	}
+			b, err = fs.ReadFile(static, path)
+			if err != nil {
+				pterm.Error.Println(err)
+				os.Exit(1)
+			}
 
-	// copy the application icon to the data folder
-	// if it doesn't exist already
-	if _, err := xdg.SearchDataFile(relPath); err != nil {
-		_ = os.WriteFile(pathToIcon, icon, os.ModePerm)
-	}
+			relPath := filepath.Join(configDir, path)
+
+			var pathToFile string
+
+			pathToFile, err = xdg.DataFile(relPath)
+			if err != nil {
+				pterm.Error.Println(err)
+				os.Exit(1)
+			}
+
+			if _, err = xdg.SearchDataFile(relPath); err != nil {
+				_ = os.WriteFile(pathToFile, b, os.ModePerm)
+			}
+		}
+
+		return err
+	})
 }
 
 func run(args []string) error {

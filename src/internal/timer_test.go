@@ -205,7 +205,7 @@ func TestTimer_PrintSession(t *testing.T) {
 
 	for _, v := range cases {
 		timer := &Timer{
-			MaxPomodoros:        v.maxPomodoros,
+			MaxSessions:         v.maxPomodoros,
 			LongBreakInterval:   v.longBreakInterval,
 			PomodoroCycle:       v.pomodoroCycle,
 			Counter:             v.pomodoroCycle,
