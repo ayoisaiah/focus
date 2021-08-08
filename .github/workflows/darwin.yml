@@ -1,0 +1,34 @@
+name: Build darwin
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    # Setup Go
+    - name: Setup Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.16'
+
+    # Tests
+    - name: Build binary
+      run: go build -o focus-darwin ./cmd/...
+
+    - name: Archive darwin binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: focus-darwin
+        path: focus-darwin
+
+    - name: Download darwin binary
+      uses: actions/download-artifact@v2
+      with:
+        name: focus-darwin
