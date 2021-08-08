@@ -3,7 +3,7 @@ before:
     - go mod download
 builds:
   - env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - linux
       - windows
@@ -18,9 +18,10 @@ builds:
         goarch: 386
       - goos: windows
         goarch: arm64
-    main: ./cmd/werk
+    main: ./cmd/focus
 archives:
-  - replacements:
+  -
+    replacements:
       darwin: darwin
       linux: linux
       windows: windows
@@ -28,10 +29,19 @@ archives:
       386: i386
       amd64: amd64
       arm64: arm64
+
+    format_overrides:
+      - goos: windows
+        format: zip
+
+    files:
+      - LICENCE
+      - README.md
+      - CHANGELOG.md
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  name_template: '{{ .Tag }}-next'
 changelog:
   sort: asc
   filters:
@@ -40,29 +50,27 @@ changelog:
       - '^test:'
 nfpms:
   -
-    id: werk
-    package_name: werk
-    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    id: focus
+    package_name: focus
+    file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
     vendor: Freshman
-    homepage: https://github.com/ayoisaiah/
+    homepage: https://freshman.tech
     maintainer: Ayooluwa Isaiah <ayo@freshman.tech>
-    description: Werk is a command-line pomodoro timer application
+    description: Focus is a command-line productivity timer based on the Pomodoro Technique
     license: MIT
     formats:
       - deb
       - rpm
-    recommends:
-      - exiftool
 scoop:
-  url_template: "https://github.com/ayoisaiah/werk/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+  url_template: 'https://github.com/ayoisaiah/focus/releases/download/{{ .Tag }}/{{ .ArtifactName }}'
   bucket:
     owner: ayoisaiah
     name: scoop-bucket
-    token: "{{ .Env.SCOOP_BUCKET_GITHUB_TOKEN }}"
+    token: '{{ .Env.SCOOP_BUCKET_GITHUB_TOKEN }}'
   commit_author:
     name: goreleaserbot
     email: goreleaser@carlosbecker.com
-  commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
-  homepage: "https://github.com/ayoisaiah/werk"
-  description: "Werk is a command-line pomodoro timer application"
+  commit_msg_template: 'Scoop update for {{ .ProjectName }} version {{ .Tag }}'
+  homepage: 'https://github.com/ayoisaiah/focus'
+  description: 'Focus is a command-line productivity timer based on the Pomodoro Technique'
   license: MIT
