@@ -209,7 +209,7 @@ func GetApp() *cli.App {
 			},
 			&cli.StringFlag{
 				Name:  "sound",
-				Usage: "Play ambient sounds continuously during a session. Valid options: coffee_shop, fireplace, rain,\n\t\t\t\twind, forest, summer_night, playground.",
+				Usage: "Play ambient sounds continuously during a session. Valid options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground.",
 			},
 			&cli.BoolFlag{
 				Name:    "sound-on-break",

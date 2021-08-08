@@ -373,7 +373,9 @@ func (t *Timer) playSound(done chan bool) {
 		return
 	}
 
-	bufferSize := 5
+	defer streamer.Close()
+
+	bufferSize := 10
 
 	err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Duration(int(time.Second)/bufferSize)))
 	if err != nil {
@@ -381,15 +383,17 @@ func (t *Timer) playSound(done chan bool) {
 		return
 	}
 
-	buffer := beep.NewBuffer(format)
+	err = streamer.Seek(0)
+	if err != nil {
+		pterm.Error.Println(err)
+		return
+	}
 
-	buffer.Append(streamer)
+	s := beep.Loop(-1, streamer)
 
-	streamer.Close()
-
-	s := beep.Loop(-1, buffer.Streamer(0, buffer.Len()))
-
-	speaker.Play(s)
+	speaker.Play(beep.Seq(s, beep.Callback(func() {
+		done <- true
+	})))
 
 	<-done
 
