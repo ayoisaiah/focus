@@ -104,7 +104,7 @@ func GetApp() *cli.App {
 		},
 		Usage:                "Focus is a cross-platform productivity timer for the command-line. It is based on the Pomodoro Technique,\n\t\ta time management method developed by Francesco Cirillo in the late 1980s.",
 		UsageText:            "[COMMAND] [OPTIONS]",
-		Version:              "v1.0.0",
+		Version:              "v1.0.1",
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{
