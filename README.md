@@ -136,7 +136,7 @@ Notifications are turned on by default. Set `notify` to `false` in your config f
 
 ## Ambient sounds
 
-Focus provides six ambient sounds by default: `coffee_shop`, `playground`, `wind`, `rain`, `summer_night`, and `fireplace`. You can play a sound using the `sound` option, or set a default sound in your config file through the `sound` key.
+Focus provides six ambient sounds by default: `coffee_shop`, `playground`, `wind`, `rain`, `summer_night`, and `fireplace`. You can play a sound using the `--sound` option, or set a default sound in your config file through the `sound` key.
 
 ```
 $ focus --sound 'coffee_shop'
