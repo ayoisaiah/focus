@@ -64,7 +64,7 @@ func (d *DBMock) updateSession(key, value []byte) error {
 	return nil
 }
 
-func (d *DBMock) deleteSessions(startTime, endTime time.Time) error {
+func (d *DBMock) deleteSessions(sessions []session) error {
 	return nil
 }
 

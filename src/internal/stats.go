@@ -557,7 +557,7 @@ func (s *Stats) Delete(w io.Writer, r io.Reader) error {
 
 	_, _ = reader.ReadString('\n')
 
-	return s.store.deleteSessions(s.StartTime, s.EndTime)
+	return s.store.deleteSessions(s.Sessions)
 }
 
 // List prints out a table of all the sessions that

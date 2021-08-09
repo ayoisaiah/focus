@@ -29,7 +29,7 @@ type DB interface {
 	getTimerState() ([]byte, []byte, error)
 	saveTimerState(timer, sessionKey []byte) error
 	updateSession(key, value []byte) error
-	deleteSessions(startTime, endTime time.Time) error
+	deleteSessions(sessions []session) error
 	close() error
 }
 
@@ -61,7 +61,7 @@ func (s *Store) init() error {
 	s.conn = db
 
 	// Create the buckets
-	err = s.conn.Update(func(tx *bolt.Tx) error {
+	return s.conn.Update(func(tx *bolt.Tx) error {
 		_, err = tx.CreateBucketIfNotExists([]byte("sessions"))
 		if err != nil {
 			return err
@@ -70,8 +70,6 @@ func (s *Store) init() error {
 		_, err = tx.CreateBucketIfNotExists([]byte("timer"))
 		return err
 	})
-
-	return err
 }
 
 // updateSession creates or updates a work session
@@ -116,22 +114,18 @@ func (s *Store) getTimerState() (timer, session []byte, err error) {
 
 // deleteSessions deletes all sessions within the
 // specified bounds from the database.
-func (s *Store) deleteSessions(startTime, endTime time.Time) error {
-	id := startTime.Format(time.RFC3339)
-
+func (s *Store) deleteSessions(sessions []session) error {
 	return s.conn.Update(func(tx *bolt.Tx) error {
-		c := tx.Bucket([]byte("sessions")).Cursor()
-		min := []byte(startTime.Format(time.RFC3339))
-		max := []byte(endTime.Format(time.RFC3339))
+		for _, v := range sessions {
+			id := v.StartTime.Format(time.RFC3339)
 
-		for k, _ := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, _ = c.Seek(min) {
-			err := c.Delete()
+			err := tx.Bucket([]byte("sessions")).Delete([]byte(id))
 			if err != nil {
 				return err
 			}
 		}
 
-		return tx.Bucket([]byte("sessions")).Delete([]byte(id))
+		return nil
 	})
 }
 

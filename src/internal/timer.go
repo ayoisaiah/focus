@@ -440,7 +440,7 @@ func (t *Timer) GetInterrupted() (timerBytes, sessionBytes []byte, err error) {
 		return nil, nil, err
 	}
 
-	if len(timerBytes) == 0 {
+	if len(timerBytes) == 0 || len(sessionBytes) == 0 {
 		return nil, nil, errNoPausedSession
 	}
 
