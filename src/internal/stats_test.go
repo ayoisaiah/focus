@@ -5,13 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sort"
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/andreyvit/diff"
 	"github.com/pterm/pterm"
-	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 func init() {
@@ -263,7 +261,7 @@ func TestGetPeriod(t *testing.T) {
 }
 
 func TestStats_Show(t *testing.T) {
-	for _, v := range statsCases {
+	for i, v := range statsCases {
 		s := getStats(t, &v)
 
 		pterm.DisableStyling()
@@ -275,172 +273,14 @@ func TestStats_Show(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		header := "Reporting period: " + s.StartTime.Format(
-			"January 02, 2006",
-		) + " - " + s.EndTime.Format(
-			"January 02, 2006",
-		) + "\n"
-		summary := getSummary(&v)
-		averages := getAverages(&v)
-		history := getHistory(s)
-		weekly := getWeekly(s)
-		hourly := getHourly(s)
+		got := buf.String()
 
-		expected := strings.TrimSpace(
-			fmt.Sprint(header, summary, averages, history, weekly, hourly),
-		)
-
-		got := strings.TrimSpace(buf.String())
+		expected := goldenFile(t, fmt.Sprintf("stats_show_%d.golden", i+1), got, *update)
 
 		if got != expected {
-			dmp := diffmatchpatch.New()
-
-			diffs := dmp.DiffMain(got, expected, false)
-
-			t.Fatalf(dmp.DiffPrettyText(diffs))
+			t.Fatalf(diff.LineDiff(got, expected))
 		}
 	}
-}
-
-func getSummary(v *statsCase) string {
-	hours, minutes := minsToHoursAndMins(v.totals.minutes)
-	expected := fmt.Sprintf(
-		"Summary\nTotal time logged: %d hours %d minutes\nWork sessions completed: %d\nWork sessions abandoned: %d\n",
-		hours,
-		minutes,
-		v.totals.completed,
-		v.totals.abandoned,
-	)
-
-	return expected
-}
-
-func getAverages(v *statsCase) string {
-	hours, minutes := minsToHoursAndMins(v.averages.minutes)
-
-	expected := fmt.Sprintf(
-		"\nAverages\nAverage time logged per day: %d hours %d minutes\nCompleted sessions per day: %d\nAbandoned sessions per day: %d\n",
-		hours,
-		minutes,
-		v.averages.completed,
-		v.averages.abandoned,
-	)
-
-	return expected
-}
-
-func getHistory(s *Stats) string {
-	type keyValue struct {
-		key   string
-		value *quantity
-	}
-
-	sl := make([]keyValue, 0, len(s.Data.History))
-	for k, v := range s.Data.History {
-		sl = append(sl, keyValue{k, v})
-	}
-
-	sort.Slice(sl, func(i, j int) bool {
-		iTime, err := time.Parse(s.Data.HistoryKeyFormat, sl[i].key)
-		if err != nil {
-			return true
-		}
-
-		jTime, err := time.Parse(s.Data.HistoryKeyFormat, sl[j].key)
-		if err != nil {
-			return true
-		}
-
-		return iTime.Before(jTime)
-	})
-
-	expected := "\nWork history (minutes)"
-
-	for _, v := range sl {
-		expected += fmt.Sprintf("%s: %d\n", v.key, v.value.minutes)
-	}
-
-	return expected + "\n"
-}
-
-func getWeekly(s *Stats) string {
-	sunday := s.Data.Weekday[0].minutes
-	monday := s.Data.Weekday[1].minutes
-	tuesday := s.Data.Weekday[2].minutes
-	wednesday := s.Data.Weekday[3].minutes
-	thursday := s.Data.Weekday[4].minutes
-	friday := s.Data.Weekday[5].minutes
-	saturday := s.Data.Weekday[6].minutes
-
-	expected := fmt.Sprintf(
-		"\nWeekly breakdown (minutes)Sunday: %d\nMonday: %d\nTuesday: %d\nWednesday: %d\nThursday: %d\nFriday: %d\nSaturday: %d\n\n",
-		sunday,
-		monday,
-		tuesday,
-		wednesday,
-		thursday,
-		friday,
-		saturday,
-	)
-
-	return expected
-}
-
-func getHourly(s *Stats) string {
-	t0 := s.Data.HourofDay[0].minutes
-	t1 := s.Data.HourofDay[1].minutes
-	t2 := s.Data.HourofDay[2].minutes
-	t3 := s.Data.HourofDay[3].minutes
-	t4 := s.Data.HourofDay[4].minutes
-	t5 := s.Data.HourofDay[5].minutes
-	t6 := s.Data.HourofDay[6].minutes
-	t7 := s.Data.HourofDay[7].minutes
-	t8 := s.Data.HourofDay[8].minutes
-	t9 := s.Data.HourofDay[9].minutes
-	t10 := s.Data.HourofDay[10].minutes
-	t11 := s.Data.HourofDay[11].minutes
-	t12 := s.Data.HourofDay[12].minutes
-	t13 := s.Data.HourofDay[13].minutes
-	t14 := s.Data.HourofDay[14].minutes
-	t15 := s.Data.HourofDay[15].minutes
-	t16 := s.Data.HourofDay[16].minutes
-	t17 := s.Data.HourofDay[17].minutes
-	t18 := s.Data.HourofDay[18].minutes
-	t19 := s.Data.HourofDay[19].minutes
-	t20 := s.Data.HourofDay[20].minutes
-	t21 := s.Data.HourofDay[21].minutes
-	t22 := s.Data.HourofDay[22].minutes
-	t23 := s.Data.HourofDay[23].minutes
-
-	expected := fmt.Sprintf(
-		"\nHourly breakdown (minutes)12:00 AM: %d\n01:00 AM: %d\n02:00 AM: %d\n03:00 AM: %d\n04:00 AM: %d\n05:00 AM: %d\n06:00 AM: %d\n07:00 AM: %d\n08:00 AM: %d\n09:00 AM: %d\n10:00 AM: %d\n11:00 AM: %d\n12:00 PM: %d\n01:00 PM: %d\n02:00 PM: %d\n03:00 PM: %d\n04:00 PM: %d\n05:00 PM: %d\n06:00 PM: %d\n07:00 PM: %d\n08:00 PM: %d\n09:00 PM: %d\n10:00 PM: %d\n11:00 PM: %d\n\n",
-		t0,
-		t1,
-		t2,
-		t3,
-		t4,
-		t5,
-		t6,
-		t7,
-		t8,
-		t9,
-		t10,
-		t11,
-		t12,
-		t13,
-		t14,
-		t15,
-		t16,
-		t17,
-		t18,
-		t19,
-		t20,
-		t21,
-		t22,
-		t23,
-	)
-
-	return expected
 }
 
 func TestStats_List(t *testing.T) {

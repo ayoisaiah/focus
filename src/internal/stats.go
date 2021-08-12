@@ -360,7 +360,7 @@ func (s *Stats) displayHourlyBreakdown(w io.Writer) {
 		return
 	}
 
-	fmt.Fprintln(w, chart)
+	fmt.Fprint(w, chart)
 }
 
 // displayWorkHistory prints the appropriate bar graph
