@@ -29,8 +29,10 @@ func (e Error) Error() string { return string(e) }
 
 const (
 	errUnableToSaveSession = Error("Unable to persist interrupted session")
-	errInvalidSoundFormat  = Error("Invalid file format. Only MP3, OGG, FLAC, and WAV files are supported")
-	errNoPausedSession     = Error(
+	errInvalidSoundFormat  = Error(
+		"Invalid file format. Only MP3, OGG, FLAC, and WAV files are supported",
+	)
+	errNoPausedSession = Error(
 		"A previously interrupted session was not found. Please start a new session",
 	)
 )
@@ -277,7 +279,9 @@ func (t *Timer) notify() {
 	msg := m[t.SessionType] + " is finished"
 
 	// pathToIcon will be an empty string if file is not found
-	pathToIcon, _ := xdg.SearchDataFile(filepath.Join(configDir, "static", "icon.png"))
+	pathToIcon, _ := xdg.SearchDataFile(
+		filepath.Join(configDir, "static", "icon.png"),
+	)
 
 	err := beeep.Notify(msg, t.Msg[t.nextSession()], pathToIcon)
 	if err != nil {
@@ -353,7 +357,9 @@ func (t *Timer) playSound(done chan bool) {
 		t.Sound += ".ogg"
 	}
 
-	pathToFile, err := xdg.SearchDataFile(filepath.Join(configDir, "static", t.Sound))
+	pathToFile, err := xdg.SearchDataFile(
+		filepath.Join(configDir, "static", t.Sound),
+	)
 	if err != nil {
 		exitFunc(err)
 	}
@@ -388,7 +394,10 @@ func (t *Timer) playSound(done chan bool) {
 
 	bufferSize := 10
 
-	err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Duration(int(time.Second)/bufferSize)))
+	err = speaker.Init(
+		format.SampleRate,
+		format.SampleRate.N(time.Duration(int(time.Second)/bufferSize)),
+	)
 	if err != nil {
 		exitFunc(err)
 	}

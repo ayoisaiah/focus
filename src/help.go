@@ -24,7 +24,11 @@ func helpText() string {
 		"{{if .Version}}%s\n\t\t{{.Version}}{{end}}\n\n",
 		pterm.Yellow("VERSION"),
 	)
-	commands := fmt.Sprintf("%s\n{{range .Commands}}{{if not .HideHelp}}   %s{{ `\t`}}{{.Usage}}{{ `\n` }}{{end}}{{end}}\n\n", pterm.Yellow("COMMANDS"), pterm.Green("{{join .Names `, `}}"))
+	commands := fmt.Sprintf(
+		"%s\n{{range .Commands}}{{if not .HideHelp}}   %s{{ `\t`}}{{.Usage}}{{ `\n` }}{{end}}{{end}}\n\n",
+		pterm.Yellow("COMMANDS"),
+		pterm.Green("{{join .Names `, `}}"),
+	)
 	options := fmt.Sprintf(
 		"%s\n{{range .VisibleFlags}}\t\t{{if .Aliases}}{{range $element := .Aliases}}%s,{{end}}{{end}} %s\n\t\t\t\t{{.Usage}}\n\n{{end}}",
 		pterm.Yellow("OPTIONS"),

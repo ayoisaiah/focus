@@ -275,7 +275,12 @@ func TestStats_Show(t *testing.T) {
 
 		got := buf.String()
 
-		expected := goldenFile(t, fmt.Sprintf("stats_show_%d.golden", i+1), got, *update)
+		expected := goldenFile(
+			t,
+			fmt.Sprintf("stats_show_%d.golden", i+1),
+			got,
+			*update,
+		)
 
 		if got != expected {
 			t.Fatalf(diff.LineDiff(got, expected))

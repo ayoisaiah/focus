@@ -12,7 +12,11 @@ var (
 	update = flag.Bool("update", false, "used to update golden files in tests")
 )
 
-func goldenFile(t *testing.T, filename, content string, shouldUpdate bool) string {
+func goldenFile(
+	t *testing.T,
+	filename, content string,
+	shouldUpdate bool,
+) string {
 	t.Helper()
 
 	filePath := filepath.Join("..", "..", "testdata", filename)

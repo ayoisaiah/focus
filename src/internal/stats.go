@@ -48,7 +48,17 @@ const (
 	period365Days   timePeriod = "365days"
 )
 
-var statsPeriod = []timePeriod{periodAllTime, periodToday, periodYesterday, period7Days, period14Days, period30Days, period90Days, period180Days, period365Days}
+var statsPeriod = []timePeriod{
+	periodAllTime,
+	periodToday,
+	periodYesterday,
+	period7Days,
+	period14Days,
+	period30Days,
+	period90Days,
+	period180Days,
+	period365Days,
+}
 
 type quantity struct {
 	minutes   int
