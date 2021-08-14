@@ -440,7 +440,9 @@ func (t *Timer) GetInterrupted() (timerBytes, sessionBytes []byte, err error) {
 		return nil, nil, err
 	}
 
-	if len(timerBytes) == 0 || len(sessionBytes) == 0 {
+	// No need to check the session since it will
+	// continue from the next work session automatically
+	if len(timerBytes) == 0 {
 		return nil, nil, errNoPausedSession
 	}
 
