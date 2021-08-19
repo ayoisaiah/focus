@@ -3,6 +3,7 @@ package focus
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -606,7 +607,12 @@ func (t *Timer) start(endTime time.Time) error {
 			fmt.Print("\033[s")
 			fmt.Print("Press ENTER to start the next session")
 
-			_, _ = reader.ReadString('\n')
+			_, err := reader.ReadString('\n')
+			if errors.Is(err, io.EOF) {
+				return nil
+			} else if err != nil {
+				return err
+			}
 
 			fmt.Print("\033[u\033[K")
 		}
