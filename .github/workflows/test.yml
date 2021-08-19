@@ -19,10 +19,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Windows git setup
-      if: matrix.os == 'windows-latest'
-      run: git config --global core.autocrlf false
-
     # Setup Go
     - name: Setup Go
       uses: actions/setup-go@v2
@@ -36,3 +32,9 @@ jobs:
     # Tests
     - name: Run testing
       run: go test ./... -race
+      if: matrix.os != 'windows-latest'
+
+    - name: Run testing
+      run: go test ./... -race -update
+      if: matrix.os == 'windows-latest'
+
