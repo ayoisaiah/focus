@@ -328,10 +328,10 @@ func (s *Stats) getSessions(start, end time.Time) error {
 	return nil
 }
 
-// displayHourlyBreakdown prints the hourly breakdown
+// getHourlyBreakdown retrieves the hourly breakdown
 // for the current time period.
-func (s *Stats) displayHourlyBreakdown(w io.Writer) {
-	fmt.Fprintf(w, "\n%s", pterm.LightBlue("Hourly breakdown (minutes)"))
+func (s *Stats) getHourlyBreakdown() string {
+	header := fmt.Sprintf("\n%s", pterm.LightBlue("Hourly breakdown (minutes)"))
 
 	type keyValue struct {
 		key   int
@@ -367,20 +367,20 @@ func (s *Stats) displayHourlyBreakdown(w io.Writer) {
 		Srender()
 	if err != nil {
 		pterm.Error.Println(err)
-		return
+		return ""
 	}
 
-	fmt.Fprint(w, chart)
+	return header + chart
 }
 
-// displayWorkHistory prints the appropriate bar graph
+// getWorkHistory retrieves the work history bar graph
 // for the current time period.
-func (s *Stats) displayWorkHistory(w io.Writer) {
+func (s *Stats) getWorkHistory() string {
 	if s.Data.Totals.minutes == 0 {
-		return
+		return ""
 	}
 
-	fmt.Fprintf(w, "\n%s", pterm.LightBlue("Work history (minutes)"))
+	header := fmt.Sprintf("\n%s", pterm.LightBlue("Work history (minutes)"))
 
 	type keyValue struct {
 		key   string
@@ -424,16 +424,16 @@ func (s *Stats) displayWorkHistory(w io.Writer) {
 		Srender()
 	if err != nil {
 		pterm.Error.Println(err)
-		return
+		return ""
 	}
 
-	fmt.Fprintln(w, chart)
+	return header + chart
 }
 
-// displayWeeklyBreakdown prints the weekly breakdown
+// getWeeklyBreakdown prints the weekly breakdown
 // for the current time period.
-func (s *Stats) displayWeeklyBreakdown(w io.Writer) {
-	fmt.Fprintf(w, "\n%s", pterm.LightBlue("Weekly breakdown (minutes)"))
+func (s *Stats) getWeeklyBreakdown() string {
+	header := fmt.Sprintf("\n%s", pterm.LightBlue("Weekly breakdown (minutes)"))
 
 	type keyValue struct {
 		key   time.Weekday
@@ -467,47 +467,50 @@ func (s *Stats) displayWeeklyBreakdown(w io.Writer) {
 		Srender()
 	if err != nil {
 		pterm.Error.Println(err)
-		return
+		return ""
 	}
 
-	fmt.Fprintln(w, chart)
+	return header + chart
 }
 
-func (s *Stats) displayAverages(w io.Writer) {
+func (s *Stats) getAverages() string {
 	hoursDiff := roundTime(s.EndTime.Sub(s.StartTime).Hours())
 
 	if hoursDiff > hoursInADay {
-		fmt.Fprintf(w, "\n%s\n", pterm.LightBlue("Averages"))
+		header := fmt.Sprintf("\n%s\n", pterm.LightBlue("Averages"))
 
 		hours, minutes := minsToHoursAndMins(s.Data.Averages.minutes)
 
-		fmt.Fprintln(
-			w,
+		timeLogged := fmt.Sprintln(
 			"Average time logged per day:",
 			pterm.Green(hours),
 			pterm.Green("hours"),
 			pterm.Green(minutes),
 			pterm.Green("minutes"),
 		)
-		fmt.Fprintln(
-			w,
+
+		completed := fmt.Sprintln(
 			"Completed sessions per day:",
 			pterm.Green(s.Data.Averages.completed),
 		)
-		fmt.Fprintln(
-			w,
+
+		abandoned := fmt.Sprintln(
 			"Abandoned sessions per day:",
 			pterm.Green(s.Data.Averages.abandoned),
 		)
+
+		return header + timeLogged + completed + abandoned
 	}
+
+	return ""
 }
 
-func (s *Stats) displaySummary(w io.Writer) {
-	fmt.Fprintf(w, "%s\n", pterm.LightBlue("Summary"))
+func (s *Stats) getSummary() string {
+	header := fmt.Sprintf("%s\n", pterm.LightBlue("Summary"))
 
 	hours, minutes := minsToHoursAndMins(s.Data.Totals.minutes)
 
-	fmt.Fprintf(w,
+	timeLogged := fmt.Sprintf(
 		"Total time logged: %s %s %s %s\n",
 		pterm.Green(hours),
 		pterm.Green("hours"),
@@ -515,16 +518,17 @@ func (s *Stats) displaySummary(w io.Writer) {
 		pterm.Green("minutes"),
 	)
 
-	fmt.Fprintln(
-		w,
+	completed := fmt.Sprintln(
 		"Work sessions completed:",
 		pterm.Green(s.Data.Totals.completed),
 	)
-	fmt.Fprintln(
-		w,
+
+	abandoned := fmt.Sprintln(
 		"Work sessions abandoned:",
 		pterm.Green(s.Data.Totals.abandoned),
 	)
+
+	return header + timeLogged + completed + abandoned
 }
 
 func (s *Stats) compute() {
@@ -650,18 +654,22 @@ func (s *Stats) Show(w io.Writer) error {
 		WithTextStyle(pterm.NewStyle(pterm.FgBlack)).
 		Sprintfln(timePeriod)
 
-	fmt.Fprint(w, header)
+	summary := s.getSummary()
+	averages := s.getAverages()
 
-	s.displaySummary(w)
-	s.displayAverages(w)
-
+	var workHistory string
 	if s.HoursDiff > hoursInADay {
-		s.displayWorkHistory(w)
+		workHistory = s.getWorkHistory()
 	}
 
-	s.displayWeeklyBreakdown(w)
+	weekly := s.getWeeklyBreakdown()
 
-	s.displayHourlyBreakdown(w)
+	hourly := s.getHourlyBreakdown()
+
+	fmt.Fprint(
+		w,
+		strings.TrimSpace(header+summary+averages+workHistory+weekly+hourly),
+	)
 
 	return nil
 }
