@@ -1,3 +1,12 @@
+## 1.1.0 (2021-08-19)
+
+Fixes and enhancements:
+
+- Fix issue where timer would start on Windows despite using Ctrl-C.
+- `focus resume` now supports the `--sound`, `--sound-on-break`, and `--disable-notification` flags.
+- Make statistics output more compact.
+- Fix timer not skipping to next work session after interrupting a break session.
+
 ## 1.0.1 (2021-08-09)
 
 Enhancements:
