@@ -30,7 +30,7 @@ Focus is a cross-platform productivity timer for the command line. It is based o
 - You can skip break sessions.
 - You can customise the number of sessions before a long break.
 - You can set a maximum number of sessions.
-- Destop notifications are supported on all platforms.
+- Desktop notifications are supported on all platforms.
 - You can customise the notification messages.
 - Detailed statistics for your work history are provided including charts.
 - Focus provides six built-in ambient sounds that you can play during a session, and you can add your own custom sounds.
@@ -123,6 +123,7 @@ Focus has 3 types of sessions: work, short break, and long break.
 - Set to 25 minutes length by default. Use the `--work` or `-w` option to change the length, or change `work_mins` in the `config.yml` file.
 - Message displayed in the terminal and desktop notification can be changed using `work_msg`.
 - You can pause a work session by pressing `Ctrl-C`. Use `focus resume` to continue from where you stopped.
+- The `focus resume` command supports the `--sound`, `--sound-on-break`, and `--disable-notification` flags.
 - If `auto_start_work` is `false`, you will be prompted to start each work session manually. Otherwise if set to `true`, it will start without your intervention.
 - The maximum number of work sessions can be set using the `--max-sessions` or `-max` option. After that number is reached, focus will exit.
 - Use the `--long-break-interval` or `-int` option to set the number of work sessions before a long break, or change `long_break_interval` in your `config.yml`.
@@ -139,7 +140,7 @@ Focus has 3 types of sessions: work, short break, and long break.
 
 ![Focus notification](https://ik.imagekit.io/turnupdev/focus-notify_igz_8z0Jnp.png)
 
-Notifications are turned on by default. Set `notify` to `false` in your config file, or use the `--disable-notification` cli option if you don't want notifications once a session ends.
+Notifications are turned on by default. Set `notify` to `false` in your config file, or use the `--disable-notification` flag if you don't want notifications once a session ends.
 
 ## Ambient sounds
 
@@ -164,7 +165,7 @@ $ focus --sound 'airplane.wav'
 $ focus --sound 'stadium_noise.flac'
 ```
 
-By default, ambient sounds are played only during work sessions. They are paused during break sessions, and resumed again in the next work session. If you'd like to retain the ambient sound during a break session, set the `sound_on_break` config option to `true`, or use the `--sound-on-break` or `-sob` cli option.
+By default, ambient sounds are played only during work sessions. They are paused during break sessions, and resumed again in the next work session. If you'd like to retain the ambient sound during a break session, set the `sound_on_break` config option to `true`, or use the `--sound-on-break` or `-sob` flag.
 
 ## Statistics & History
 
@@ -174,14 +175,14 @@ $ focus stats
 
 The above command will display your work history for the last 7 days by default. You'll see how many work sessions you completed, how many you abandoned, and how long you focused for overall. It also displays a break down by week, and hour to let you know what times you tend to be productive.
 
-You can change the reporting period through the `--period` or `-p` option. It accepts the following values: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time.
+You can change the reporting period through the `--period` or `-p` option. It accepts the following values: *today*, *yesterday*, *7days*, *14days*, *30days*, *90days*, *180days*, *365days*, *all-time*.
 
 ```
 $ focus stats -p 'today'
 $ focus stats -p 'all-time'
 ```
 
-You can also set a specific time period using the `--start` and `--end` options. The latter defaults to the current day if not specifed. The acceptable formats are shown below:
+You can also set a specific time period using the `--start` and `--end` options. The latter defaults to the current day if not specified. The acceptable formats are shown below:
 
 ```
 $ focus stats --start '2021-08-06'
@@ -210,7 +211,9 @@ $ focus stats --list --period 'today'
 +---+-----------------------+-----------------------+-----------+
 ```
 
-Note that sessions that cross over to a new day will count towards that day's sessions as observed above.
+**Note**
+- Sessions that cross over to a new day will count towards that day's sessions as observed above.
+- A session with an empty end date indicates that it was interrupted by terminating the process so that a graceful shutdown was not possible.
 
 ### Deleting sessions
 
