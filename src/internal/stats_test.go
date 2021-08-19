@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/andreyvit/diff"
 	"github.com/pterm/pterm"
+	"github.com/sebdah/goldie/v2"
 )
 
 func init() {
@@ -29,6 +30,10 @@ type statsCase struct {
 	totals   totals
 	averages totals
 }
+
+var (
+	fixtures = filepath.Join("..", "..", "testdata")
+)
 
 var statsCases = []statsCase{
 	{
@@ -273,18 +278,10 @@ func TestStats_Show(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		got := buf.String()
+		got := buf.Bytes()
 
-		expected := goldenFile(
-			t,
-			fmt.Sprintf("stats_show_%d.golden", i+1),
-			got,
-			*update,
-		)
-
-		if got != expected {
-			t.Fatalf(diff.LineDiff(got, expected))
-		}
+		g := goldie.New(t, goldie.WithFixtureDir(fixtures))
+		g.Assert(t, fmt.Sprintf("stats_show_%d", i+1), got)
 	}
 }
 

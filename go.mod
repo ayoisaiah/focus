@@ -11,6 +11,7 @@ require (
 	github.com/gopherjs/gopherjs v0.0.0-20210707094841-eea289f08d45 // indirect
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pterm/pterm v0.12.28
+	github.com/sebdah/goldie/v2 v2.5.3 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/urfave/cli/v2 v2.3.0
 	go.etcd.io/bbolt v1.3.6
