@@ -94,7 +94,32 @@ func checkForUpdates(app *cli.App) {
 
 // GetApp retrieves the focus app instance.
 func GetApp() *cli.App {
-	return &cli.App{
+	globalFlags := map[string]cli.Flag{
+		"no-color": &cli.BoolFlag{
+			Name:  "no-color",
+			Usage: "Disable coloured output.",
+		},
+	}
+
+	timerFlags := []cli.Flag{
+		&cli.StringFlag{
+			Name:  "sound",
+			Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground.",
+		},
+		&cli.BoolFlag{
+			Name:    "sound-on-break",
+			Aliases: []string{"sob"},
+			Usage:   "Play ambient sounds during a break sessions.",
+		},
+		&cli.BoolFlag{
+			Name:    "disable-notifications",
+			Aliases: []string{"d"},
+			Usage:   "Disable the system notification after a session is completed.",
+		},
+		globalFlags["no-color"],
+	}
+
+	app := &cli.App{
 		Name: "Focus",
 		Authors: []*cli.Author{
 			{
@@ -110,12 +135,7 @@ func GetApp() *cli.App {
 			{
 				Name:  "resume",
 				Usage: "Resume a previously interrupted work session",
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:  "no-color",
-						Usage: "Disable coloured output.",
-					},
-				},
+				Flags: timerFlags,
 				Action: func(ctx *cli.Context) error {
 					if ctx.Bool("no-color") {
 						disableStyling()
@@ -130,12 +150,14 @@ func GetApp() *cli.App {
 						Store: store,
 					}
 
-					_, _, err = t.GetInterrupted()
+					err = t.Resume()
 					if err != nil {
 						return err
 					}
 
-					return t.Resume()
+					t.SetResumeOptions(ctx)
+
+					return t.Run()
 				},
 			},
 			{
@@ -191,10 +213,7 @@ func GetApp() *cli.App {
 						Aliases: []string{"e"},
 						Usage:   "Specify an end date in the following format: YYYY-MM-DD [HH:MM:SS PM] (defaults to the current time).",
 					},
-					&cli.BoolFlag{
-						Name:  "no-color",
-						Usage: "Disable coloured output.",
-					},
+					globalFlags["no-color"],
 				},
 			},
 		},
@@ -224,24 +243,6 @@ func GetApp() *cli.App {
 				Aliases: []string{"max"},
 				Usage:   "The maximum number of work sessions (unlimited by default).",
 			},
-			&cli.BoolFlag{
-				Name:    "disable-notifications",
-				Aliases: []string{"d"},
-				Usage:   "Disable the system notification after a session is completed.",
-			},
-			&cli.StringFlag{
-				Name:  "sound",
-				Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground.",
-			},
-			&cli.BoolFlag{
-				Name:    "sound-on-break",
-				Aliases: []string{"sob"},
-				Usage:   "Play ambient sounds during a break sessions.",
-			},
-			&cli.BoolFlag{
-				Name:  "no-color",
-				Usage: "Disable coloured output.",
-			},
 		},
 		Action: func(ctx *cli.Context) error {
 			if ctx.Bool("no-color") {
@@ -263,4 +264,8 @@ func GetApp() *cli.App {
 			return t.Run()
 		},
 	}
+
+	app.Flags = append(app.Flags, timerFlags...)
+
+	return app
 }
