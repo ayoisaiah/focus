@@ -58,11 +58,19 @@ install it through the command below:
 $ sudo apt install libasound2-dev
 ```
 
-You can also install it via [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/):
+## NPM Package
+
+You can also install Focus via through its [NPM package](https://www.npmjs.com/package/@ayoisaiah/focus):
+
+With `npm`:
 
 ```bash
 $ npm i @ayoisaiah/focus -g
-# or
+```
+
+With `yarn`:
+
+```bash
 $ yarn global add @ayoisaiah/focus
 ```
 
