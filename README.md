@@ -16,14 +16,14 @@
 
 Focus is a cross-platform productivity timer for the command line. It is based on the [Pomodoro Technique](https://en.wikipedia.org/wiki/Pomodoro_Technique), a time management method developed by Francesco Cirillo in the late 1980s.
 
-## How it works
+## 🍅 How it works
 
 1. Pick a task you need to accomplish.
 2. Set a timer for 25 minutes and start working without interruptions.
 3. When the timer rings, take a short break for 5 minutes.
 4. Once you've completed four work sessions, you can take a longer 15 minute break.
 
-## Main features
+## ✨ Main features
 
 - Work and break session lengths are customisable.
 - You can pause and resume work sessions.
@@ -35,7 +35,7 @@ Focus is a cross-platform productivity timer for the command line. It is based o
 - Detailed statistics for your work history are provided including charts.
 - Focus provides six built-in ambient sounds that you can play during a session, and you can add your own custom sounds.
 
-## Screenshots
+## 💻 Screenshots
 
 ![Focus first run](https://ik.imagekit.io/turnupdev/focus-screenshot_6BU22Sj-J.png)
 
@@ -43,7 +43,7 @@ Focus is a cross-platform productivity timer for the command line. It is based o
 
 ![Focus](https://ik.imagekit.io/turnupdev/focus-ops_bcJ7-Gnuag.png)
 
-## Installation
+## ⚡ Installation
 
 Focus is written in Go, so you can install it through `go install` (requires Go 1.16 or later):
 
@@ -58,7 +58,7 @@ install it through the command below:
 $ sudo apt install libasound2-dev
 ```
 
-### NPM Package
+### 📦 NPM Package
 
 You can also install Focus via through its [NPM package](https://www.npmjs.com/package/@ayoisaiah/focus):
 
@@ -76,7 +76,7 @@ $ yarn global add @ayoisaiah/focus
 
 Other installation methods are [available here](https://github.com/ayoisaiah/focus/wiki/Installation/).
 
-## Usage
+## 🚀 Usage
 
 Once Focus is installed, run it using the command below:
 
@@ -86,7 +86,7 @@ $ focus
 
 **Note:** Only one instance of `focus` can be active at a time.
 
-## Configuration
+## ⚙ Configuration
 
 When you run Focus for the first time, it will prompt you to set your preferred timer lengths, and how many sessions before a long break. Afterwards, you may change these values by using command-line options or editing the `config.yml` file which will be located in `~/.config/focus/` on Linux, `%LOCALAPPDATA%\focus` on Windows, and `~/Library/Application Support/focus` on macOS.
 
@@ -122,11 +122,11 @@ sound_on_break: false # play ambient sound during break sessions
 
 If you specify a command-line argument while running focus, it will override the corresponding value in the config file.
 
-## Sessions
+## ⏳ Sessions
 
 Focus has 3 types of sessions: work, short break, and long break.
 
-### Work sessions
+### 💼 Work sessions
 
 - Set to 25 minutes length by default. Use the `--work` or `-w` option to change the length, or change `work_mins` in the `config.yml` file.
 - Message displayed in the terminal and desktop notification can be changed using `work_msg`.
@@ -136,7 +136,7 @@ Focus has 3 types of sessions: work, short break, and long break.
 - The maximum number of work sessions can be set using the `--max-sessions` or `-max` option. After that number is reached, focus will exit.
 - Use the `--long-break-interval` or `-int` option to set the number of work sessions before a long break, or change `long_break_interval` in your `config.yml`.
 
-### Break sessions
+### 😎 Break sessions
 
 - Short break is 5 minutes by default. Use the `--short-break` or `-s` option to change the length, or set`short_break_mins` in the `config.yml` file.
 - Long break is 15 minutes by default. Use the `--long-break` or `-l` option to change the length, or set `long_break_mins` in the `config.yml` file.
@@ -144,13 +144,13 @@ Focus has 3 types of sessions: work, short break, and long break.
 - Pressing `Ctrl-C` during a break session will interrupt it. Run `focus resume` to skip to the next work session.
 - If `auto_start_break` is `false`, you will be prompted to start each break session manually. Otherwise if set to `true`, it will start without your intervention.
 
-## Notifications
+## 🔔 Notifications
 
 ![Focus notification](https://ik.imagekit.io/turnupdev/focus-notify_igz_8z0Jnp.png)
 
 Notifications are turned on by default. Set `notify` to `false` in your config file, or use the `--disable-notification` flag if you don't want notifications once a session ends.
 
-## Ambient sounds
+## 🔊 Ambient sounds
 
 Focus provides six ambient sounds by default: `coffee_shop`, `playground`, `wind`, `rain`, `summer_night`, and `fireplace`. You can play a sound using the `--sound` option, or set a default sound in your config file through the `sound` key.
 
@@ -175,7 +175,7 @@ $ focus --sound 'stadium_noise.flac'
 
 By default, ambient sounds are played only during work sessions. They are paused during break sessions, and resumed again in the next work session. If you'd like to retain the ambient sound during a break session, set the `sound_on_break` config option to `true`, or use the `--sound-on-break` or `-sob` flag.
 
-## Statistics & History
+## 📈 Statistics & History
 
 ```
 $ focus stats
@@ -198,7 +198,7 @@ $ focus stats --start '2021-08-06' --end '2021-08-07'
 $ focus stats --start '2021-07-23 12:00:05 PM' --end '2021-07-29 03:25:00 AM'
 ```
 
-### Listing sessions
+### 📃 Listing sessions
 
 Use the `--list` option to display a table of your work sessions instead of aggregated statistics. Use the `--period` or `--start` and `--end` option to change the reporting period (defaults to 7 days).
 
@@ -221,9 +221,9 @@ $ focus stats --list --period 'today'
 
 **Note**
 - Sessions that cross over to a new day will count towards that day's sessions as observed above.
-- A session with an empty end date indicates that it was interrupted by terminating the process so that a graceful shutdown was not possible.
+- A session with an empty end date indicates that the process was intin such a way that a graceful shutdown was not possible.
 
-### Deleting sessions
+### 🔥 Deleting sessions
 
 Deleting sessions is done in the same way as `--list` except that `--delete` is used instead. You will be prompted to confirm the deletion before it is carried out.
 
@@ -238,10 +238,10 @@ $ focus stats --delete --start '2021-08-08 06:11:00 PM'
  WARNING  The above sessions will be deleted permanently. Press ENTER to proceed
 ```
 
-## Contribute
+## 🤝 Contribute
 
 Bug reports and feature requests are much welcome! Please open an issue before creating a pull request.
 
-## Licence
+## ⚖ Licence
 
 Created by Ayooluwa Isaiah, and released under the terms of the [MIT Licence](http://opensource.org/licenses/MIT).
