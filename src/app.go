@@ -104,7 +104,7 @@ func GetApp() *cli.App {
 	timerFlags := []cli.Flag{
 		&cli.StringFlag{
 			Name:  "sound",
-			Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground.",
+			Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground. Disable sound by setting to 'off'",
 		},
 		&cli.BoolFlag{
 			Name:    "sound-on-break",

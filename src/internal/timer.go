@@ -557,7 +557,7 @@ func (t *Timer) start(endTime time.Time) error {
 	var soundIsPlaying bool
 
 	for {
-		if t.Sound != "" {
+		if t.Sound != "" && t.Sound != "off" {
 			if t.SessionType == work && !soundIsPlaying {
 				go t.playSound(done)
 
