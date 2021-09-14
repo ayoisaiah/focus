@@ -102,6 +102,12 @@ func GetApp() *cli.App {
 	}
 
 	timerFlags := []cli.Flag{
+		&cli.BoolFlag{
+			Name:    "disable-notifications",
+			Aliases: []string{"d"},
+			Usage:   "Disable the system notification after a session is completed.",
+		},
+		globalFlags["no-color"],
 		&cli.StringFlag{
 			Name:  "sound",
 			Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground. Disable sound by setting to 'off'",
@@ -111,12 +117,6 @@ func GetApp() *cli.App {
 			Aliases: []string{"sob"},
 			Usage:   "Play ambient sounds during a break sessions.",
 		},
-		&cli.BoolFlag{
-			Name:    "disable-notifications",
-			Aliases: []string{"d"},
-			Usage:   "Disable the system notification after a session is completed.",
-		},
-		globalFlags["no-color"],
 	}
 
 	app := &cli.App{
@@ -190,12 +190,19 @@ func GetApp() *cli.App {
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
-						Name:  "delete",
-						Usage: "Delete the all work sessions within the specified time period.",
+						Name:    "delete",
+						Aliases: []string{"d"},
+						Usage:   "Delete the all work sessions within the specified time period.",
 					},
 					&cli.BoolFlag{
-						Name:  "list",
-						Usage: "List all the work sessions within the specified time period.",
+						Name:    "list",
+						Aliases: []string{"l"},
+						Usage:   "List all the work sessions within the specified time period.",
+					},
+					&cli.StringFlag{
+						Name:    "tag",
+						Aliases: []string{"t"},
+						Usage:   "Match only sessions with a specific tag",
 					},
 					&cli.StringFlag{
 						Name:    "period",
@@ -219,14 +226,19 @@ func GetApp() *cli.App {
 		},
 		Flags: []cli.Flag{
 			&cli.UintFlag{
-				Name:    "work",
-				Aliases: []string{"w"},
-				Usage:   "Work duration in minutes (default: 25).",
+				Name:    "max-sessions",
+				Aliases: []string{"max"},
+				Usage:   "The maximum number of work sessions (unlimited by default).",
 			},
 			&cli.UintFlag{
 				Name:    "short-break",
 				Aliases: []string{"s"},
 				Usage:   "Short break duration in minutes (default: 5).",
+			},
+			&cli.StringFlag{
+				Name:    "tag",
+				Aliases: []string{"t"},
+				Usage:   "Add a tag to a session",
 			},
 			&cli.UintFlag{
 				Name:    "long-break",
@@ -239,9 +251,9 @@ func GetApp() *cli.App {
 				Usage:   "The number of work sessions before a long break (default: 4).",
 			},
 			&cli.UintFlag{
-				Name:    "max-sessions",
-				Aliases: []string{"max"},
-				Usage:   "The maximum number of work sessions (unlimited by default).",
+				Name:    "work",
+				Aliases: []string{"w"},
+				Usage:   "Work duration in minutes (default: 25).",
 			},
 		},
 		Action: func(ctx *cli.Context) error {

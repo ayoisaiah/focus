@@ -65,6 +65,8 @@ type sessionTimeline struct {
 type session struct {
 	// Name is the name of a session
 	Name sessionType `json:"name"`
+	// Tag is the label that a session belongs to
+	Tag string `json:"tag"`
 	// Duration is the duration in minutes for a session
 	Duration int `json:"duration"`
 	// Timeline helps to keep track of how many times
@@ -149,6 +151,7 @@ type Timer struct {
 	Store               DB          `json:"-"`
 	Sound               string      `json:"sound"`
 	SoundOnBreak        bool        `json:"sound_on_break"`
+	Tag                 string      `json:"tag"`
 }
 
 // nextSession retrieves the next session.
@@ -528,6 +531,7 @@ func (t *Timer) initSession() (time.Time, error) {
 	t.Session = session{
 		Name:      t.SessionType,
 		Duration:  t.Kind[t.SessionType],
+		Tag:       t.Tag,
 		Completed: false,
 		StartTime: startTime,
 		Timeline: []sessionTimeline{
@@ -660,6 +664,8 @@ func (t *Timer) setOptions(ctx *cli.Context) {
 	if ctx.Uint("max-sessions") > 0 {
 		t.MaxSessions = int(ctx.Uint("max-sessions"))
 	}
+
+	t.Tag = ctx.String("tag")
 
 	t.SetResumeOptions(ctx)
 }

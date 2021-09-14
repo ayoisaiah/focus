@@ -17,7 +17,10 @@ func (d *DBMock) init() error {
 	return nil
 }
 
-func (d *DBMock) getSessions(startTime, endTime time.Time) ([][]byte, error) {
+func (d *DBMock) getSessions(
+	startTime, endTime time.Time,
+	tag string,
+) ([][]byte, error) {
 	jsonFile, err := os.ReadFile("../../testdata/work.json")
 	if err != nil {
 		return nil, err

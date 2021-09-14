@@ -125,6 +125,7 @@ type Data struct {
 	Weekday          map[time.Weekday]*quantity
 	HourofDay        map[int]*quantity
 	History          map[string]*quantity
+	Tags             map[string]*quantity
 	HistoryKeyFormat string
 	Totals           quantity
 	Averages         quantity
@@ -137,6 +138,7 @@ func initData(start, end time.Time, hoursDiff int) *Data {
 
 	d.Weekday = make(map[time.Weekday]*quantity)
 	d.History = make(map[string]*quantity)
+	d.Tags = make(map[string]*quantity)
 	d.HourofDay = make(map[int]*quantity)
 
 	for i := 0; i <= 6; i++ {
@@ -257,6 +259,9 @@ func (d *Data) calculateSessionDuration(
 func (d *Data) computeTotals(sessions []session, startTime, endTime time.Time) {
 	for i := range sessions {
 		s := sessions[i]
+		if s.Tag == "" {
+			s.Tag = "uncategorized"
+		}
 
 		if s.EndTime.IsZero() {
 			continue
@@ -272,26 +277,33 @@ func (d *Data) computeTotals(sessions []session, startTime, endTime time.Time) {
 			),
 		)
 
+		if _, exists := d.Tags[s.Tag]; !exists {
+			d.Tags[s.Tag] = &quantity{}
+		}
+
+		d.Tags[s.Tag].minutes += duration
+		d.Totals.minutes += duration
+
 		if s.Completed {
 			d.Weekday[s.StartTime.Weekday()].completed++
 			d.HourofDay[s.StartTime.Hour()].completed++
+			d.Tags[s.Tag].completed++
 
 			if _, exists := d.History[s.StartTime.Format(d.HistoryKeyFormat)]; exists {
 				d.History[s.StartTime.Format(d.HistoryKeyFormat)].completed++
 			}
 
 			d.Totals.completed++
-			d.Totals.minutes += duration
 		} else {
 			d.Weekday[s.StartTime.Weekday()].abandoned++
 			d.HourofDay[s.StartTime.Hour()].abandoned++
+			d.Tags[s.Tag].abandoned++
 
 			if _, exists := d.History[s.StartTime.Format(d.HistoryKeyFormat)]; exists {
 				d.History[s.StartTime.Format(d.HistoryKeyFormat)].abandoned++
 			}
 
 			d.Totals.abandoned++
-			d.Totals.minutes += duration
 		}
 	}
 }
@@ -301,6 +313,7 @@ type Stats struct {
 	StartTime time.Time
 	EndTime   time.Time
 	Sessions  []session
+	Tag       string
 	store     DB
 	Data      *Data
 	HoursDiff int
@@ -308,8 +321,8 @@ type Stats struct {
 
 // getSessions retrieves the work sessions
 // for the specified time period.
-func (s *Stats) getSessions(start, end time.Time) error {
-	b, err := s.store.getSessions(start, end)
+func (s *Stats) getSessions() error {
+	b, err := s.store.getSessions(s.StartTime, s.EndTime, s.Tag)
 	if err != nil {
 		return err
 	}
@@ -430,7 +443,7 @@ func (s *Stats) getWorkHistory() string {
 	return header + chart
 }
 
-// getWeeklyBreakdown prints the weekly breakdown
+// getWeeklyBreakdown retrieves weekly breakdown
 // for the current time period.
 func (s *Stats) getWeeklyBreakdown() string {
 	header := fmt.Sprintf("\n%s", pterm.LightBlue("Weekly breakdown (minutes)"))
@@ -473,6 +486,8 @@ func (s *Stats) getWeeklyBreakdown() string {
 	return header + chart
 }
 
+// getAverages retrieves the average time logged for the
+// current time period.
 func (s *Stats) getAverages() string {
 	hoursDiff := roundTime(s.EndTime.Sub(s.StartTime).Hours())
 
@@ -505,16 +520,56 @@ func (s *Stats) getAverages() string {
 	return ""
 }
 
+// getTags retrieves the tag breakdown for the current time period.
+func (s *Stats) getTags() string {
+	var builder strings.Builder
+
+	builder.WriteString(fmt.Sprintf("\n%s\n", pterm.LightBlue("Tags")))
+
+	type KeyValue struct {
+		Key   string
+		Value int
+	}
+
+	kv := make([]KeyValue, 0, len(s.Data.Tags))
+	for k, v := range s.Data.Tags {
+		kv = append(kv, KeyValue{k, v.minutes})
+	}
+
+	sort.SliceStable(kv, func(i, j int) bool {
+		return kv[i].Value > kv[j].Value
+	})
+
+	for _, v := range kv {
+		hrs, mins := minsToHoursAndMins(s.Data.Tags[v.Key].minutes)
+
+		tag := fmt.Sprintf(
+			"%s: %s %s %s %s\n",
+			v.Key,
+			pterm.Green(hrs),
+			pterm.Green("hours"),
+			pterm.Green(mins),
+			pterm.Green("minutes"),
+		)
+
+		builder.WriteString(tag)
+	}
+
+	return builder.String()
+}
+
+// getSummary retrieves the work session summary for the current
+// time period.
 func (s *Stats) getSummary() string {
 	header := fmt.Sprintf("%s\n", pterm.LightBlue("Summary"))
 
-	hours, minutes := minsToHoursAndMins(s.Data.Totals.minutes)
+	totalHrs, totalMins := minsToHoursAndMins(s.Data.Totals.minutes)
 
 	timeLogged := fmt.Sprintf(
 		"Total time logged: %s %s %s %s\n",
-		pterm.Green(hours),
+		pterm.Green(totalHrs),
 		pterm.Green("hours"),
-		pterm.Green(minutes),
+		pterm.Green(totalMins),
 		pterm.Green("minutes"),
 	)
 
@@ -538,7 +593,7 @@ func (s *Stats) compute() {
 
 func printTable(data [][]string, w io.Writer) {
 	table := tablewriter.NewWriter(w)
-	table.SetHeader([]string{"#", "Start date", "End date", "Status"})
+	table.SetHeader([]string{"#", "Start date", "End date", "Tag", "Status"})
 	table.SetAutoWrapText(false)
 
 	for _, v := range data {
@@ -577,7 +632,7 @@ func (s *Stats) Delete(w io.Writer, r io.Reader) error {
 // List prints out a table of all the sessions that
 // were created within the specified time range.
 func (s *Stats) List(w io.Writer) error {
-	err := s.getSessions(s.StartTime, s.EndTime)
+	err := s.getSessions()
 	if err != nil {
 		return err
 	}
@@ -589,21 +644,27 @@ func (s *Stats) List(w io.Writer) error {
 
 	data := make([][]string, len(s.Sessions))
 
-	for i, v := range s.Sessions {
+	for i, sess := range s.Sessions {
 		statusText := pterm.Green("completed")
-		if !v.Completed {
+		if !sess.Completed {
 			statusText = pterm.Red("abandoned")
 		}
 
-		endDate := v.EndTime.Format("Jan 02, 2006 03:04 PM")
-		if v.EndTime.IsZero() {
+		endDate := sess.EndTime.Format("Jan 02, 2006 03:04 PM")
+		if sess.EndTime.IsZero() {
 			endDate = ""
+		}
+
+		tag := sess.Tag
+		if tag == "" {
+			tag = "uncategorized"
 		}
 
 		sl := []string{
 			fmt.Sprintf("%d", i+1),
-			v.StartTime.Format("Jan 02, 2006 03:04 PM"),
+			sess.StartTime.Format("Jan 02, 2006 03:04 PM"),
 			endDate,
+			tag,
 			statusText,
 		}
 
@@ -620,7 +681,7 @@ func (s *Stats) List(w io.Writer) error {
 func (s *Stats) Show(w io.Writer) error {
 	defer s.store.close()
 
-	err := s.getSessions(s.StartTime, s.EndTime)
+	err := s.getSessions()
 	if err != nil {
 		return err
 	}
@@ -662,13 +723,20 @@ func (s *Stats) Show(w io.Writer) error {
 		workHistory = s.getWorkHistory()
 	}
 
+	var tags string
+	if len(s.Data.Tags) > 1 && s.Tag == "" {
+		tags = s.getTags()
+	}
+
 	weekly := s.getWeeklyBreakdown()
 
 	hourly := s.getHourlyBreakdown()
 
 	fmt.Fprint(
 		w,
-		strings.TrimSpace(header+summary+averages+workHistory+weekly+hourly),
+		strings.TrimSpace(
+			header+summary+tags+averages+workHistory+weekly+hourly,
+		),
 	)
 
 	return nil
@@ -683,6 +751,7 @@ type statsCtx interface {
 func NewStats(ctx statsCtx, store DB) (*Stats, error) {
 	s := &Stats{}
 	s.store = store
+	s.Tag = ctx.String("tag")
 
 	period := ctx.String("period")
 

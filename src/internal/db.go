@@ -24,7 +24,7 @@ const (
 
 type DB interface {
 	init() error
-	getSessions(startTime, endTime time.Time) ([][]byte, error)
+	getSessions(startTime, endTime time.Time, tag string) ([][]byte, error)
 	deleteTimerState() error
 	getTimerState() ([]byte, []byte, error)
 	saveTimerState(timer, sessionKey []byte) error
@@ -152,8 +152,12 @@ func (s *Store) deleteTimerState() error {
 // within the specified time period. It checks the previous
 // work session just before the `startTime` to see if
 // its end time is within the specified bounds. If so, it
-// is included in the output.
-func (s *Store) getSessions(startTime, endTime time.Time) ([][]byte, error) {
+// is included in the output. The `tag` parameter is used to filter
+// sessions by tag. An empty string signifies no filtering.
+func (s *Store) getSessions(
+	startTime, endTime time.Time,
+	tag string,
+) ([][]byte, error) {
 	var b [][]byte
 
 	err := s.conn.View(func(tx *bolt.Tx) error {
@@ -185,7 +189,20 @@ func (s *Store) getSessions(startTime, endTime time.Time) ([][]byte, error) {
 		}
 
 		for k, v := sk, sv; k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
-			b = append(b, v)
+			// Filter out tags that don't match
+			if tag != "" {
+				var sess session
+				err := json.Unmarshal(v, &sess)
+				if err != nil {
+					return err
+				}
+
+				if sess.Tag == tag {
+					b = append(b, v)
+				}
+			} else {
+				b = append(b, v)
+			}
 		}
 
 		return nil
