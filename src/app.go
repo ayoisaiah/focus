@@ -186,6 +186,10 @@ func GetApp() *cli.App {
 						return stats.List(os.Stdout)
 					}
 
+					if stats.Tag != "" {
+						return stats.EditTag(os.Stdout, os.Stdin)
+					}
+
 					return stats.Show(os.Stdout)
 				},
 				Flags: []cli.Flag{

@@ -31,7 +31,8 @@ const (
 )
 
 const (
-	barChartChar = "▇"
+	barChartChar  = "▇"
+	noSessionsMsg = "No sessions found for the specified time range"
 )
 
 type timePeriod string
@@ -260,7 +261,7 @@ func (d *Data) computeTotals(sessions []session, startTime, endTime time.Time) {
 	for i := range sessions {
 		s := sessions[i]
 		if s.Tag == "" {
-			s.Tag = "uncategorized"
+			s.Tag = "uncategorised"
 		}
 
 		if s.EndTime.IsZero() {
@@ -603,6 +604,40 @@ func printTable(data [][]string, w io.Writer) {
 	table.Render()
 }
 
+// EditTag.is used to edit the tags of the specified sessions.
+func (s *Stats) EditTag(w io.Writer, r io.Reader) error {
+	tag := s.Tag
+	// So that getSessions() does not filter by tag
+	s.Tag = ""
+
+	err := s.getSessions()
+	if err != nil {
+		return err
+	}
+
+	if len(s.Sessions) == 0 {
+		pterm.Info.Println(noSessionsMsg)
+		return nil
+	}
+
+	for i := range s.Sessions {
+		s.Sessions[i].Tag = tag
+	}
+
+	printSessionsTable(w, s.Sessions)
+
+	warning := pterm.Warning.Sprint(
+		"The above sessions will be changed. Press ENTER to proceed",
+	)
+	fmt.Fprint(w, warning)
+
+	reader := bufio.NewReader(r)
+
+	_, _ = reader.ReadString('\n')
+
+	return s.store.editSessionTag(s.Sessions)
+}
+
 // Delete attempts to delete all sessions that fall
 // in the specified time range. It requests for
 // confirmation before proceeding with the permanent
@@ -629,22 +664,10 @@ func (s *Stats) Delete(w io.Writer, r io.Reader) error {
 	return s.store.deleteSessions(s.Sessions)
 }
 
-// List prints out a table of all the sessions that
-// were created within the specified time range.
-func (s *Stats) List(w io.Writer) error {
-	err := s.getSessions()
-	if err != nil {
-		return err
-	}
+func printSessionsTable(w io.Writer, sessions []session) {
+	data := make([][]string, len(sessions))
 
-	if len(s.Sessions) == 0 {
-		pterm.Info.Println("No sessions found for the specified time range")
-		return nil
-	}
-
-	data := make([][]string, len(s.Sessions))
-
-	for i, sess := range s.Sessions {
+	for i, sess := range sessions {
 		statusText := pterm.Green("completed")
 		if !sess.Completed {
 			statusText = pterm.Red("abandoned")
@@ -655,16 +678,11 @@ func (s *Stats) List(w io.Writer) error {
 			endDate = ""
 		}
 
-		tag := sess.Tag
-		if tag == "" {
-			tag = "uncategorized"
-		}
-
 		sl := []string{
 			fmt.Sprintf("%d", i+1),
 			sess.StartTime.Format("Jan 02, 2006 03:04 PM"),
 			endDate,
-			tag,
+			sess.Tag,
 			statusText,
 		}
 
@@ -672,6 +690,22 @@ func (s *Stats) List(w io.Writer) error {
 	}
 
 	printTable(data, w)
+}
+
+// List prints out a table of all the sessions that
+// were created within the specified time range.
+func (s *Stats) List(w io.Writer) error {
+	err := s.getSessions()
+	if err != nil {
+		return err
+	}
+
+	if len(s.Sessions) == 0 {
+		pterm.Info.Println(noSessionsMsg)
+		return nil
+	}
+
+	printSessionsTable(w, s.Sessions)
 
 	return nil
 }
@@ -724,7 +758,7 @@ func (s *Stats) Show(w io.Writer) error {
 	}
 
 	var tags string
-	if len(s.Data.Tags) > 1 && s.Tag == "" {
+	if s.Tag == "" {
 		tags = s.getTags()
 	}
 
@@ -735,7 +769,7 @@ func (s *Stats) Show(w io.Writer) error {
 	fmt.Fprint(
 		w,
 		strings.TrimSpace(
-			header+summary+tags+averages+workHistory+weekly+hourly,
+			header+summary+averages+tags+workHistory+weekly+hourly,
 		),
 	)
 

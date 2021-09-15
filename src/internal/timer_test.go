@@ -71,6 +71,10 @@ func (d *DBMock) deleteSessions(sessions []session) error {
 	return nil
 }
 
+func (d *DBMock) editSessionTag(sessions []session) error {
+	return nil
+}
+
 func (d *DBMock) close() error {
 	return nil
 }
