@@ -634,7 +634,7 @@ func (s *Stats) EditTag(w io.Writer, r io.Reader) error {
 	printSessionsTable(w, s.Sessions)
 
 	warning := pterm.Warning.Sprint(
-		"The above sessions will be changed. Press ENTER to proceed",
+		"The sessions above will be updated. Press ENTER to proceed",
 	)
 	fmt.Fprint(w, warning)
 
@@ -642,7 +642,23 @@ func (s *Stats) EditTag(w io.Writer, r io.Reader) error {
 
 	_, _ = reader.ReadString('\n')
 
-	return s.store.editSessionTag(s.Sessions)
+	for i := range s.Sessions {
+		sess := s.Sessions[i]
+
+		key := []byte(sess.StartTime.Format(time.RFC3339))
+
+		value, err := json.Marshal(sess)
+		if err != nil {
+			return err
+		}
+
+		err = s.store.updateSession(key, value)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Delete attempts to delete all sessions that fall

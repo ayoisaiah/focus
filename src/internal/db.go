@@ -30,7 +30,6 @@ type DB interface {
 	saveTimerState(timer, sessionKey []byte) error
 	updateSession(key, value []byte) error
 	deleteSessions(sessions []session) error
-	editSessionTag(sessions []session) error
 	close() error
 }
 
@@ -111,28 +110,6 @@ func (s *Store) getTimerState() (timer, session []byte, err error) {
 	})
 
 	return timer, session, err
-}
-
-// editSessionTag modifies the tag for each session.
-func (s *Store) editSessionTag(sessions []session) error {
-	return s.conn.Update(func(tx *bolt.Tx) error {
-		for i := range sessions {
-			sess := sessions[i]
-			key := []byte(sess.StartTime.Format(time.RFC3339))
-
-			value, err := json.Marshal(sess)
-			if err != nil {
-				return err
-			}
-
-			err = tx.Bucket([]byte("sessions")).Put(key, value)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
 }
 
 // deleteSessions deletes all sessions within the
