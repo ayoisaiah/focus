@@ -19,7 +19,7 @@ func (d *DBMock) init() error {
 
 func (d *DBMock) getSessions(
 	startTime, endTime time.Time,
-	tag string,
+	tags []string,
 ) ([][]byte, error) {
 	jsonFile, err := os.ReadFile("../../testdata/work.json")
 	if err != nil {

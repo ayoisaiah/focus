@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -65,8 +66,8 @@ type sessionTimeline struct {
 type session struct {
 	// Name is the name of a session
 	Name sessionType `json:"name"`
-	// Tag is the label that a session belongs to
-	Tag string `json:"tag"`
+	// Tags are the labels for a session
+	Tags []string `json:"tags"`
 	// Duration is the duration in minutes for a session
 	Duration int `json:"duration"`
 	// Timeline helps to keep track of how many times
@@ -528,10 +529,15 @@ func (t *Timer) initSession() (time.Time, error) {
 	endTime := startTime.
 		Add(time.Duration(t.Kind[t.SessionType] * int(time.Minute)))
 
+	var tags []string
+	if t.Tag != "" {
+		tags = strings.Split(t.Tag, ",")
+	}
+
 	t.Session = session{
 		Name:      t.SessionType,
 		Duration:  t.Kind[t.SessionType],
-		Tag:       t.Tag,
+		Tags:      tags,
 		Completed: false,
 		StartTime: startTime,
 		Timeline: []sessionTimeline{

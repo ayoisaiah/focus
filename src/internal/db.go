@@ -24,7 +24,7 @@ const (
 
 type DB interface {
 	init() error
-	getSessions(startTime, endTime time.Time, tag string) ([][]byte, error)
+	getSessions(startTime, endTime time.Time, tag []string) ([][]byte, error)
 	deleteTimerState() error
 	getTimerState() ([]byte, []byte, error)
 	saveTimerState(timer, sessionKey []byte) error
@@ -116,7 +116,8 @@ func (s *Store) getTimerState() (timer, session []byte, err error) {
 // editSessionTag modifies the tag for each session.
 func (s *Store) editSessionTag(sessions []session) error {
 	return s.conn.Update(func(tx *bolt.Tx) error {
-		for _, sess := range sessions {
+		for i := range sessions {
+			sess := sessions[i]
 			key := []byte(sess.StartTime.Format(time.RFC3339))
 
 			value, err := json.Marshal(sess)
@@ -138,8 +139,9 @@ func (s *Store) editSessionTag(sessions []session) error {
 // specified bounds from the database.
 func (s *Store) deleteSessions(sessions []session) error {
 	return s.conn.Update(func(tx *bolt.Tx) error {
-		for _, v := range sessions {
-			id := v.StartTime.Format(time.RFC3339)
+		for i := range sessions {
+			sess := sessions[i]
+			id := sess.StartTime.Format(time.RFC3339)
 
 			err := tx.Bucket([]byte("sessions")).Delete([]byte(id))
 			if err != nil {
@@ -170,6 +172,18 @@ func (s *Store) deleteTimerState() error {
 	})
 }
 
+// contains checks if a string is present in
+// a string slice.
+func stringContains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+
+	return false
+}
+
 // getSessions retrieves the saved work sessions
 // within the specified time period. It checks the previous
 // work session just before the `startTime` to see if
@@ -178,7 +192,7 @@ func (s *Store) deleteTimerState() error {
 // sessions by tag. An empty string signifies no filtering.
 func (s *Store) getSessions(
 	startTime, endTime time.Time,
-	tag string,
+	tags []string,
 ) ([][]byte, error) {
 	var b [][]byte
 
@@ -212,15 +226,17 @@ func (s *Store) getSessions(
 
 		for k, v := sk, sv; k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
 			// Filter out tags that don't match
-			if tag != "" {
+			if len(tags) != 0 {
 				var sess session
 				err := json.Unmarshal(v, &sess)
 				if err != nil {
 					return err
 				}
 
-				if sess.Tag == tag {
-					b = append(b, v)
+				for _, t := range sess.Tags {
+					if stringContains(tags, t) {
+						b = append(b, v)
+					}
 				}
 			} else {
 				b = append(b, v)

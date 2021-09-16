@@ -186,7 +186,7 @@ func GetApp() *cli.App {
 						return stats.List(os.Stdout)
 					}
 
-					if stats.Tag != "" {
+					if len(stats.Tags) != 0 {
 						return stats.EditTag(os.Stdout, os.Stdin)
 					}
 

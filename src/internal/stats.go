@@ -260,8 +260,8 @@ func (d *Data) calculateSessionDuration(
 func (d *Data) computeTotals(sessions []session, startTime, endTime time.Time) {
 	for i := range sessions {
 		s := sessions[i]
-		if s.Tag == "" {
-			s.Tag = "uncategorised"
+		if len(s.Tags) == 0 {
+			s.Tags = []string{"uncategorised"}
 		}
 
 		if s.EndTime.IsZero() {
@@ -278,17 +278,25 @@ func (d *Data) computeTotals(sessions []session, startTime, endTime time.Time) {
 			),
 		)
 
-		if _, exists := d.Tags[s.Tag]; !exists {
-			d.Tags[s.Tag] = &quantity{}
+		for _, t := range s.Tags {
+			if _, exists := d.Tags[t]; !exists {
+				d.Tags[t] = &quantity{}
+			}
+
+			d.Tags[t].minutes += duration
+
+			if s.Completed {
+				d.Tags[t].completed++
+			} else {
+				d.Tags[t].abandoned++
+			}
 		}
 
-		d.Tags[s.Tag].minutes += duration
 		d.Totals.minutes += duration
 
 		if s.Completed {
 			d.Weekday[s.StartTime.Weekday()].completed++
 			d.HourofDay[s.StartTime.Hour()].completed++
-			d.Tags[s.Tag].completed++
 
 			if _, exists := d.History[s.StartTime.Format(d.HistoryKeyFormat)]; exists {
 				d.History[s.StartTime.Format(d.HistoryKeyFormat)].completed++
@@ -298,7 +306,6 @@ func (d *Data) computeTotals(sessions []session, startTime, endTime time.Time) {
 		} else {
 			d.Weekday[s.StartTime.Weekday()].abandoned++
 			d.HourofDay[s.StartTime.Hour()].abandoned++
-			d.Tags[s.Tag].abandoned++
 
 			if _, exists := d.History[s.StartTime.Format(d.HistoryKeyFormat)]; exists {
 				d.History[s.StartTime.Format(d.HistoryKeyFormat)].abandoned++
@@ -314,7 +321,7 @@ type Stats struct {
 	StartTime time.Time
 	EndTime   time.Time
 	Sessions  []session
-	Tag       string
+	Tags      []string
 	store     DB
 	Data      *Data
 	HoursDiff int
@@ -323,7 +330,7 @@ type Stats struct {
 // getSessions retrieves the work sessions
 // for the specified time period.
 func (s *Stats) getSessions() error {
-	b, err := s.store.getSessions(s.StartTime, s.EndTime, s.Tag)
+	b, err := s.store.getSessions(s.StartTime, s.EndTime, s.Tags)
 	if err != nil {
 		return err
 	}
@@ -606,9 +613,9 @@ func printTable(data [][]string, w io.Writer) {
 
 // EditTag.is used to edit the tags of the specified sessions.
 func (s *Stats) EditTag(w io.Writer, r io.Reader) error {
-	tag := s.Tag
+	tag := s.Tags
 	// So that getSessions() does not filter by tag
-	s.Tag = ""
+	s.Tags = []string{}
 
 	err := s.getSessions()
 	if err != nil {
@@ -621,7 +628,7 @@ func (s *Stats) EditTag(w io.Writer, r io.Reader) error {
 	}
 
 	for i := range s.Sessions {
-		s.Sessions[i].Tag = tag
+		s.Sessions[i].Tags = tag
 	}
 
 	printSessionsTable(w, s.Sessions)
@@ -667,7 +674,9 @@ func (s *Stats) Delete(w io.Writer, r io.Reader) error {
 func printSessionsTable(w io.Writer, sessions []session) {
 	data := make([][]string, len(sessions))
 
-	for i, sess := range sessions {
+	for i := range sessions {
+		sess := sessions[i]
+
 		statusText := pterm.Green("completed")
 		if !sess.Completed {
 			statusText = pterm.Red("abandoned")
@@ -678,11 +687,13 @@ func printSessionsTable(w io.Writer, sessions []session) {
 			endDate = ""
 		}
 
+		tags := strings.Join(sess.Tags, ", ")
+
 		sl := []string{
 			fmt.Sprintf("%d", i+1),
 			sess.StartTime.Format("Jan 02, 2006 03:04 PM"),
 			endDate,
-			sess.Tag,
+			tags,
 			statusText,
 		}
 
@@ -758,7 +769,7 @@ func (s *Stats) Show(w io.Writer) error {
 	}
 
 	var tags string
-	if s.Tag == "" {
+	if len(s.Tags) == 0 {
 		tags = s.getTags()
 	}
 
@@ -785,7 +796,10 @@ type statsCtx interface {
 func NewStats(ctx statsCtx, store DB) (*Stats, error) {
 	s := &Stats{}
 	s.store = store
-	s.Tag = ctx.String("tag")
+
+	if (ctx.String("tag")) != "" {
+		s.Tags = strings.Split(ctx.String("tag"), ",")
+	}
 
 	period := ctx.String("period")
 
