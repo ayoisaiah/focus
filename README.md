@@ -60,7 +60,7 @@ $ sudo apt install libasound2-dev
 
 ### 📦 NPM Package
 
-You can also install Focus via through its [NPM package](https://www.npmjs.com/package/@ayoisaiah/focus):
+You can also install Focus through its [NPM package](https://www.npmjs.com/package/@ayoisaiah/focus):
 
 With `npm`:
 
@@ -103,7 +103,7 @@ short_break_msg: Take a breather # short break session message (shown in termina
 
 long_break_mins: 15 # long break session length
 
-long_break_msg: Take a long break # # long break session message (shown in terminal and notification)
+long_break_msg: Take a long break # long break session message (shown in terminal and notification)
 
 long_break_interval: 4 # number of sessions before long break
 
@@ -144,6 +144,20 @@ Focus has 3 types of sessions: work, short break, and long break.
 - Pressing `Ctrl-C` during a break session will interrupt it. Run `focus resume` to skip to the next work session.
 - If `auto_start_break` is `false`, you will be prompted to start each break session manually. Otherwise if set to `true`, it will start without your intervention.
 
+## Tagging sessions
+
+You can use the `--tag` or `-t` flag to apply a tag to a new session:
+
+```
+$ focus --tag 'side-project'
+```
+
+Multiple tags are supported (use commas to separate each):
+
+```
+$ focus --tag 'side-project,focus'
+```
+
 ## 🔔 Notifications
 
 ![Focus notification](https://ik.imagekit.io/turnupdev/focus-notify_igz_8z0Jnp.png)
@@ -175,6 +189,13 @@ $ focus --sound 'stadium_noise.flac'
 
 By default, ambient sounds are played only during work sessions. They are paused during break sessions, and resumed again in the next work session. If you'd like to retain the ambient sound during a break session, set the `sound_on_break` config option to `true`, or use the `--sound-on-break` or `-sob` flag.
 
+You can also disable sounds when starting or resuming a session by setting `--sound` to `off`:
+
+```
+$ focus --sound 'off'
+$ focus resume --sound 'off'
+```
+
 ## 📈 Statistics & History
 
 ```
@@ -200,28 +221,65 @@ $ focus stats --start '2021-07-23 12:00:05 PM' --end '2021-07-29 03:25:00 AM'
 
 ### 📃 Listing sessions
 
-Use the `--list` option to display a table of your work sessions instead of aggregated statistics. Use the `--period` or `--start` and `--end` option to change the reporting period (defaults to 7 days).
+Use the `--list` option to display a table of your work sessions instead of aggregated statistics. Use the `--period` or `--start` and `--end` option to change the reporting period (defaults to the last 7 days).
 
 ```
-$ focus stats --list --period 'today'
-+---+-----------------------+-----------------------+-----------+
-| # |      START DATE       |       END DATE        |  STATUS   |
-+---+-----------------------+-----------------------+-----------+
-| 1 | Aug 07, 2021 11:59 PM | Aug 08, 2021 12:00 AM | completed |
-| 2 | Aug 08, 2021 04:31 PM | Aug 08, 2021 04:32 PM | completed |
-| 3 | Aug 08, 2021 04:33 PM | Aug 08, 2021 04:34 PM | abandoned |
-| 4 | Aug 08, 2021 05:56 PM | Aug 08, 2021 05:57 PM | completed |
-| 5 | Aug 08, 2021 05:58 PM | Aug 08, 2021 05:59 PM | completed |
-| 6 | Aug 08, 2021 06:00 PM | Aug 08, 2021 06:01 PM | completed |
-| 7 | Aug 08, 2021 06:02 PM | Aug 08, 2021 06:03 PM | completed |
-| 8 | Aug 08, 2021 06:11 PM |                       | abandoned |
-| 9 | Aug 08, 2021 06:11 PM | Aug 08, 2021 06:11 PM | abandoned |
-+---+-----------------------+-----------------------+-----------+
+$ focus stats --list
++---+-----------------------+-----------------------+--------------+-----------+
+| # |      START DATE       |       END DATE        |     TAG      |  STATUS   |
++---+-----------------------+-----------------------+--------------+-----------+
+| 1 | Sep 09, 2021 02:16 AM | Sep 09, 2021 03:06 AM | side-project | completed |
+| 2 | Sep 11, 2021 01:39 PM | Sep 11, 2021 02:29 PM | client       | completed |
+| 3 | Sep 11, 2021 08:25 PM | Sep 11, 2021 09:10 PM | client       | abandoned |
+| 4 | Sep 12, 2021 09:45 PM | Sep 12, 2021 10:35 PM | piano        | completed |
+| 5 | Sep 13, 2021 03:48 PM | Sep 13, 2021 04:11 PM | reading      | abandoned |
+| 6 | Sep 15, 2021 09:44 AM | Sep 15, 2021 10:34 AM | side-project | completed |
+| 7 | Sep 15, 2021 10:38 AM | Sep 15, 2021 10:53 AM | piano        | abandoned |
+| 8 | Sep 15, 2021 07:37 PM | Sep 15, 2021 08:02 PM | client       | completed |
++---+-----------------------+-----------------------+--------------+-----------+
+```
+
+You can filter the list by tag:
+
+```
+$ focus stats --list --tag 'client,piano'
++---+-----------------------+-----------------------+--------+-----------+
+| # |      START DATE       |       END DATE        |  TAG   |  STATUS   |
++---+-----------------------+-----------------------+--------+-----------+
+| 1 | Sep 11, 2021 01:39 PM | Sep 11, 2021 02:29 PM | client | completed |
+| 2 | Sep 11, 2021 08:25 PM | Sep 11, 2021 09:10 PM | client | abandoned |
+| 3 | Sep 12, 2021 09:45 PM | Sep 12, 2021 10:35 PM | piano  | completed |
+| 4 | Sep 15, 2021 10:38 AM | Sep 15, 2021 10:53 AM | piano  | abandoned |
+| 5 | Sep 15, 2021 07:37 PM | Sep 15, 2021 08:02 PM | client | completed |
++---+-----------------------+-----------------------+--------+-----------+
 ```
 
 **Note**
-- Sessions that cross over to a new day will count towards that day's sessions as observed above.
+- Sessions that cross over to a new day will count towards that day's sessions.
 - A session with an empty end date indicates that the process was intin such a way that a graceful shutdown was not possible.
+
+### ✒ Editing sessions
+
+You can edit the tags of one or more sessions through the `--tag` option. The matching sessions will be updated with the value of the `--tag` option. You will be prompted before the update is carried out.
+
+```
+$ focus stats --list -p 'yesterday'
++---+-----------------------+-----------------------+-------+-----------+
+| # |      START DATE       |       END DATE        |  TAG  |  STATUS   |
++---+-----------------------+-----------------------+-------+-----------+
+| 1 | Sep 16, 2021 05:53 PM | Sep 16, 2021 05:53 PM | piano | abandoned |
++---+-----------------------+-----------------------+-------+-----------+
+```
+
+```
+$ focus stats --tag 'piano,prelude in c major' -p yesterday
++---+-----------------------+-----------------------+---------------------------+-----------+
+| # |      START DATE       |       END DATE        |            TAG            |  STATUS   |
++---+-----------------------+-----------------------+---------------------------+-----------+
+| 1 | Sep 16, 2021 05:53 PM | Sep 16, 2021 05:53 PM | piano, prelude in c major | abandoned |
++---+-----------------------+-----------------------+---------------------------+-----------+
+WARNING  The sessions above will be updated. Press ENTER to proceed
+```
 
 ### 🔥 Deleting sessions
 
@@ -235,7 +293,7 @@ $ focus stats --delete --start '2021-08-08 06:11:00 PM'
 | 1 | Aug 08, 2021 06:11 PM |                       | abandoned |
 | 2 | Aug 08, 2021 06:11 PM | Aug 08, 2021 06:11 PM | abandoned |
 +---+-----------------------+-----------------------+-----------+
- WARNING  The above sessions will be deleted permanently. Press ENTER to proceed
+WARNING  The above sessions will be deleted permanently. Press ENTER to proceed
 ```
 
 ## 🤝 Contribute
