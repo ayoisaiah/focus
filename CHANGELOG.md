@@ -1,3 +1,10 @@
+## 1.2.0 (2021-09-17)
+
+Features and enhancements:
+
+- Add ability to tag sessions.
+- Make it possible to disable sound when resuming a session.
+
 ## 1.1.0 (2021-08-19)
 
 Fixes and enhancements:
