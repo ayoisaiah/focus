@@ -256,7 +256,7 @@ $ focus stats --list --tag 'client,piano'
 
 **Note**
 - Sessions that cross over to a new day will count towards that day's sessions.
-- A session with an empty end date indicates that the process was intin such a way that a graceful shutdown was not possible.
+- A session with an empty end date indicates that the process was ended such a way that a graceful shutdown was not possible.
 
 ### ✒ Editing sessions
 
