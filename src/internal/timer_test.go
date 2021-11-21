@@ -11,70 +11,6 @@ import (
 	"time"
 )
 
-type DBMock struct{}
-
-func (d *DBMock) init() error {
-	return nil
-}
-
-func (d *DBMock) getSessions(
-	startTime, endTime time.Time,
-	tags []string,
-) ([][]byte, error) {
-	jsonFile, err := os.ReadFile("../../testdata/work.json")
-	if err != nil {
-		return nil, err
-	}
-
-	var sessions []session
-
-	err = json.Unmarshal(jsonFile, &sessions)
-	if err != nil {
-		return nil, err
-	}
-
-	result := [][]byte{}
-
-	for _, v := range sessions {
-		if v.StartTime.Before(startTime) || v.StartTime.After(endTime) {
-			continue
-		}
-
-		b, err := json.Marshal(v)
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, b)
-	}
-
-	return result, nil
-}
-
-func (d *DBMock) deleteTimerState() error {
-	return nil
-}
-
-func (d *DBMock) getTimerState() (timer, session []byte, err error) {
-	return nil, nil, nil
-}
-
-func (d *DBMock) saveTimerState(timer, sessionKey []byte) error {
-	return nil
-}
-
-func (d *DBMock) updateSession(key, value []byte) error {
-	return nil
-}
-
-func (d *DBMock) deleteSessions(sessions []session) error {
-	return nil
-}
-
-func (d *DBMock) close() error {
-	return nil
-}
-
 // TestTimer_InitSession confirms that the endtime
 // is perfectly distanced from the start time
 // by the specified amount of minutes.
@@ -107,6 +43,8 @@ func TestTimer_InitSession(t *testing.T) {
 	}
 }
 
+// TestTimer_GetNextSession ensures that the correct session type
+// is begun after a session ends.
 func TestTimer_GetNextSession(t *testing.T) {
 	type testCase struct {
 		input             sessionType
@@ -141,6 +79,8 @@ func TestTimer_GetNextSession(t *testing.T) {
 	}
 }
 
+// TestTimer_PrintSession verifies the text that is printed to
+// the terminal when a session begins.
 func TestTimer_PrintSession(t *testing.T) {
 	type testCase struct {
 		endTime             string
