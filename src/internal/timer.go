@@ -648,9 +648,28 @@ func (t *Timer) countdown(timeRemaining countdown) {
 	)
 }
 
-// setOptions configures a new Timer instance based
+// SetOptions configures a new Timer instance based
 // on command line arguments.
-func (t *Timer) setOptions(ctx *cli.Context) {
+func (t *Timer) SetOptions(ctx *cli.Context) {
+	t.Tag = ctx.String("tag")
+
+	if ctx.Bool("disable-notifications") {
+		t.ShowNotification = false
+	}
+
+	if ctx.Bool("sound-on-break") {
+		t.SoundOnBreak = true
+	}
+
+	if ctx.String("sound") != "" {
+		t.Sound = ctx.String("sound")
+	}
+
+	if ctx.Command.Name == "resume" {
+		return
+	}
+
+	// the following options are set only when starting a new session
 	if ctx.Uint("work") > 0 {
 		t.Kind[work] = int(ctx.Uint("work"))
 	}
@@ -669,26 +688,6 @@ func (t *Timer) setOptions(ctx *cli.Context) {
 
 	if ctx.Uint("max-sessions") > 0 {
 		t.MaxSessions = int(ctx.Uint("max-sessions"))
-	}
-
-	t.Tag = ctx.String("tag")
-
-	t.SetResumeOptions(ctx)
-}
-
-// SetResumeOptions is used to update timer options that are used
-// when starting or resuming a timer.
-func (t *Timer) SetResumeOptions(ctx *cli.Context) {
-	if ctx.Bool("disable-notifications") {
-		t.ShowNotification = false
-	}
-
-	if ctx.Bool("sound-on-break") {
-		t.SoundOnBreak = true
-	}
-
-	if ctx.String("sound") != "" {
-		t.Sound = ctx.String("sound")
 	}
 }
 
@@ -718,7 +717,7 @@ func NewTimer(ctx *cli.Context, c *Config, store *Store) *Timer {
 
 	// Command-line options will override the configuration
 	// file
-	t.setOptions(ctx)
+	t.SetOptions(ctx)
 
 	return t
 }

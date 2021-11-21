@@ -117,6 +117,11 @@ func GetApp() *cli.App {
 			Aliases: []string{"sob"},
 			Usage:   "Play ambient sounds during a break sessions.",
 		},
+		&cli.StringFlag{
+			Name:    "tag",
+			Aliases: []string{"t"},
+			Usage:   "Match only sessions with a specific tag",
+		},
 	}
 
 	app := &cli.App{
@@ -155,7 +160,7 @@ func GetApp() *cli.App {
 						return err
 					}
 
-					t.SetResumeOptions(ctx)
+					t.SetOptions(ctx)
 
 					return t.Run()
 				},
@@ -204,11 +209,6 @@ func GetApp() *cli.App {
 						Usage:   "List all the work sessions within the specified time period.",
 					},
 					&cli.StringFlag{
-						Name:    "tag",
-						Aliases: []string{"t"},
-						Usage:   "Match only sessions with a specific tag",
-					},
-					&cli.StringFlag{
 						Name:    "period",
 						Aliases: []string{"p"},
 						Usage:   "Specify a time period for (defaults to 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time.",
@@ -238,11 +238,6 @@ func GetApp() *cli.App {
 				Name:    "short-break",
 				Aliases: []string{"s"},
 				Usage:   "Short break duration in minutes (default: 5).",
-			},
-			&cli.StringFlag{
-				Name:    "tag",
-				Aliases: []string{"t"},
-				Usage:   "Add a tag to a session",
 			},
 			&cli.UintFlag{
 				Name:    "long-break",
