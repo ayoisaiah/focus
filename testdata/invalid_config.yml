@@ -1,0 +1,13 @@
+work_mins: Focus
+work_msg: 10
+short_break_mins: A string
+short_break_msg: Take a breather
+long_break_mins: 0.9
+long_break_msg: Take a long break
+long_break_interval: 4
+notify: yes
+auto_start_work: no
+auto_start_break: false
+24hr_clock: no
+sound: ""
+sound_on_break: false

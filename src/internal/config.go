@@ -52,12 +52,15 @@ type Config struct {
 }
 
 const (
-	workMinutes       = 25
-	shortBreakMinutes = 5
-	longBreakMinutes  = 15
-	longBreakInterval = 4
-	configDir         = "focus"
-	configFileName    = "config.yml"
+	defaultWorkMinutes       = 25
+	defaultShortBreakMinutes = 5
+	defaultLongBreakMinutes  = 15
+	defaultLongBreakInterval = 4
+)
+
+var (
+	configDir      = "focus"
+	configFileName = "config.yml"
 )
 
 func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
@@ -106,10 +109,10 @@ Edit the configuration file to change any settings, or use command line argument
 		if c.WorkMinutes == 0 {
 			fmt.Printf(
 				"\nWork length in minutes (default: %s): ",
-				pterm.Green(workMinutes),
+				pterm.Green(defaultWorkMinutes),
 			)
 
-			num, err := numberPrompt(reader, workMinutes)
+			num, err := numberPrompt(reader, defaultWorkMinutes)
 			if err != nil {
 				pterm.Error.Println(err)
 				continue
@@ -121,10 +124,10 @@ Edit the configuration file to change any settings, or use command line argument
 		if c.ShortBreakMinutes == 0 {
 			fmt.Printf(
 				"Short break length in minutes (default: %s): ",
-				pterm.Green(shortBreakMinutes),
+				pterm.Green(defaultShortBreakMinutes),
 			)
 
-			num, err := numberPrompt(reader, shortBreakMinutes)
+			num, err := numberPrompt(reader, defaultShortBreakMinutes)
 			if err != nil {
 				pterm.Error.Println(err)
 				continue
@@ -136,10 +139,10 @@ Edit the configuration file to change any settings, or use command line argument
 		if c.LongBreakMinutes == 0 {
 			fmt.Printf(
 				"Long break length in minutes (default: %s): ",
-				pterm.Green(longBreakMinutes),
+				pterm.Green(defaultLongBreakMinutes),
 			)
 
-			num, err := numberPrompt(reader, longBreakMinutes)
+			num, err := numberPrompt(reader, defaultLongBreakMinutes)
 			if err != nil {
 				pterm.Error.Println(err)
 				continue
@@ -151,10 +154,10 @@ Edit the configuration file to change any settings, or use command line argument
 		if c.LongBreakInterval == 0 {
 			fmt.Printf(
 				"Work sessions before long break (default: %s): ",
-				pterm.Green(longBreakInterval),
+				pterm.Green(defaultLongBreakInterval),
 			)
 
-			num, err := numberPrompt(reader, longBreakInterval)
+			num, err := numberPrompt(reader, defaultLongBreakInterval)
 			if err != nil {
 				pterm.Error.Println(err)
 				continue
@@ -218,33 +221,43 @@ func (c *Config) init() error {
 // get retrieves an already existing configuration from
 // the filesystem.
 func (c *Config) get(pathToConfig string) error {
-	c.defaults(false)
-
 	b, err := os.ReadFile(pathToConfig)
 	if err != nil {
 		return err
 	}
 
-	err = yaml.Unmarshal(b, c)
+	var nc Config
+
+	err = yaml.Unmarshal(b, &nc)
 	if err != nil {
-		return err
+		pterm.Warning.Printfln(
+			"Unable to initialise Focus from config file due to errors: %v. Using default settings.",
+			err,
+		)
+
+		return nil
 	}
+
+	// Account for empty config files
+	if nc == (Config{}) {
+		pterm.Warning.Printfln(
+			"Unable to initialise Focus from empty config file. Using default settings.",
+		)
+
+		return nil
+	}
+
+	*c = nc
 
 	return c.save(pathToConfig)
 }
 
-// defaults sets default values for the config.
-// The `willPrompt` flag is used to control
-// if default values should be set for the
-// values that.are requested in the prompt.
-func (c *Config) defaults(willPrompt bool) {
-	if !willPrompt {
-		c.WorkMinutes = workMinutes
-		c.ShortBreakMinutes = shortBreakMinutes
-		c.LongBreakMinutes = longBreakMinutes
-		c.LongBreakInterval = longBreakInterval
-	}
-
+// defaults sets default values for the config object.
+func (c *Config) defaults() {
+	c.WorkMinutes = defaultWorkMinutes
+	c.ShortBreakMinutes = defaultShortBreakMinutes
+	c.LongBreakMinutes = defaultLongBreakMinutes
+	c.LongBreakInterval = defaultLongBreakInterval
 	c.AutoStartBreak = true
 	c.AutoStartWork = false
 	c.Notify = true
@@ -252,7 +265,6 @@ func (c *Config) defaults(willPrompt bool) {
 	c.ShortBreakMessage = "Take a breather"
 	c.LongBreakMessage = "Take a long break"
 	c.TwentyFourHourClock = false
-	c.Sound = ""
 	c.SoundOnBreak = false
 }
 
@@ -260,8 +272,6 @@ func (c *Config) defaults(willPrompt bool) {
 // for key application settings. The results are
 // saved to the filesystem to facilitate reuse.
 func (c *Config) create(pathToConfig string) error {
-	c.defaults(true)
-
 	c.prompt(pathToConfig)
 
 	err := c.save(pathToConfig)
@@ -280,6 +290,8 @@ func (c *Config) create(pathToConfig string) error {
 // NewConfig returns the application configuration.
 func NewConfig() (*Config, error) {
 	c := &Config{}
+
+	c.defaults()
 
 	err := c.init()
 	if err != nil {

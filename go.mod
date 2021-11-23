@@ -23,6 +23,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/gookit/color v1.4.2 // indirect
 	github.com/gopherjs/gopherwasm v1.1.0 // indirect
 	github.com/hajimehoshi/go-mp3 v0.1.1 // indirect

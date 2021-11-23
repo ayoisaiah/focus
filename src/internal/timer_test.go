@@ -93,7 +93,7 @@ func TestTimer_PrintSession(t *testing.T) {
 	}
 
 	c := &Config{}
-	c.defaults(false)
+	c.defaults()
 
 	cases := []testCase{
 		{
