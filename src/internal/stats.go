@@ -793,7 +793,7 @@ func (s *Stats) Show(w io.Writer) error {
 
 	hourly := s.getHourlyBreakdown()
 
-	fmt.Fprint(
+	fmt.Fprintln(
 		w,
 		strings.TrimSpace(
 			header+summary+averages+tags+workHistory+weekly+hourly,
