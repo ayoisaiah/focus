@@ -97,7 +97,7 @@ func GetApp() *cli.App {
 	globalFlags := map[string]cli.Flag{
 		"no-color": &cli.BoolFlag{
 			Name:  "no-color",
-			Usage: "Disable coloured output.",
+			Usage: "Disable coloured output",
 		},
 	}
 
@@ -105,7 +105,7 @@ func GetApp() *cli.App {
 		&cli.BoolFlag{
 			Name:    "disable-notifications",
 			Aliases: []string{"d"},
-			Usage:   "Disable the system notification after a session is completed.",
+			Usage:   "Disable the system notification after a session is completed",
 		},
 		globalFlags["no-color"],
 		&cli.StringFlag{
@@ -115,12 +115,12 @@ func GetApp() *cli.App {
 		&cli.BoolFlag{
 			Name:    "sound-on-break",
 			Aliases: []string{"sob"},
-			Usage:   "Play ambient sounds during a break sessions.",
+			Usage:   "Play ambient sounds during a break sessions",
 		},
 		&cli.StringFlag{
 			Name:    "tag",
 			Aliases: []string{"t"},
-			Usage:   "Match only sessions with a specific tag",
+			Usage:   "Add comma-delimited tags to a session",
 		},
 	}
 
@@ -167,7 +167,7 @@ func GetApp() *cli.App {
 			},
 			{
 				Name:  "stats",
-				Usage: "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days.",
+				Usage: "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days",
 				Action: func(ctx *cli.Context) error {
 					if ctx.Bool("no-color") {
 						pterm.DisableColor()
@@ -201,28 +201,33 @@ func GetApp() *cli.App {
 					&cli.BoolFlag{
 						Name:    "delete",
 						Aliases: []string{"d"},
-						Usage:   "Delete the all work sessions within the specified time period.",
+						Usage:   "Delete the all work sessions within the specified time period",
 					},
 					&cli.BoolFlag{
 						Name:    "list",
 						Aliases: []string{"l"},
-						Usage:   "List all the work sessions within the specified time period.",
+						Usage:   "List all the work sessions within the specified time period",
 					},
 					&cli.StringFlag{
 						Name:    "period",
 						Aliases: []string{"p"},
-						Usage:   "Specify a time period for (defaults to 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time.",
+						Usage:   "Specify a time period for (defaults to 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time",
 						Value:   "7days",
 					},
 					&cli.StringFlag{
 						Name:    "start",
 						Aliases: []string{"s"},
-						Usage:   "Specify a start date in the following format: YYYY-MM-DD [HH:MM:SS PM].",
+						Usage:   "Specify a start date in the following format: YYYY-MM-DD [HH:MM:SS PM]",
 					},
 					&cli.StringFlag{
 						Name:    "end",
 						Aliases: []string{"e"},
-						Usage:   "Specify an end date in the following format: YYYY-MM-DD [HH:MM:SS PM] (defaults to the current time).",
+						Usage:   "Specify an end date in the following format: YYYY-MM-DD [HH:MM:SS PM] (defaults to the current time)",
+					},
+					&cli.StringFlag{
+						Name:    "tag",
+						Aliases: []string{"t"},
+						Usage:   "Match only sessions with a specific tag",
 					},
 					globalFlags["no-color"],
 				},
@@ -232,27 +237,27 @@ func GetApp() *cli.App {
 			&cli.UintFlag{
 				Name:    "max-sessions",
 				Aliases: []string{"max"},
-				Usage:   "The maximum number of work sessions (unlimited by default).",
+				Usage:   "The maximum number of work sessions (unlimited by default)",
 			},
 			&cli.UintFlag{
 				Name:    "short-break",
 				Aliases: []string{"s"},
-				Usage:   "Short break duration in minutes (default: 5).",
+				Usage:   "Short break duration in minutes (default: 5)",
 			},
 			&cli.UintFlag{
 				Name:    "long-break",
 				Aliases: []string{"l"},
-				Usage:   "Long break duration in minutes (default: 15).",
+				Usage:   "Long break duration in minutes (default: 15)",
 			},
 			&cli.UintFlag{
 				Name:    "long-break-interval",
 				Aliases: []string{"int"},
-				Usage:   "The number of work sessions before a long break (default: 4).",
+				Usage:   "The number of work sessions before a long break (default: 4)",
 			},
 			&cli.UintFlag{
 				Name:    "work",
 				Aliases: []string{"w"},
-				Usage:   "Work duration in minutes (default: 25).",
+				Usage:   "Work duration in minutes (default: 25)",
 			},
 		},
 		Action: func(ctx *cli.Context) error {
