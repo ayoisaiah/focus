@@ -47,7 +47,7 @@ func (s *Store) init() error {
 		return err
 	}
 
-	var fileMode fs.FileMode = 0600
+	var fileMode fs.FileMode = 0o600
 
 	db, err := bolt.Open(
 		pathToDB,

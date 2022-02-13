@@ -32,10 +32,10 @@ func (e Error) Error() string { return string(e) }
 const (
 	errUnableToSaveSession = Error("Unable to persist interrupted session")
 	errInvalidSoundFormat  = Error(
-		"Invalid file format. Only MP3, OGG, FLAC, and WAV files are supported",
+		"Invalid sound file format. Only MP3, OGG, FLAC, and WAV files are supported",
 	)
 	errNoPausedSession = Error(
-		"A previously interrupted session was not found. Please start a new session",
+		"Existing paused session was not detected. Please start a new session",
 	)
 )
 
@@ -648,11 +648,9 @@ func (t *Timer) countdown(timeRemaining countdown) {
 	)
 }
 
-// SetOptions configures a new Timer instance based
+// SetOptions configures a Timer instance based
 // on command line arguments.
 func (t *Timer) SetOptions(ctx *cli.Context) {
-	t.Tag = ctx.String("tag")
-
 	if ctx.Bool("disable-notifications") {
 		t.ShowNotification = false
 	}
@@ -670,6 +668,8 @@ func (t *Timer) SetOptions(ctx *cli.Context) {
 	}
 
 	// the following options are set only when starting a new session
+	t.Tag = ctx.String("tag")
+
 	if ctx.Uint("work") > 0 {
 		t.Kind[work] = int(ctx.Uint("work"))
 	}
