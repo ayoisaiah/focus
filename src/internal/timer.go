@@ -190,7 +190,20 @@ func (t *Timer) endSession(endTime time.Time) error {
 	}
 
 	if t.ShowNotification {
-		t.notify()
+		m := map[sessionType]string{
+			work:       "Work session",
+			shortBreak: "Short break",
+			longBreak:  "Long break",
+		}
+
+		title := m[t.SessionType] + " is finished"
+		msg := t.Msg[t.nextSession()]
+
+		if t.Counter == t.MaxSessions {
+			msg = "Max sessions reached. Exiting focus"
+		}
+
+		t.notify(title, msg)
 	}
 
 	return nil
@@ -274,21 +287,13 @@ func (t *Timer) printSession(endTime time.Time, w io.Writer) {
 }
 
 // notify sends a desktop notification.
-func (t *Timer) notify() {
-	m := map[sessionType]string{
-		work:       "Work session",
-		shortBreak: "Short break",
-		longBreak:  "Long break",
-	}
-
-	msg := m[t.SessionType] + " is finished"
-
+func (t *Timer) notify(title, msg string) {
 	// pathToIcon will be an empty string if file is not found
 	pathToIcon, _ := xdg.SearchDataFile(
 		filepath.Join(configDir, "static", "icon.png"),
 	)
 
-	err := beeep.Notify(msg, t.Msg[t.nextSession()], pathToIcon)
+	err := beeep.Notify(title, msg, pathToIcon)
 	if err != nil {
 		pterm.Error.Println(
 			fmt.Errorf("Unable to display notification: %w", err),
