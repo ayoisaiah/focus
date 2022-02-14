@@ -537,6 +537,9 @@ func (t *Timer) initSession() (time.Time, error) {
 	var tags []string
 	if t.Tag != "" {
 		tags = strings.Split(t.Tag, ",")
+		for i := range tags {
+			tags[i] = strings.Trim(tags[i], " ")
+		}
 	}
 
 	t.Session = session{
