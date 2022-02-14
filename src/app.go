@@ -11,6 +11,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	envUpdateNotifier = "FOCUS_UPDATE_NOTIFIER"
+	envNoColor        = "NO_COLOR"
+	envFocusNoColor   = "FOCUS_NO_COLOR"
+)
+
 func init() {
 	// Override the default help template
 	cli.AppHelpTemplate = helpText()
@@ -19,16 +25,22 @@ func init() {
 	oldVersionPrinter := cli.VersionPrinter
 	cli.VersionPrinter = func(c *cli.Context) {
 		oldVersionPrinter(c)
-		checkForUpdates(GetApp())
+
+		if _, found := os.LookupEnv(envUpdateNotifier); found {
+			checkForUpdates(GetApp())
+		} else {
+			pterm.Printfln("See the latest updates: %s", pterm.Yellow("https://github.com/ayoisaiah/focus/releases"))
+			pterm.Printfln("Or set the %s variable in your env to any value opt into update notifications", pterm.Green(envUpdateNotifier))
+		}
 	}
 
 	// Disable colour output if NO_COLOR is set
-	if _, exists := os.LookupEnv("NO_COLOR"); exists {
+	if _, exists := os.LookupEnv(envNoColor); exists {
 		disableStyling()
 	}
 
 	// Disable colour output if FOCUS_NO_COLOR is set
-	if _, exists := os.LookupEnv("FOCUS_NO_COLOR"); exists {
+	if _, exists := os.LookupEnv(envFocusNoColor); exists {
 		disableStyling()
 	}
 
