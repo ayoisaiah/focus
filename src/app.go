@@ -25,12 +25,13 @@ func init() {
 	oldVersionPrinter := cli.VersionPrinter
 	cli.VersionPrinter = func(c *cli.Context) {
 		oldVersionPrinter(c)
+		fmt.Printf(
+			"https://github.com/ayoisaiah/focus/releases/%s\n",
+			c.App.Version,
+		)
 
 		if _, found := os.LookupEnv(envUpdateNotifier); found {
-			checkForUpdates(GetApp())
-		} else {
-			pterm.Printfln("See the latest updates: %s", pterm.Yellow("https://github.com/ayoisaiah/focus/releases"))
-			pterm.Printfln("Or set the %s variable in your env to any value opt into update notifications", pterm.Green(envUpdateNotifier))
+			checkForUpdates(c.App)
 		}
 	}
 
@@ -100,7 +101,7 @@ func checkForUpdates(app *cli.App) {
 			Text:  "UPDATE AVAILABLE",
 			Style: pterm.NewStyle(pterm.BgYellow, pterm.FgBlack),
 		}
-		pterm.Warning.Printfln("A new release of Focus is available: %s at %s", version, resp.Request.URL.String())
+		pterm.Warning.Printfln("A new release of focus is available: %s at %s", version, resp.Request.URL.String())
 	}
 }
 
@@ -137,14 +138,14 @@ func GetApp() *cli.App {
 	}
 
 	app := &cli.App{
-		Name: "Focus",
+		Name: "focus",
 		Authors: []*cli.Author{
 			{
 				Name:  "Ayooluwa Isaiah",
 				Email: "ayo@freshman.tech",
 			},
 		},
-		Usage:                "Focus is a cross-platform productivity timer for the command-line. It is based on the Pomodoro Technique,\n\t\ta time management method developed by Francesco Cirillo in the late 1980s.",
+		Usage:                "focus is a cross-platform productivity timer for the command-line. It is based on the Pomodoro Technique,\n\t\ta time management method developed by Francesco Cirillo in the late 1980s.",
 		UsageText:            "[COMMAND] [OPTIONS]",
 		Version:              "v1.2.0",
 		EnableBashCompletion: true,
