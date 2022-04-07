@@ -31,8 +31,7 @@ const ascii = `
 █████╗  ██║   ██║██║     ██║   ██║███████╗
 ██╔══╝  ██║   ██║██║     ██║   ██║╚════██║
 ██║     ╚██████╔╝╚██████╗╚██████╔╝███████║
-╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝
-`
+╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝`
 
 // Config represents the user's preferences.
 type Config struct {
@@ -90,7 +89,7 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 
 // configPrompt is the prompt for the app's initial configuration.
 func (c *Config) prompt(path string) {
-	fmt.Println(ascii)
+	fmt.Printf("%s\n\n", ascii)
 
 	pterm.Info.Printfln("Your preferences will be saved to: %s\n\n", path)
 
