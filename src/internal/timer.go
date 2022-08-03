@@ -64,23 +64,13 @@ type sessionTimeline struct {
 
 // session represents a work or break session.
 type session struct {
-	// Name is the name of a session
-	Name sessionType `json:"name"`
-	// Tags are the labels for a session
-	Tags []string `json:"tags"`
-	// Duration is the duration in minutes for a session
-	Duration int `json:"duration"`
-	// Timeline helps to keep track of how many times
-	// a session was paused, for how long, and when it
-	// was restarted
-	Timeline []sessionTimeline `json:"timeline"`
-	// StartTime is the original time the session was started
-	StartTime time.Time `json:"start_time"`
-	// EndTime the final end time of the session
-	EndTime time.Time `json:"end_time"`
-	// Completed indicates whether a session was completed
-	// or abandoned
-	Completed bool `json:"completed"`
+	StartTime time.Time         `json:"start_time"`
+	EndTime   time.Time         `json:"end_time"`
+	Name      sessionType       `json:"name"`
+	Tags      []string          `json:"tags"`
+	Timeline  []sessionTimeline `json:"timeline"`
+	Duration  int               `json:"duration"`
+	Completed bool              `json:"completed"`
 }
 
 // getElapsedTimeInSeconds returns the time elapsed
@@ -137,22 +127,22 @@ type message map[sessionType]string
 
 // Timer represents a Focus instance.
 type Timer struct {
-	SessionType         sessionType `json:"session_type"`
-	Session             session     `json:"-"`
+	Store               DB          `json:"-"`
 	Kind                kind        `json:"kind"`
-	AutoStartWork       bool        `json:"auto_start_work"`
-	AutoStartBreak      bool        `json:"auto_start_break"`
+	Msg                 message     `json:"msg"`
+	Tag                 string      `json:"tag"`
+	SessionType         sessionType `json:"session_type"`
+	Sound               string      `json:"sound"`
+	Session             session     `json:"-"`
+	WorkCycle           int         `json:"iteration"`
+	Counter             int         `json:"counter"`
 	LongBreakInterval   int         `json:"long_break_interval"`
 	MaxSessions         int         `json:"max_sessions"`
-	Counter             int         `json:"counter"`
-	WorkCycle           int         `json:"iteration"`
-	Msg                 message     `json:"msg"`
 	ShowNotification    bool        `json:"show_notification"`
 	TwentyFourHourClock bool        `json:"24_hour_clock"`
-	Store               DB          `json:"-"`
-	Sound               string      `json:"sound"`
+	AutoStartBreak      bool        `json:"auto_start_break"`
+	AutoStartWork       bool        `json:"auto_start_work"`
 	SoundOnBreak        bool        `json:"sound_on_break"`
-	Tag                 string      `json:"tag"`
 }
 
 // nextSession retrieves the next session.

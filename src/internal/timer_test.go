@@ -85,11 +85,11 @@ func TestTimer_PrintSession(t *testing.T) {
 	type testCase struct {
 		endTime             string
 		sessionType         sessionType
+		expected            string
 		maxSessions         int
 		workCycle           int
 		longBreakInterval   int
 		twentyFourHourClock bool
-		expected            string
 	}
 
 	c := &Config{}
@@ -99,50 +99,50 @@ func TestTimer_PrintSession(t *testing.T) {
 		{
 			"2021-06-13T13:50:00Z",
 			work,
-			0,
-			2,
-			4,
-			false,
 			fmt.Sprintf(
 				"[Work 2/4]: %s (until 01:50:00 PM)",
 				c.WorkMessage,
 			),
+			0,
+			2,
+			4,
+			false,
 		},
 		{
 			"2021-06-18T20:00:00Z",
 			work,
-			8,
-			4,
-			4,
-			true,
 			fmt.Sprintf(
 				"[Work 4/8]: %s (until 20:00:00)",
 				c.WorkMessage,
 			),
+			8,
+			4,
+			4,
+			true,
 		},
 		{
 			"2021-07-01T00:10:00Z",
 			shortBreak,
-			0,
-			1,
-			4,
-			false,
 			fmt.Sprintf(
 				"[Short break]: %s (until 12:10:00 AM)",
 				c.ShortBreakMessage,
 			),
+			0,
+			1,
+			4,
+			false,
 		},
 		{
 			"2021-07-01T15:43:00Z",
 			longBreak,
-			0,
-			4,
-			4,
-			false,
 			fmt.Sprintf(
 				"[Long break]: %s (until 03:43:00 PM)",
 				c.LongBreakMessage,
 			),
+			0,
+			4,
+			4,
+			false,
 		},
 	}
 

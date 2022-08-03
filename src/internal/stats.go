@@ -319,10 +319,10 @@ func (d *Data) computeTotals(sessions []session, startTime, endTime time.Time) {
 type Stats struct {
 	StartTime time.Time
 	EndTime   time.Time
-	Sessions  []session
-	Tags      []string
 	store     DB
 	Data      *Data
+	Sessions  []session
+	Tags      []string
 	HoursDiff int
 }
 
@@ -354,13 +354,13 @@ func (s *Stats) getHourlyBreakdown() string {
 	header := fmt.Sprintf("\n%s", pterm.LightBlue("Hourly breakdown (minutes)"))
 
 	type keyValue struct {
-		key   int
 		value *quantity
+		key   int
 	}
 
 	sl := make([]keyValue, 0, len(s.Data.HourofDay))
 	for k, v := range s.Data.HourofDay {
-		sl = append(sl, keyValue{k, v})
+		sl = append(sl, keyValue{v, k})
 	}
 
 	sort.SliceStable(sl, func(i, j int) bool {
@@ -403,13 +403,13 @@ func (s *Stats) getWorkHistory() string {
 	header := fmt.Sprintf("\n%s", pterm.LightBlue("Work history (minutes)"))
 
 	type keyValue struct {
-		key   string
 		value *quantity
+		key   string
 	}
 
 	sl := make([]keyValue, 0, len(s.Data.History))
 	for k, v := range s.Data.History {
-		sl = append(sl, keyValue{k, v})
+		sl = append(sl, keyValue{v, k})
 	}
 
 	sort.Slice(sl, func(i, j int) bool {
@@ -456,13 +456,13 @@ func (s *Stats) getWeeklyBreakdown() string {
 	header := fmt.Sprintf("\n%s", pterm.LightBlue("Weekly breakdown (minutes)"))
 
 	type keyValue struct {
-		key   time.Weekday
 		value *quantity
+		key   time.Weekday
 	}
 
 	sl := make([]keyValue, 0, len(s.Data.Weekday))
 	for k, v := range s.Data.Weekday {
-		sl = append(sl, keyValue{k, v})
+		sl = append(sl, keyValue{v, k})
 	}
 
 	sort.SliceStable(sl, func(i, j int) bool {

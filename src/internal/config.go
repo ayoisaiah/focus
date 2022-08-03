@@ -35,18 +35,18 @@ const ascii = `
 
 // Config represents the user's preferences.
 type Config struct {
-	WorkMinutes         int    `yaml:"work_mins"`
+	Sound               string `yaml:"sound"`
 	WorkMessage         string `yaml:"work_msg"`
-	ShortBreakMinutes   int    `yaml:"short_break_mins"`
 	ShortBreakMessage   string `yaml:"short_break_msg"`
-	LongBreakMinutes    int    `yaml:"long_break_mins"`
 	LongBreakMessage    string `yaml:"long_break_msg"`
+	ShortBreakMinutes   int    `yaml:"short_break_mins"`
+	LongBreakMinutes    int    `yaml:"long_break_mins"`
 	LongBreakInterval   int    `yaml:"long_break_interval"`
-	Notify              bool   `yaml:"notify"`
+	WorkMinutes         int    `yaml:"work_mins"`
 	AutoStartWork       bool   `yaml:"auto_start_work"`
 	AutoStartBreak      bool   `yaml:"auto_start_break"`
 	TwentyFourHourClock bool   `yaml:"24hr_clock"`
-	Sound               string `yaml:"sound"`
+	Notify              bool   `yaml:"notify"`
 	SoundOnBreak        bool   `yaml:"sound_on_break"`
 }
 
