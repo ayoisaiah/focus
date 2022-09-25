@@ -2,6 +2,7 @@ package focus
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,7 +11,7 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/pterm/pterm"
-	"gopkg.in/yaml.v3"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -33,21 +34,21 @@ const ascii = `
 ██║     ╚██████╔╝╚██████╗╚██████╔╝███████║
 ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝`
 
-// Config represents the user's preferences.
+// Config represents the program's configurable properties.
 type Config struct {
-	Sound               string `yaml:"sound"`
-	WorkMessage         string `yaml:"work_msg"`
-	ShortBreakMessage   string `yaml:"short_break_msg"`
-	LongBreakMessage    string `yaml:"long_break_msg"`
-	ShortBreakMinutes   int    `yaml:"short_break_mins"`
-	LongBreakMinutes    int    `yaml:"long_break_mins"`
-	LongBreakInterval   int    `yaml:"long_break_interval"`
-	WorkMinutes         int    `yaml:"work_mins"`
-	AutoStartWork       bool   `yaml:"auto_start_work"`
-	AutoStartBreak      bool   `yaml:"auto_start_break"`
-	TwentyFourHourClock bool   `yaml:"24hr_clock"`
-	Notify              bool   `yaml:"notify"`
-	SoundOnBreak        bool   `yaml:"sound_on_break"`
+	Sound               string
+	WorkMessage         string
+	ShortBreakMessage   string
+	LongBreakMessage    string
+	ShortBreakMinutes   int
+	LongBreakMinutes    int
+	LongBreakInterval   int
+	WorkMinutes         int
+	AutoStartWork       bool
+	AutoStartBreak      bool
+	TwentyFourHourClock bool
+	Notify              bool
+	SoundOnBreak        bool
 }
 
 const (
@@ -55,6 +56,22 @@ const (
 	defaultShortBreakMinutes = 5
 	defaultLongBreakMinutes  = 15
 	defaultLongBreakInterval = 4
+)
+
+const (
+	configWorkMinutes         = "work_mins"
+	configWorkMessage         = "work_msg"
+	configSound               = "sound"
+	configShortBreakMinutes   = "short_break_mins"
+	configShortBreakMessage   = "short_break_msg"
+	configLongBreakMinutes    = "long_break_mins"
+	configLongBreakMessage    = "long_break_msg"
+	configLongBreakInterval   = "long_break_interval"
+	configAutoStartWork       = "auto_start_work"
+	configAutoStartBreak      = "auto_start_break"
+	configNotify              = "notify"
+	configSoundOnBreak        = "sound_on_break"
+	configTwentyFourHourClock = "24hr_clock"
 )
 
 var (
@@ -87,7 +104,9 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 	return num, nil
 }
 
-// configPrompt is the prompt for the app's initial configuration.
+// configPrompt allows the user to state their preferred configuration
+// for the most important functions of the program. It is run only
+// when a configuration file is not already present (e.g on first run).
 func (c *Config) prompt(path string) {
 	fmt.Printf("%s\n\n", ascii)
 
@@ -105,7 +124,7 @@ Edit the configuration file to change any settings, or use command line argument
 	_, _ = reader.ReadString('\n')
 
 	for {
-		if c.WorkMinutes == 0 {
+		if !viper.IsSet(configWorkMinutes) {
 			fmt.Printf(
 				"\nWork length in minutes (default: %s): ",
 				pterm.Green(defaultWorkMinutes),
@@ -117,10 +136,10 @@ Edit the configuration file to change any settings, or use command line argument
 				continue
 			}
 
-			c.WorkMinutes = num
+			viper.Set(configWorkMinutes, num)
 		}
 
-		if c.ShortBreakMinutes == 0 {
+		if !viper.IsSet(configShortBreakMinutes) {
 			fmt.Printf(
 				"Short break length in minutes (default: %s): ",
 				pterm.Green(defaultShortBreakMinutes),
@@ -132,10 +151,10 @@ Edit the configuration file to change any settings, or use command line argument
 				continue
 			}
 
-			c.ShortBreakMinutes = num
+			viper.Set(configShortBreakMinutes, num)
 		}
 
-		if c.LongBreakMinutes == 0 {
+		if !viper.IsSet(configLongBreakMinutes) {
 			fmt.Printf(
 				"Long break length in minutes (default: %s): ",
 				pterm.Green(defaultLongBreakMinutes),
@@ -147,10 +166,10 @@ Edit the configuration file to change any settings, or use command line argument
 				continue
 			}
 
-			c.LongBreakMinutes = num
+			viper.Set(configLongBreakMinutes, num)
 		}
 
-		if c.LongBreakInterval == 0 {
+		if !viper.IsSet(configLongBreakInterval) {
 			fmt.Printf(
 				"Work sessions before long break (default: %s): ",
 				pterm.Green(defaultLongBreakInterval),
@@ -162,119 +181,67 @@ Edit the configuration file to change any settings, or use command line argument
 				continue
 			}
 
-			c.LongBreakInterval = num
+			viper.Set(configLongBreakInterval, num)
 		}
 
 		break
 	}
 }
 
-// save stores the current configuration to disk.
-func (c *Config) save(path string) error {
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		ferr := file.Close()
-		if ferr != nil {
-			err = ferr
-		}
-	}()
-
-	writer := bufio.NewWriter(file)
-
-	b, err := yaml.Marshal(c)
-	if err != nil {
-		return err
-	}
-
-	_, err = writer.Write(b)
-	if err != nil {
-		return err
-	}
-
-	return writer.Flush()
-}
-
 // init initialises the application configuration.
 // If the config file does not exist,.it prompts the user
-// and saves the inputted preferences in a config file.
+// and saves the inputted preferences and defaults in a config file.
 func (c *Config) init() error {
 	relPath := filepath.Join(configDir, configFileName)
+
+	viper.SetConfigName(configFileName)
+	viper.SetConfigType("yaml")
 
 	pathToConfigFile, err := xdg.ConfigFile(relPath)
 	if err != nil {
 		return err
 	}
 
-	_, err = xdg.SearchConfigFile(relPath)
-	if err != nil {
-		return c.create(pathToConfigFile)
-	}
+	viper.AddConfigPath(filepath.Dir(pathToConfigFile))
 
-	return c.get(pathToConfigFile)
-}
+	if err := viper.ReadInConfig(); err != nil {
+		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
+			return c.create(pathToConfigFile)
+		}
 
-// get retrieves an already existing configuration from
-// the filesystem.
-func (c *Config) get(pathToConfig string) error {
-	b, err := os.ReadFile(pathToConfig)
-	if err != nil {
 		return err
 	}
 
-	var nc Config
-
-	err = yaml.Unmarshal(b, &nc)
-	if err != nil {
-		pterm.Warning.Printfln(
-			"Unable to initialise Focus from config file due to errors: %v. Using default settings.",
-			err,
-		)
-
-		return nil
-	}
-
-	// Account for empty config files
-	if nc == (Config{}) {
-		pterm.Warning.Printfln(
-			"Unable to initialise Focus from empty config file. Using default settings.",
-		)
-
-		return nil
-	}
-
-	*c = nc
-
-	return c.save(pathToConfig)
+	return nil
 }
 
-// defaults sets default values for the config object.
-func (c *Config) defaults() {
-	c.WorkMinutes = defaultWorkMinutes
-	c.ShortBreakMinutes = defaultShortBreakMinutes
-	c.LongBreakMinutes = defaultLongBreakMinutes
-	c.LongBreakInterval = defaultLongBreakInterval
-	c.AutoStartBreak = true
-	c.AutoStartWork = false
-	c.Notify = true
-	c.WorkMessage = "Focus on your task"
-	c.ShortBreakMessage = "Take a breather"
-	c.LongBreakMessage = "Take a long break"
-	c.TwentyFourHourClock = false
-	c.SoundOnBreak = false
+func (c *Config) set() {
+	c.WorkMinutes = viper.GetInt(configWorkMinutes)
+	c.ShortBreakMinutes = viper.GetInt(configShortBreakMinutes)
+	c.LongBreakMinutes = viper.GetInt(configLongBreakMinutes)
+	c.LongBreakInterval = viper.GetInt(configLongBreakInterval)
+	c.AutoStartBreak = viper.GetBool(configAutoStartBreak)
+	c.AutoStartWork = viper.GetBool(configAutoStartWork)
+	c.Notify = viper.GetBool(configNotify)
+	c.WorkMessage = viper.GetString(configWorkMessage)
+	c.ShortBreakMessage = viper.GetString(configShortBreakMessage)
+	c.LongBreakMessage = viper.GetString(configLongBreakMessage)
+	c.TwentyFourHourClock = viper.GetBool(configTwentyFourHourClock)
+	c.SoundOnBreak = viper.GetBool(configSoundOnBreak)
+	c.Sound = viper.GetString(configSound)
 }
 
 // create prompts the user to set perferred values
 // for key application settings. The results are
-// saved to the filesystem to facilitate reuse.
+// saved to the user's config directory.
 func (c *Config) create(pathToConfig string) error {
 	c.prompt(pathToConfig)
 
-	err := c.save(pathToConfig)
+	c.defaults()
+
+	err := viper.WriteConfigAs(pathToConfig)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -286,16 +253,31 @@ func (c *Config) create(pathToConfig string) error {
 	return nil
 }
 
+// defaults sets program's default configuration values.
+func (c *Config) defaults() {
+	viper.SetDefault(configWorkMinutes, defaultWorkMinutes)
+	viper.SetDefault(configWorkMessage, "Focus on your task")
+	viper.SetDefault(configShortBreakMessage, "Take a breather")
+	viper.SetDefault(configShortBreakMinutes, defaultShortBreakMinutes)
+	viper.SetDefault(configLongBreakMessage, "Take a long break")
+	viper.SetDefault(configLongBreakMinutes, defaultLongBreakMinutes)
+	viper.SetDefault(configLongBreakInterval, defaultLongBreakInterval)
+	viper.SetDefault(configAutoStartBreak, true)
+	viper.SetDefault(configAutoStartWork, false)
+	viper.SetDefault(configNotify, true)
+	viper.SetDefault(configSoundOnBreak, false)
+}
+
 // NewConfig returns the application configuration.
 func NewConfig() (*Config, error) {
 	c := &Config{}
-
-	c.defaults()
 
 	err := c.init()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", errInitFailed.Error(), err)
 	}
+
+	c.set()
 
 	return c, nil
 }
