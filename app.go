@@ -1,4 +1,4 @@
-package cmd
+package focus
 
 import (
 	"fmt"
@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	focus "github.com/ayoisaiah/focus/src/internal"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 )
@@ -159,12 +158,12 @@ func GetApp() *cli.App {
 						disableStyling()
 					}
 
-					store, err := focus.NewStore()
+					store, err := NewStore()
 					if err != nil {
 						return err
 					}
 
-					t := &focus.Timer{
+					t := &Timer{
 						Store: store,
 					}
 
@@ -186,12 +185,12 @@ func GetApp() *cli.App {
 						pterm.DisableColor()
 					}
 
-					store, err := focus.NewStore()
+					store, err := NewStore()
 					if err != nil {
 						return err
 					}
 
-					stats, err := focus.NewStats(ctx, store)
+					stats, err := NewStats(ctx, store)
 					if err != nil {
 						return err
 					}
@@ -278,17 +277,17 @@ func GetApp() *cli.App {
 				disableStyling()
 			}
 
-			store, err := focus.NewStore()
+			store, err := NewStore()
 			if err != nil {
 				return err
 			}
 
-			config, err := focus.NewConfig()
+			config, err := NewConfig()
 			if err != nil {
 				return err
 			}
 
-			t := focus.NewTimer(ctx, config, store)
+			t := NewTimer(ctx, config, store)
 
 			return t.Run()
 		},

@@ -1,4 +1,4 @@
-package focus
+package focus_test
 
 import (
 	"io"

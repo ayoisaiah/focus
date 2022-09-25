@@ -1,4 +1,4 @@
-package focus
+package focus_test
 
 import (
 	"bytes"
@@ -31,9 +31,7 @@ type statsCase struct {
 	averages totals
 }
 
-var (
-	fixtures = filepath.Join("..", "..", "testdata")
-)
+var fixtures = filepath.Join("..", "..", "testdata")
 
 var statsCases = []statsCase{
 	{

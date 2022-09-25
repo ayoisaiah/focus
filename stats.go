@@ -14,15 +14,6 @@ import (
 )
 
 const (
-	errParsingDate = Error(
-		"The specified date format must be: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS PM",
-	)
-	errInvalidDateRange = Error(
-		"The end date must not be earlier than the start date",
-	)
-)
-
-const (
 	hoursInADay      = 24
 	maxHoursInAMonth = 744  // 31 day months
 	maxHoursInAYear  = 8784 // Leap years

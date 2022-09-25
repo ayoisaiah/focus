@@ -16,12 +16,6 @@ const (
 	dbFile = "focus.db"
 )
 
-const (
-	errSingleInstanceAllowed = Error(
-		"Only one instance of Focus can be active at a time",
-	)
-)
-
 type DB interface {
 	init() error
 	getSessions(startTime, endTime time.Time, tag []string) ([][]byte, error)
@@ -234,7 +228,7 @@ func NewStore() (*Store, error) {
 	if err != nil {
 		if errors.Is(err, bolt.ErrDatabaseOpen) ||
 			errors.Is(err, bolt.ErrTimeout) {
-			return nil, errSingleInstanceAllowed
+			return nil, errFocusRunning
 		}
 
 		return nil, err

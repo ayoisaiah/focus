@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/adrg/xdg"
-	cmd "github.com/ayoisaiah/focus/src"
+	"github.com/ayoisaiah/focus"
 	"github.com/pterm/pterm"
 )
 
@@ -19,41 +19,45 @@ const (
 var static embed.FS
 
 func init() {
-	_ = fs.WalkDir(static, "static", func(path string, d fs.DirEntry, err error) error {
-		if !d.IsDir() {
-			var b []byte
+	_ = fs.WalkDir(
+		static,
+		"static",
+		func(path string, d fs.DirEntry, err error) error {
+			if !d.IsDir() {
+				var b []byte
 
-			b, err = fs.ReadFile(static, path)
-			if err != nil {
-				pterm.Error.Println(err)
-				os.Exit(1)
-			}
-
-			relPath := filepath.Join(configDir, path)
-
-			var pathToFile string
-
-			pathToFile, err = xdg.DataFile(relPath)
-			if err != nil {
-				pterm.Error.Println(err)
-				os.Exit(1)
-			}
-
-			if _, err = xdg.SearchDataFile(relPath); err != nil {
-				err = os.WriteFile(pathToFile, b, os.ModePerm)
+				b, err = fs.ReadFile(static, path)
 				if err != nil {
 					pterm.Error.Println(err)
 					os.Exit(1)
 				}
-			}
-		}
 
-		return err
-	})
+				relPath := filepath.Join(configDir, path)
+
+				var pathToFile string
+
+				pathToFile, err = xdg.DataFile(relPath)
+				if err != nil {
+					pterm.Error.Println(err)
+					os.Exit(1)
+				}
+
+				if _, err = xdg.SearchDataFile(relPath); err != nil {
+					err = os.WriteFile(pathToFile, b, os.ModePerm)
+					if err != nil {
+						pterm.Error.Println(err)
+						os.Exit(1)
+					}
+				}
+			}
+
+			return err
+		},
+	)
 }
 
 func run(args []string) error {
-	return cmd.GetApp().Run(args)
+	return focus.GetApp().Run(args)
 }
 
 func main() {

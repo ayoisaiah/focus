@@ -25,20 +25,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-type Error string
-
-func (e Error) Error() string { return string(e) }
-
-const (
-	errUnableToSaveSession = Error("Unable to persist interrupted session")
-	errInvalidSoundFormat  = Error(
-		"Invalid sound file format. Only MP3, OGG, FLAC, and WAV files are supported",
-	)
-	errNoPausedSession = Error(
-		"Existing paused session was not detected. Please start a new session",
-	)
-)
-
 type countdown struct {
 	t int
 	m int

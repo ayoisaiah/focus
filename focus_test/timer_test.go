@@ -1,4 +1,4 @@
-package focus
+package focus_test
 
 import (
 	"bytes"
@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ayoisaiah/focus"
 )
 
 // TestTimer_InitSession confirms that the endtime
@@ -22,7 +24,7 @@ func TestTimer_InitSession(t *testing.T) {
 	}
 
 	for _, v := range table {
-		timer := &Timer{}
+		timer := &focus.Timer{}
 		timer.SessionType = work
 		timer.Kind = make(kind)
 		timer.Kind[timer.SessionType] = v.duration
