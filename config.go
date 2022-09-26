@@ -11,6 +11,7 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/pterm/pterm"
+	"github.com/pterm/pterm/putils"
 	"github.com/spf13/viper"
 )
 
@@ -63,9 +64,22 @@ const (
 )
 
 var (
-	configDir      = "focus"
-	configFileName = "config.yml"
+	configDir        = "focus"
+	configFileName   = "config.yml"
+	pathToConfigFile string
 )
+
+func init() {
+	var err error
+
+	relPath := filepath.Join(configDir, configFileName)
+
+	pathToConfigFile, err = xdg.ConfigFile(relPath)
+	if err != nil {
+		pterm.Error.Println(err)
+		os.Exit(1)
+	}
+}
 
 func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 	input, err := reader.ReadString('\n')
@@ -100,9 +114,9 @@ func (c *Config) prompt(path string) {
 
 	pterm.Info.Printfln("Your preferences will be saved to: %s\n\n", path)
 
-	_ = pterm.NewBulletListFromString(`Follow the prompts below to configure Focus for the first time.
+	_ = putils.BulletListFromString(`Follow the prompts below to configure Focus for the first time.
 Type your preferred value, or press ENTER to accept the defaults.
-Edit the configuration file to change any settings, or use command line arguments (see the --help flag)`, " ").
+Edit the configuration file (focus edit-config) to change any settings, or use command line arguments (see the --help flag)`, " ").
 		Render()
 
 	reader := bufio.NewReader(os.Stdin)
@@ -180,15 +194,8 @@ Edit the configuration file to change any settings, or use command line argument
 // If the config file does not exist,.it prompts the user
 // and saves the inputted preferences and defaults in a config file.
 func (c *Config) init() error {
-	relPath := filepath.Join(configDir, configFileName)
-
 	viper.SetConfigName(configFileName)
 	viper.SetConfigType("yaml")
-
-	pathToConfigFile, err := xdg.ConfigFile(relPath)
-	if err != nil {
-		return err
-	}
 
 	viper.AddConfigPath(filepath.Dir(pathToConfigFile))
 

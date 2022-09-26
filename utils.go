@@ -27,3 +27,15 @@ func contains(s []timePeriod, e timePeriod) bool {
 
 	return false
 }
+
+// firstNonEmptyString returns its first non-empty argument, or "" if all
+// arguments are empty.
+func firstNonEmptyString(ss ...string) string {
+	for _, s := range ss {
+		if s != "" {
+			return s
+		}
+	}
+
+	return ""
+}

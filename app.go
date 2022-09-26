@@ -1,9 +1,12 @@
 package focus
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/pterm/pterm"
@@ -15,6 +18,110 @@ const (
 	envNoColor        = "NO_COLOR"
 	envFocusNoColor   = "FOCUS_NO_COLOR"
 )
+
+func defaultAction(ctx *cli.Context) error {
+	if ctx.Bool("no-color") {
+		disableStyling()
+	}
+
+	store, err := NewStore()
+	if err != nil {
+		return err
+	}
+
+	config, err := NewConfig()
+	if err != nil {
+		return err
+	}
+
+	t := NewTimer(ctx, config, store)
+
+	return t.Run()
+}
+
+func editConfigAction(_ *cli.Context) error {
+	defaultEditor := "vi"
+
+	if runtime.GOOS == "windows" {
+		defaultEditor = "C:\\Windows\\system32\\notepad.exe"
+	}
+
+	editor := firstNonEmptyString(
+		os.Getenv("VISUAL"),
+		os.Getenv("EDITOR"),
+		defaultEditor,
+	)
+
+	cmd := exec.Command(editor, pathToConfigFile)
+
+	var stderr bytes.Buffer
+
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println(stderr.String())
+		return err
+	}
+
+	return nil
+}
+
+func resumeAction(ctx *cli.Context) error {
+	if ctx.Bool("no-color") {
+		disableStyling()
+	}
+
+	store, err := NewStore()
+	if err != nil {
+		return err
+	}
+
+	t := &Timer{
+		Store: store,
+	}
+
+	err = t.Resume()
+	if err != nil {
+		return err
+	}
+
+	t.SetOptions(ctx)
+
+	return t.Run()
+}
+
+func statsAction(ctx *cli.Context) error {
+	if ctx.Bool("no-color") {
+		pterm.DisableColor()
+	}
+
+	store, err := NewStore()
+	if err != nil {
+		return err
+	}
+
+	stats, err := NewStats(ctx, store)
+	if err != nil {
+		return err
+	}
+
+	if ctx.Bool("delete") {
+		return stats.Delete(os.Stdout, os.Stdin)
+	}
+
+	if ctx.Bool("list") {
+		return stats.List(os.Stdout)
+	}
+
+	if len(stats.Tags) != 0 {
+		return stats.EditTag(os.Stdout, os.Stdin)
+	}
+
+	return stats.Show(os.Stdout)
+}
 
 func init() {
 	// Override the default help template
@@ -150,65 +257,20 @@ func GetApp() *cli.App {
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{
-				Name:  "resume",
-				Usage: "Resume a previously interrupted work session",
-				Flags: timerFlags,
-				Action: func(ctx *cli.Context) error {
-					if ctx.Bool("no-color") {
-						disableStyling()
-					}
-
-					store, err := NewStore()
-					if err != nil {
-						return err
-					}
-
-					t := &Timer{
-						Store: store,
-					}
-
-					err = t.Resume()
-					if err != nil {
-						return err
-					}
-
-					t.SetOptions(ctx)
-
-					return t.Run()
-				},
+				Name:   "resume",
+				Usage:  "Resume a previously interrupted work session",
+				Flags:  timerFlags,
+				Action: resumeAction,
 			},
 			{
-				Name:  "stats",
-				Usage: "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days",
-				Action: func(ctx *cli.Context) error {
-					if ctx.Bool("no-color") {
-						pterm.DisableColor()
-					}
-
-					store, err := NewStore()
-					if err != nil {
-						return err
-					}
-
-					stats, err := NewStats(ctx, store)
-					if err != nil {
-						return err
-					}
-
-					if ctx.Bool("delete") {
-						return stats.Delete(os.Stdout, os.Stdin)
-					}
-
-					if ctx.Bool("list") {
-						return stats.List(os.Stdout)
-					}
-
-					if len(stats.Tags) != 0 {
-						return stats.EditTag(os.Stdout, os.Stdin)
-					}
-
-					return stats.Show(os.Stdout)
-				},
+				Name:   "edit-config",
+				Usage:  "Edit the configuration file",
+				Action: editConfigAction,
+			},
+			{
+				Name:   "stats",
+				Usage:  "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days",
+				Action: statsAction,
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "delete",
@@ -272,25 +334,7 @@ func GetApp() *cli.App {
 				Usage:   "Work duration in minutes (default: 25)",
 			},
 		},
-		Action: func(ctx *cli.Context) error {
-			if ctx.Bool("no-color") {
-				disableStyling()
-			}
-
-			store, err := NewStore()
-			if err != nil {
-				return err
-			}
-
-			config, err := NewConfig()
-			if err != nil {
-				return err
-			}
-
-			t := NewTimer(ctx, config, store)
-
-			return t.Run()
-		},
+		Action: defaultAction,
 	}
 
 	app.Flags = append(app.Flags, timerFlags...)
