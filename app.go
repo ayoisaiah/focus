@@ -29,7 +29,7 @@ func defaultAction(ctx *cli.Context) error {
 		return err
 	}
 
-	config, err := NewConfig()
+	config, err := GetConfig()
 	if err != nil {
 		return err
 	}

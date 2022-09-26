@@ -25,19 +25,20 @@ const ascii = `
 
 // Config represents the program's configurable properties.
 type Config struct {
+	LongBreakMessage    string
+	CmdAfterSession     string
 	Sound               string
 	WorkMessage         string
 	ShortBreakMessage   string
-	LongBreakMessage    string
-	ShortBreakMinutes   int
-	LongBreakMinutes    int
 	LongBreakInterval   int
+	LongBreakMinutes    int
+	ShortBreakMinutes   int
 	WorkMinutes         int
-	AutoStartWork       bool
 	AutoStartBreak      bool
-	TwentyFourHourClock bool
-	Notify              bool
+	AutoStartWork       bool
 	SoundOnBreak        bool
+	Notify              bool
+	TwentyFourHourClock bool
 }
 
 const (
@@ -61,6 +62,7 @@ const (
 	configNotify              = "notify"
 	configSoundOnBreak        = "sound_on_break"
 	configTwentyFourHourClock = "24hr_clock"
+	configCmdAfterSession     = "cmd_after_session"
 )
 
 var (
@@ -70,6 +72,10 @@ var (
 )
 
 func init() {
+	if os.Getenv("FOCUS_ENV") == "development" {
+		configFileName = "config_dev.yml"
+	}
+
 	var err error
 
 	relPath := filepath.Join(configDir, configFileName)
@@ -224,6 +230,7 @@ func (c *Config) set() {
 	c.TwentyFourHourClock = viper.GetBool(configTwentyFourHourClock)
 	c.SoundOnBreak = viper.GetBool(configSoundOnBreak)
 	c.Sound = viper.GetString(configSound)
+	c.CmdAfterSession = viper.GetString(configCmdAfterSession)
 }
 
 // create prompts the user to set perferred values
@@ -261,10 +268,11 @@ func (c *Config) defaults() {
 	viper.SetDefault(configAutoStartWork, false)
 	viper.SetDefault(configNotify, true)
 	viper.SetDefault(configSoundOnBreak, false)
+	viper.SetDefault(configCmdAfterSession, "")
 }
 
-// NewConfig returns the application configuration.
-func NewConfig() (*Config, error) {
+// GetConfig returns the application configuration.
+func GetConfig() (*Config, error) {
 	c := &Config{}
 
 	err := c.init()

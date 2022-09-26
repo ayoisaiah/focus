@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -12,9 +13,13 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-const (
-	dbFile = "focus.db"
-)
+var dbFile = "focus.db"
+
+func init() {
+	if os.Getenv("FOCUS_ENV") == "development" {
+		dbFile = "focus_dev.db"
+	}
+}
 
 type DB interface {
 	init() error

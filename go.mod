@@ -7,7 +7,6 @@ require (
 	github.com/faiface/beep v1.1.0
 	github.com/gen2brain/beeep v0.0.0-20220909211152-5a9ec94374f6
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
-	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pterm/pterm v0.12.46
 	github.com/sebdah/goldie/v2 v2.5.3
@@ -20,20 +19,18 @@ require (
 
 require (
 	github.com/google/go-cmp v0.5.9
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/spf13/viper v1.13.0
 )
 
 require (
 	atomicgo.dev/cursor v0.1.1 // indirect
 	atomicgo.dev/keyboard v0.2.8 // indirect
-	github.com/atomicgo/cursor v0.0.1 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
 	github.com/gookit/color v1.5.2 // indirect
-	github.com/gopherjs/gopherwasm v1.1.0 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.3 // indirect
 	github.com/hajimehoshi/oto v1.0.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -53,17 +50,14 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/exp v0.0.0-20220909182711-5c715a9e8561 // indirect
 	golang.org/x/exp/shiny v0.0.0-20220921164117-439092de6870 // indirect
 	golang.org/x/image v0.0.0-20220902085622-e7cb96979f69 // indirect
 	golang.org/x/mobile v0.0.0-20220722155234-aaac322e2105 // indirect

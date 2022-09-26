@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	"github.com/faiface/beep/vorbis"
 	"github.com/faiface/beep/wav"
 	"github.com/gen2brain/beeep"
+	"github.com/kballard/go-shellquote"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 )
@@ -113,6 +115,7 @@ type message map[sessionType]string
 
 // Timer represents a Focus instance.
 type Timer struct {
+	CmdAfterSession     string      `json:"cmd_after_session"`
 	Store               DB          `json:"-"`
 	Kind                kind        `json:"kind"`
 	Msg                 message     `json:"msg"`
@@ -589,6 +592,15 @@ func (t *Timer) start(endTime time.Time) error {
 			t.countdown(timeRemaining)
 		}
 
+		afterSessionCmd := t.getCmd()
+
+		if afterSessionCmd != nil {
+			err := afterSessionCmd.Run()
+			if err != nil {
+				return err
+			}
+		}
+
 		if t.Counter == t.MaxSessions {
 			return nil
 		}
@@ -675,6 +687,28 @@ func (t *Timer) SetOptions(ctx *cli.Context) {
 	}
 }
 
+func (t *Timer) getCmd() *exec.Cmd {
+	cmdSlice, err := shellquote.Split(t.CmdAfterSession)
+	if err != nil {
+		pterm.Warning.Println("unable to parse cmd_after_session option")
+		return nil
+	}
+
+	if len(cmdSlice) == 0 {
+		return nil
+	}
+
+	name := cmdSlice[0]
+	args := cmdSlice[1:]
+
+	cmd := exec.Command(name, args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd
+}
+
 // NewTimer returns a new timer constructed from
 // the configuration file and command line arguments.
 func NewTimer(ctx *cli.Context, c *Config, store *Store) *Timer {
@@ -697,6 +731,7 @@ func NewTimer(ctx *cli.Context, c *Config, store *Store) *Timer {
 		Sound:               c.Sound,
 		SoundOnBreak:        c.SoundOnBreak,
 		Store:               store,
+		CmdAfterSession:     c.CmdAfterSession,
 	}
 
 	// Command-line options will override the configuration
