@@ -659,6 +659,10 @@ func (t *Timer) SetOptions(ctx *cli.Context) {
 		t.Sound = ctx.String("sound")
 	}
 
+	if ctx.String("cmd") != "" {
+		t.CmdAfterSession = ctx.String("cmd")
+	}
+
 	if ctx.Command.Name == "resume" {
 		return
 	}

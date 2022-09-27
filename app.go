@@ -221,6 +221,11 @@ func GetApp() *cli.App {
 	}
 
 	timerFlags := []cli.Flag{
+		&cli.StringFlag{
+			Name:    "cmd",
+			Aliases: []string{"c"},
+			Usage:   "Execute arbitrary command after each session",
+		},
 		&cli.BoolFlag{
 			Name:    "disable-notifications",
 			Aliases: []string{"d"},
