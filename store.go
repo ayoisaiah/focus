@@ -30,6 +30,7 @@ type DB interface {
 	updateSession(key, value []byte) error
 	deleteSessions(sessions []session) error
 	close() error
+	open() error
 }
 
 // Store is a wrapper for a BoltDB connection.
@@ -41,27 +42,14 @@ type Store struct {
 // and creates the necessary buckets for storing data
 // if they do not exist already.
 func (s *Store) init() error {
-	pathToDB, err := xdg.DataFile(filepath.Join(configDir, dbFile))
+	err := s.open()
 	if err != nil {
 		return err
 	}
-
-	var fileMode fs.FileMode = 0o600
-
-	db, err := bolt.Open(
-		pathToDB,
-		fileMode,
-		&bolt.Options{Timeout: 1 * time.Second},
-	)
-	if err != nil {
-		return err
-	}
-
-	s.conn = db
 
 	// Create the buckets
 	return s.conn.Update(func(tx *bolt.Tx) error {
-		_, err = tx.CreateBucketIfNotExists([]byte("sessions"))
+		_, err := tx.CreateBucketIfNotExists([]byte("sessions"))
 		if err != nil {
 			return err
 		}
@@ -129,6 +117,34 @@ func (s *Store) deleteSessions(sessions []session) error {
 	})
 }
 
+// open creates or opens a database and locks it
+func (s *Store) open() error {
+	pathToDB, err := xdg.DataFile(filepath.Join(configDir, dbFile))
+	if err != nil {
+		return err
+	}
+
+	var fileMode fs.FileMode = 0o600
+
+	db, err := bolt.Open(
+		pathToDB,
+		fileMode,
+		&bolt.Options{Timeout: 1 * time.Second},
+	)
+	if err != nil {
+		if errors.Is(err, bolt.ErrDatabaseOpen) ||
+			errors.Is(err, bolt.ErrTimeout) {
+			return errFocusRunning
+		}
+
+		return err
+	}
+
+	s.conn = db
+
+	return nil
+}
+
 // close closes the db connection to release file lock.
 func (s *Store) close() error {
 	return s.conn.Close()
@@ -146,18 +162,6 @@ func (s *Store) deleteTimerState() error {
 		return tx.Bucket([]byte("timer")).
 			Delete([]byte("interrrupted_session_key"))
 	})
-}
-
-// contains checks if a string is present in
-// a string slice.
-func stringContains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-
-	return false
 }
 
 // getSessions retrieves the saved work sessions
@@ -210,7 +214,7 @@ func (s *Store) getSessions(
 				}
 
 				for _, t := range sess.Tags {
-					if stringContains(tags, t) {
+					if sliceIncludes(tags, t) {
 						b = append(b, v)
 					}
 				}
@@ -231,11 +235,6 @@ func NewStore() (*Store, error) {
 
 	err := store.init()
 	if err != nil {
-		if errors.Is(err, bolt.ErrDatabaseOpen) ||
-			errors.Is(err, bolt.ErrTimeout) {
-			return nil, errFocusRunning
-		}
-
 		return nil, err
 	}
 

@@ -809,7 +809,7 @@ func NewStats(ctx statsCtx, store DB) (*Stats, error) {
 
 	period := ctx.String("period")
 
-	if period != "" && !contains(statsPeriod, timePeriod(period)) {
+	if period != "" && !sliceIncludes(statsPeriod, timePeriod(period)) {
 		var sl []string
 		for _, v := range statsPeriod {
 			sl = append(sl, string(v))

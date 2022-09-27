@@ -16,18 +16,6 @@ func minsToHoursAndMins(val int) (hrs, mins int) {
 	return
 }
 
-// contains checks if a string is present in
-// a string slice.
-func contains(s []timePeriod, e timePeriod) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-
-	return false
-}
-
 // firstNonEmptyString returns its first non-empty argument, or "" if all
 // arguments are empty.
 func firstNonEmptyString(ss ...string) string {
@@ -38,4 +26,14 @@ func firstNonEmptyString(ss ...string) string {
 	}
 
 	return ""
+}
+
+func sliceIncludes[T comparable](elems []T, searchElement T) bool {
+	for _, v := range elems {
+		if v == searchElement {
+			return true
+		}
+	}
+
+	return false
 }

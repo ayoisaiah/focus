@@ -592,10 +592,10 @@ func (t *Timer) start(endTime time.Time) error {
 			t.countdown(timeRemaining)
 		}
 
-		afterSessionCmd := t.getCmd()
+		sessionCmd := t.getCmd()
 
-		if afterSessionCmd != nil {
-			err := afterSessionCmd.Run()
+		if sessionCmd != nil {
+			err := sessionCmd.Run()
 			if err != nil {
 				return err
 			}
@@ -607,13 +607,19 @@ func (t *Timer) start(endTime time.Time) error {
 
 		if t.SessionType != work && !t.AutoStartWork ||
 			t.SessionType == work && !t.AutoStartBreak {
-			// Block until user input before beginning next session
+			// close db to release file lock
+			err := t.Store.close()
+			if err != nil {
+				return err
+			}
+
 			reader := bufio.NewReader(os.Stdin)
 
 			fmt.Print("\033[s")
 			fmt.Print("Press ENTER to start the next session")
 
-			_, err := reader.ReadString('\n')
+			// Block until user input before beginning next session
+			_, err = reader.ReadString('\n')
 			if errors.Is(err, io.EOF) {
 				return nil
 			} else if err != nil {
@@ -621,6 +627,11 @@ func (t *Timer) start(endTime time.Time) error {
 			}
 
 			fmt.Print("\033[u\033[K")
+
+			err = t.Store.open()
+			if err != nil {
+				return err
+			}
 		}
 
 		t.SessionType = t.nextSession()
