@@ -1,36 +1,24 @@
 package focus
 
-type Error string
+import "errors"
 
-func (e Error) Error() string { return string(e) }
-
-const (
-	errUnableToSaveSession = Error("Unable to persist interrupted session")
-	errInvalidSoundFormat  = Error(
+var (
+	errUnableToSaveSession = errors.New("Unable to persist interrupted session")
+	errInvalidSoundFormat  = errors.New(
 		"Invalid sound file format. Only MP3, OGG, FLAC, and WAV files are supported",
 	)
-	errNoPausedSession = Error(
-		"Existing paused session was not detected. Please start a new session",
+	errNoPausedSession = errors.New(
+		"Paused session not found, please start a new session",
 	)
 
-	errReadingInput = Error(
-		"An error occurred while reading input. Please try again",
-	)
-	errExpectedInteger = Error(
-		"Expected an integer that must be greater than zero",
-	)
-	errInitFailed = Error(
-		"Unable to initialise Focus settings from the configuration file",
-	)
-
-	errParsingDate = Error(
+	errParsingDate = errors.New(
 		"The specified date format must be: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS PM",
 	)
-	errInvalidDateRange = Error(
+	errInvalidDateRange = errors.New(
 		"The end date must not be earlier than the start date",
 	)
 
-	errFocusRunning = Error(
+	errFocusRunning = errors.New(
 		"Is Focus already running? Only one instance can be active at a time",
 	)
 )

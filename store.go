@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/adrg/xdg"
+	"github.com/ayoisaiah/focus/config"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -119,6 +120,10 @@ func (s *Store) deleteSessions(sessions []session) error {
 
 // open creates or opens a database and locks it
 func (s *Store) open() error {
+	cfg := config.Get()
+
+	configDir := filepath.Base(filepath.Dir(cfg.PathToConfig))
+
 	pathToDB, err := xdg.DataFile(filepath.Join(configDir, dbFile))
 	if err != nil {
 		return err

@@ -328,8 +328,8 @@ func (s *Stats) getSessions() error {
 	for _, v := range b {
 		sess := session{}
 
-		err = json.Unmarshal(v, &sess)
 		if err != nil {
+			err = json.Unmarshal(v, &sess)
 			return err
 		}
 
@@ -342,7 +342,7 @@ func (s *Stats) getSessions() error {
 // getHourlyBreakdown retrieves the hourly breakdown
 // for the current time period.
 func (s *Stats) getHourlyBreakdown() string {
-	header := fmt.Sprintf("\n%s", pterm.LightBlue("Hourly breakdown (minutes)"))
+	header := fmt.Sprintf("\n%s", Blue("Hourly breakdown (minutes)"))
 
 	type keyValue struct {
 		value *quantity
@@ -366,7 +366,7 @@ func (s *Stats) getHourlyBreakdown() string {
 		d := time.Date(2000, 1, 1, v.key, 0, 0, 0, time.UTC)
 
 		bars = append(bars, pterm.Bar{
-			Label: d.Format("03:04 PM"),
+			Label: Cyan(d.Format("03:04 PM")),
 			Value: val.minutes,
 		})
 	}
@@ -391,7 +391,7 @@ func (s *Stats) getWorkHistory() string {
 		return ""
 	}
 
-	header := fmt.Sprintf("\n%s", pterm.LightBlue("Work history (minutes)"))
+	header := fmt.Sprintf("\n%s", Blue("Work history (minutes)"))
 
 	type keyValue struct {
 		value *quantity
@@ -444,7 +444,7 @@ func (s *Stats) getWorkHistory() string {
 // getWeeklyBreakdown retrieves weekly breakdown
 // for the current time period.
 func (s *Stats) getWeeklyBreakdown() string {
-	header := fmt.Sprintf("\n%s", pterm.LightBlue("Weekly breakdown (minutes)"))
+	header := fmt.Sprintf("\n%s", Blue("Weekly breakdown (minutes)"))
 
 	type keyValue struct {
 		value *quantity
@@ -466,7 +466,7 @@ func (s *Stats) getWeeklyBreakdown() string {
 		val := s.Data.Weekday[v.key]
 
 		bars = append(bars, pterm.Bar{
-			Label: v.key.String(),
+			Label: Cyan(v.key.String()),
 			Value: val.minutes,
 		})
 	}
@@ -490,26 +490,26 @@ func (s *Stats) getAverages() string {
 	hoursDiff := roundTime(s.EndTime.Sub(s.StartTime).Hours())
 
 	if hoursDiff > hoursInADay {
-		header := fmt.Sprintf("\n%s\n", pterm.LightBlue("Averages"))
+		header := fmt.Sprintf("\n%s\n", Blue("Averages"))
 
 		hours, minutes := minsToHoursAndMins(s.Data.Averages.minutes)
 
 		timeLogged := fmt.Sprintln(
 			"Average time logged per day:",
-			pterm.Green(hours),
-			pterm.Green("hours"),
-			pterm.Green(minutes),
-			pterm.Green("minutes"),
+			Green(hours),
+			Green("hours"),
+			Green(minutes),
+			Green("minutes"),
 		)
 
 		completed := fmt.Sprintln(
 			"Completed sessions per day:",
-			pterm.Green(s.Data.Averages.completed),
+			Green(s.Data.Averages.completed),
 		)
 
 		abandoned := fmt.Sprintln(
 			"Abandoned sessions per day:",
-			pterm.Green(s.Data.Averages.abandoned),
+			Green(s.Data.Averages.abandoned),
 		)
 
 		return header + timeLogged + completed + abandoned
@@ -522,7 +522,7 @@ func (s *Stats) getAverages() string {
 func (s *Stats) getTags() string {
 	var builder strings.Builder
 
-	builder.WriteString(fmt.Sprintf("\n%s\n", pterm.LightBlue("Tags")))
+	builder.WriteString(fmt.Sprintf("\n%s\n", Blue("Tags")))
 
 	type KeyValue struct {
 		Key   string
@@ -544,10 +544,10 @@ func (s *Stats) getTags() string {
 		tag := fmt.Sprintf(
 			"%s: %s %s %s %s\n",
 			v.Key,
-			pterm.Green(hrs),
-			pterm.Green("hours"),
-			pterm.Green(mins),
-			pterm.Green("minutes"),
+			Green(hrs),
+			Green("hours"),
+			Green(mins),
+			Green("minutes"),
 		)
 
 		builder.WriteString(tag)
@@ -559,26 +559,26 @@ func (s *Stats) getTags() string {
 // getSummary retrieves the work session summary for the current
 // time period.
 func (s *Stats) getSummary() string {
-	header := fmt.Sprintf("%s\n", pterm.LightBlue("Summary"))
+	header := fmt.Sprintf("%s\n", Blue("Summary"))
 
 	totalHrs, totalMins := minsToHoursAndMins(s.Data.Totals.minutes)
 
 	timeLogged := fmt.Sprintf(
 		"Total time logged: %s %s %s %s\n",
-		pterm.Green(totalHrs),
-		pterm.Green("hours"),
-		pterm.Green(totalMins),
-		pterm.Green("minutes"),
+		Green(totalHrs),
+		Green("hours"),
+		Green(totalMins),
+		Green("minutes"),
 	)
 
 	completed := fmt.Sprintln(
 		"Work sessions completed:",
-		pterm.Green(s.Data.Totals.completed),
+		Green(s.Data.Totals.completed),
 	)
 
 	abandoned := fmt.Sprintln(
 		"Work sessions abandoned:",
-		pterm.Green(s.Data.Totals.abandoned),
+		Green(s.Data.Totals.abandoned),
 	)
 
 	return header + timeLogged + completed + abandoned
@@ -683,9 +683,9 @@ func printSessionsTable(w io.Writer, sessions []session) {
 	for i := range sessions {
 		sess := sessions[i]
 
-		statusText := pterm.Green("completed")
+		statusText := Green("completed")
 		if !sess.Completed {
-			statusText = pterm.Red("abandoned")
+			statusText = Red("abandoned")
 		}
 
 		endDate := sess.EndTime.Format("Jan 02, 2006 03:04 PM")

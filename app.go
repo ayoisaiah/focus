@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/ayoisaiah/focus/config"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 )
@@ -29,12 +30,9 @@ func defaultAction(ctx *cli.Context) error {
 		return err
 	}
 
-	config, err := GetConfig()
-	if err != nil {
-		return err
-	}
+	cfg := config.Get()
 
-	t := NewTimer(ctx, config, store)
+	t := NewTimer(ctx, cfg, store)
 
 	return t.Run()
 }
@@ -52,7 +50,9 @@ func editConfigAction(_ *cli.Context) error {
 		defaultEditor,
 	)
 
-	cmd := exec.Command(editor, pathToConfigFile)
+	cfg := config.Get()
+
+	cmd := exec.Command(editor, cfg.PathToConfig)
 
 	var stderr bytes.Buffer
 
@@ -222,8 +222,8 @@ func GetApp() *cli.App {
 
 	timerFlags := []cli.Flag{
 		&cli.StringFlag{
-			Name:    "cmd",
-			Aliases: []string{"c"},
+			Name:    "session-cmd",
+			Aliases: []string{"cmd"},
 			Usage:   "Execute arbitrary command after each session",
 		},
 		&cli.BoolFlag{

@@ -1,4 +1,4 @@
-package focus
+package config
 
 import (
 	"bufio"
@@ -8,11 +8,29 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/adrg/xdg"
 	"github.com/pterm/pterm"
 	"github.com/pterm/pterm/putils"
 	"github.com/spf13/viper"
+)
+
+var (
+	config Config
+	once   sync.Once
+)
+
+var (
+	errReadingInput = errors.New(
+		"An error occurred while reading input. Please try again",
+	)
+	errExpectedInteger = errors.New(
+		"Expected an integer that must be greater than zero",
+	)
+	errInitFailed = errors.New(
+		"Unable to initialise Focus settings from the configuration file",
+	)
 )
 
 const ascii = `
@@ -26,19 +44,21 @@ const ascii = `
 // Config represents the program's configurable properties.
 type Config struct {
 	LongBreakMessage    string
-	CmdAfterSession     string
+	SessionCmd          string
 	Sound               string
 	WorkMessage         string
 	ShortBreakMessage   string
-	LongBreakInterval   int
+	PathToConfig        string
 	LongBreakMinutes    int
 	ShortBreakMinutes   int
+	LongBreakInterval   int
 	WorkMinutes         int
-	AutoStartBreak      bool
 	AutoStartWork       bool
 	SoundOnBreak        bool
 	Notify              bool
 	TwentyFourHourClock bool
+	DarkTheme           bool
+	AutoStartBreak      bool
 }
 
 const (
@@ -62,28 +82,18 @@ const (
 	configNotify              = "notify"
 	configSoundOnBreak        = "sound_on_break"
 	configTwentyFourHourClock = "24hr_clock"
-	configCmdAfterSession     = "cmd_after_session"
+	configSessionCmd          = "session_cmd"
+	configDarkTheme           = "dark_theme"
 )
 
 var (
-	configDir        = "focus"
-	configFileName   = "config.yml"
-	pathToConfigFile string
+	configDir      = "focus"
+	configFileName = "config.yml"
 )
 
 func init() {
 	if os.Getenv("FOCUS_ENV") == "development" {
 		configFileName = "config_dev.yml"
-	}
-
-	var err error
-
-	relPath := filepath.Join(configDir, configFileName)
-
-	pathToConfigFile, err = xdg.ConfigFile(relPath)
-	if err != nil {
-		pterm.Error.Println(err)
-		os.Exit(1)
 	}
 }
 
@@ -115,10 +125,13 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 // configPrompt allows the user to state their preferred configuration
 // for the most important functions of the program. It is run only
 // when a configuration file is not already present (e.g on first run).
-func (c *Config) prompt(path string) {
+func (c *Config) prompt() {
 	fmt.Printf("%s\n\n", ascii)
 
-	pterm.Info.Printfln("Your preferences will be saved to: %s\n\n", path)
+	pterm.Info.Printfln(
+		"Your preferences will be saved to: %s\n\n",
+		c.PathToConfig,
+	)
 
 	_ = putils.BulletListFromString(`Follow the prompts below to configure Focus for the first time.
 Type your preferred value, or press ENTER to accept the defaults.
@@ -203,11 +216,21 @@ func (c *Config) init() error {
 	viper.SetConfigName(configFileName)
 	viper.SetConfigType("yaml")
 
-	viper.AddConfigPath(filepath.Dir(pathToConfigFile))
+	relPath := filepath.Join(configDir, configFileName)
+
+	pathToConfigFile, err := xdg.ConfigFile(relPath)
+	if err != nil {
+		pterm.Error.Println(err)
+		os.Exit(1)
+	}
+
+	c.PathToConfig = pathToConfigFile
+
+	viper.AddConfigPath(filepath.Dir(c.PathToConfig))
 
 	if err := viper.ReadInConfig(); err != nil {
 		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
-			return c.create(pathToConfigFile)
+			return c.create()
 		}
 
 		return err
@@ -230,18 +253,19 @@ func (c *Config) set() {
 	c.TwentyFourHourClock = viper.GetBool(configTwentyFourHourClock)
 	c.SoundOnBreak = viper.GetBool(configSoundOnBreak)
 	c.Sound = viper.GetString(configSound)
-	c.CmdAfterSession = viper.GetString(configCmdAfterSession)
+	c.SessionCmd = viper.GetString(configSessionCmd)
+	c.DarkTheme = viper.GetBool(configDarkTheme)
 }
 
 // create prompts the user to set perferred values
 // for key application settings. The results are
 // saved to the user's config directory.
-func (c *Config) create(pathToConfig string) error {
-	c.prompt(pathToConfig)
+func (c *Config) create() error {
+	c.prompt()
 
 	c.defaults()
 
-	err := viper.WriteConfigAs(pathToConfig)
+	err := viper.WriteConfigAs(c.PathToConfig)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -268,19 +292,21 @@ func (c *Config) defaults() {
 	viper.SetDefault(configAutoStartWork, false)
 	viper.SetDefault(configNotify, true)
 	viper.SetDefault(configSoundOnBreak, false)
-	viper.SetDefault(configCmdAfterSession, "")
+	viper.SetDefault(configSessionCmd, "")
+	viper.SetDefault(configDarkTheme, true)
 }
 
-// GetConfig returns the application configuration.
-func GetConfig() (*Config, error) {
-	c := &Config{}
+// Get returns the application configuration.
+func Get() *Config {
+	once.Do(func() {
+		err := config.init()
+		if err != nil {
+			pterm.Error.Printfln("%s: %s", errInitFailed.Error(), err.Error())
+			os.Exit(1)
+		}
 
-	err := c.init()
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", errInitFailed.Error(), err)
-	}
+		config.set()
+	})
 
-	c.set()
-
-	return c, nil
+	return &config
 }

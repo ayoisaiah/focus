@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/adrg/xdg"
+	"github.com/ayoisaiah/focus/config"
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/flac"
 	"github.com/faiface/beep/mp3"
@@ -115,7 +116,7 @@ type message map[sessionType]string
 
 // Timer represents a Focus instance.
 type Timer struct {
-	CmdAfterSession     string      `json:"cmd_after_session"`
+	SessionCmd          string      `json:"session_cmd"`
 	Store               DB          `json:"-"`
 	Kind                kind        `json:"kind"`
 	Msg                 message     `json:"msg"`
@@ -245,14 +246,14 @@ func (t *Timer) printSession(endTime time.Time, w io.Writer) {
 		}
 
 		text = fmt.Sprintf(
-			pterm.Green("[Work %d/%d]"),
+			Green("[Work %d/%d]"),
 			count,
 			total,
 		) + ": " + t.Msg[work]
 	case shortBreak:
-		text = pterm.LightBlue("[Short break]") + ": " + t.Msg[shortBreak]
+		text = Blue("[Short break]") + ": " + t.Msg[shortBreak]
 	case longBreak:
-		text = pterm.LightMagenta("[Long break]") + ": " + t.Msg[longBreak]
+		text = Magenta("[Long break]") + ": " + t.Msg[longBreak]
 	}
 
 	var timeFormat string
@@ -262,11 +263,20 @@ func (t *Timer) printSession(endTime time.Time, w io.Writer) {
 		timeFormat = "03:04:05 PM"
 	}
 
-	fmt.Fprintf(w, "%s (until %s)\n", text, endTime.Format(timeFormat))
+	fmt.Fprintf(
+		w,
+		"%s (until %s)\n",
+		text,
+		Highlight(endTime.Format(timeFormat)),
+	)
 }
 
 // notify sends a desktop notification.
 func (t *Timer) notify(title, msg string) {
+	cfg := config.Get()
+
+	configDir := filepath.Base(filepath.Dir(cfg.PathToConfig))
+
 	// pathToIcon will be an empty string if file is not found
 	pathToIcon, _ := xdg.SearchDataFile(
 		filepath.Join(configDir, "static", "icon.png"),
@@ -281,8 +291,8 @@ func (t *Timer) notify(title, msg string) {
 }
 
 // handleInterruption is used to save the current state
-// of the timer if a work session is halted before.
-// completion.
+// of the timer whenever the timer is interrupted by pressing
+// Ctrl-C
 func (t *Timer) handleInterruption() {
 	c := make(chan os.Signal, 1)
 
@@ -290,6 +300,27 @@ func (t *Timer) handleInterruption() {
 
 	go func() {
 		<-c
+
+		fail := func(err error) {
+			pterm.Error.Printfln(
+				"%s",
+				fmt.Errorf("%s: %w", errUnableToSaveSession, err),
+			)
+			os.Exit(1)
+		}
+
+		if t.Session.Completed {
+			err := t.Store.open()
+			if err != nil {
+				if errors.Is(err, errFocusRunning) {
+					// Indicates that another sessions is already running
+					// so no need to save current timer state
+					os.Exit(0)
+				}
+
+				fail(err)
+			}
+		}
 
 		interrruptedTime := time.Now()
 		t.Session.EndTime = interrruptedTime
@@ -299,30 +330,19 @@ func (t *Timer) handleInterruption() {
 
 		err := t.saveSession()
 		if err != nil {
-			pterm.Error.Printfln(
-				"%s",
-				fmt.Errorf("%s: %w", errUnableToSaveSession, err),
-			)
-			os.Exit(1)
+			fail(err)
 		}
 
 		timerBytes, err := json.Marshal(t)
 		if err != nil {
-			pterm.Error.Printfln(
-				"%s",
-				fmt.Errorf("%s: %w", errUnableToSaveSession, err),
-			)
-			os.Exit(1)
+			fail(err)
 		}
 
 		sessionKey := []byte(t.Session.StartTime.Format(time.RFC3339))
 
 		err = t.Store.saveTimerState(timerBytes, sessionKey)
 		if err != nil {
-			pterm.Error.Printfln(
-				"%s",
-				fmt.Errorf("%s: %w", errUnableToSaveSession, err),
-			)
+			fail(err)
 			os.Exit(1)
 		}
 
@@ -345,6 +365,10 @@ func (t *Timer) playSound(done chan bool) {
 	if ext == "" {
 		t.Sound += ".ogg"
 	}
+
+	cfg := config.Get()
+
+	configDir := filepath.Base(filepath.Dir(cfg.PathToConfig))
 
 	pathToFile, err := xdg.SearchDataFile(
 		filepath.Join(configDir, "static", t.Sound),
@@ -592,7 +616,7 @@ func (t *Timer) start(endTime time.Time) error {
 			t.countdown(timeRemaining)
 		}
 
-		sessionCmd := t.getCmd()
+		sessionCmd := t.getSessionCmd()
 
 		if sessionCmd != nil {
 			err := sessionCmd.Run()
@@ -670,8 +694,8 @@ func (t *Timer) SetOptions(ctx *cli.Context) {
 		t.Sound = ctx.String("sound")
 	}
 
-	if ctx.String("cmd") != "" {
-		t.CmdAfterSession = ctx.String("cmd")
+	if ctx.String("session-cmd") != "" {
+		t.SessionCmd = ctx.String("session-cmd")
 	}
 
 	if ctx.Command.Name == "resume" {
@@ -702,8 +726,8 @@ func (t *Timer) SetOptions(ctx *cli.Context) {
 	}
 }
 
-func (t *Timer) getCmd() *exec.Cmd {
-	cmdSlice, err := shellquote.Split(t.CmdAfterSession)
+func (t *Timer) getSessionCmd() *exec.Cmd {
+	cmdSlice, err := shellquote.Split(t.SessionCmd)
 	if err != nil {
 		pterm.Warning.Println("unable to parse cmd_after_session option")
 		return nil
@@ -726,7 +750,7 @@ func (t *Timer) getCmd() *exec.Cmd {
 
 // NewTimer returns a new timer constructed from
 // the configuration file and command line arguments.
-func NewTimer(ctx *cli.Context, c *Config, store *Store) *Timer {
+func NewTimer(ctx *cli.Context, c *config.Config, store *Store) *Timer {
 	t := &Timer{
 		Kind: kind{
 			work:       c.WorkMinutes,
@@ -746,7 +770,7 @@ func NewTimer(ctx *cli.Context, c *Config, store *Store) *Timer {
 		Sound:               c.Sound,
 		SoundOnBreak:        c.SoundOnBreak,
 		Store:               store,
-		CmdAfterSession:     c.CmdAfterSession,
+		SessionCmd:          c.SessionCmd,
 	}
 
 	// Command-line options will override the configuration
