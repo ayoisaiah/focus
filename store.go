@@ -118,7 +118,7 @@ func (s *Store) deleteSessions(sessions []session) error {
 	})
 }
 
-// open creates or opens a database and locks it
+// open creates or opens a database and locks it.
 func (s *Store) open() error {
 	cfg := config.Get()
 
@@ -200,7 +200,7 @@ func (s *Store) getSessions(
 
 			// include session in results if it was ended
 			// in the bounds of the specified time period
-			if !sess.EndTime.Before(startTime) {
+			if sess.EndTime.After(startTime) {
 				sk, sv = pk, pv
 			} else {
 				sk, sv = c.Next()

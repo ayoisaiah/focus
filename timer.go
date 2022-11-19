@@ -292,7 +292,7 @@ func (t *Timer) notify(title, msg string) {
 
 // handleInterruption is used to save the current state
 // of the timer whenever the timer is interrupted by pressing
-// Ctrl-C
+// Ctrl-C.
 func (t *Timer) handleInterruption() {
 	c := make(chan os.Signal, 1)
 

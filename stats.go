@@ -149,7 +149,7 @@ func initData(start, end time.Time, hoursDiff int) *Data {
 		d.HistoryKeyFormat = "2006"
 	}
 
-	for date := start; !date.After(end); date = date.Add(time.Duration(hoursInADay) * time.Hour) {
+	for date := start; date.Before(end); date = date.Add(time.Duration(hoursInADay) * time.Hour) {
 		d.History[date.Format(d.HistoryKeyFormat)] = &quantity{}
 	}
 
@@ -201,7 +201,7 @@ func (d *Data) calculateSessionDuration(
 	for _, v := range s.Timeline {
 		var durationAdded bool
 
-		for date := v.StartTime; !date.After(v.EndTime); date = date.Add(1 * time.Minute) {
+		for date := v.StartTime; date.Before(v.EndTime); date = date.Add(1 * time.Minute) {
 			// prevent minutes that fall outside the specified bounds
 			// from being included
 			if date.Before(statsStart) || date.After(statsEnd) {
