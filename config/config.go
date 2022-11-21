@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -11,15 +12,19 @@ import (
 	"sync"
 
 	"github.com/adrg/xdg"
+	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/pterm/pterm"
 	"github.com/pterm/pterm/putils"
 	"github.com/spf13/viper"
+	"github.com/urfave/cli/v2"
 )
 
-var (
-	config Config
-	once   sync.Once
-)
+var config = &Config{
+	Message:  make(session.Message),
+	Duration: make(session.Duration),
+}
+
+var once sync.Once
 
 var (
 	errReadingInput = errors.New(
@@ -41,24 +46,24 @@ const ascii = `
 ██║     ╚██████╔╝╚██████╗╚██████╔╝███████║
 ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝`
 
-// Config represents the program's configurable properties.
 type Config struct {
-	LongBreakMessage    string
-	SessionCmd          string
-	Sound               string
-	WorkMessage         string
-	ShortBreakMessage   string
-	PathToConfig        string
-	LongBreakMinutes    int
-	ShortBreakMinutes   int
-	LongBreakInterval   int
-	WorkMinutes         int
-	AutoStartWork       bool
-	SoundOnBreak        bool
-	Notify              bool
-	TwentyFourHourClock bool
-	DarkTheme           bool
-	AutoStartBreak      bool
+	Stderr              io.Writer        `json:"-"`
+	Stdout              io.Writer        `json:"-"`
+	Stdin               io.Reader        `json:"-"`
+	Duration            session.Duration `json:"duration"`
+	Message             session.Message  `json:"message"`
+	AmbientSound        string           `json:"ambient_sound"`
+	PathToConfig        string           `json:"path_to_config"`
+	PathToDB            string           `json:"path_to_db"`
+	SessionCmd          string           `json:"session_cmd"`
+	Tags                []string         `json:"tags"`
+	LongBreakInterval   int              `json:"long_break_interval"`
+	Notify              bool             `json:"notify"`
+	DarkTheme           bool             `json:"dark_theme"`
+	TwentyFourHourClock bool             `json:"twenty_four_hour_clock"`
+	PlaySoundOnBreak    bool             `json:"ambient_sound_on_break"`
+	AutoStartBreak      bool             `json:"auto_start_break"`
+	AutoStartWork       bool             `json:"auto_start_work"`
 }
 
 const (
@@ -71,7 +76,7 @@ const (
 const (
 	configWorkMinutes         = "work_mins"
 	configWorkMessage         = "work_msg"
-	configSound               = "sound"
+	configAmbientSound        = "ambient_sound"
 	configShortBreakMinutes   = "short_break_mins"
 	configShortBreakMessage   = "short_break_msg"
 	configLongBreakMinutes    = "long_break_mins"
@@ -89,11 +94,13 @@ const (
 var (
 	configDir      = "focus"
 	configFileName = "config.yml"
+	dbFile         = "focus.db"
 )
 
 func init() {
 	if os.Getenv("FOCUS_ENV") == "development" {
 		configFileName = "config_dev.yml"
+		dbFile = "focus_dev.db"
 	}
 }
 
@@ -122,15 +129,15 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 	return num, nil
 }
 
-// configPrompt allows the user to state their preferred configuration
+// prompt allows the user to state their preferred configuration
 // for the most important functions of the program. It is run only
 // when a configuration file is not already present (e.g on first run).
-func (c *Config) prompt() {
+func prompt() {
 	fmt.Printf("%s\n\n", ascii)
 
 	pterm.Info.Printfln(
 		"Your preferences will be saved to: %s\n\n",
-		c.PathToConfig,
+		config.PathToConfig,
 	)
 
 	_ = putils.BulletListFromString(`Follow the prompts below to configure Focus for the first time.
@@ -212,7 +219,7 @@ Edit the configuration file (focus edit-config) to change any settings, or use c
 // init initialises the application configuration.
 // If the config file does not exist,.it prompts the user
 // and saves the inputted preferences and defaults in a config file.
-func (c *Config) init() error {
+func initConfig() error {
 	viper.SetConfigName(configFileName)
 	viper.SetConfigType("yaml")
 
@@ -224,13 +231,13 @@ func (c *Config) init() error {
 		os.Exit(1)
 	}
 
-	c.PathToConfig = pathToConfigFile
+	config.PathToConfig = pathToConfigFile
 
-	viper.AddConfigPath(filepath.Dir(c.PathToConfig))
+	viper.AddConfigPath(filepath.Dir(config.PathToConfig))
 
 	if err := viper.ReadInConfig(); err != nil {
 		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
-			return c.create()
+			return create()
 		}
 
 		return err
@@ -239,33 +246,92 @@ func (c *Config) init() error {
 	return nil
 }
 
-func (c *Config) set() {
-	c.WorkMinutes = viper.GetInt(configWorkMinutes)
-	c.ShortBreakMinutes = viper.GetInt(configShortBreakMinutes)
-	c.LongBreakMinutes = viper.GetInt(configLongBreakMinutes)
-	c.LongBreakInterval = viper.GetInt(configLongBreakInterval)
-	c.AutoStartBreak = viper.GetBool(configAutoStartBreak)
-	c.AutoStartWork = viper.GetBool(configAutoStartWork)
-	c.Notify = viper.GetBool(configNotify)
-	c.WorkMessage = viper.GetString(configWorkMessage)
-	c.ShortBreakMessage = viper.GetString(configShortBreakMessage)
-	c.LongBreakMessage = viper.GetString(configLongBreakMessage)
-	c.TwentyFourHourClock = viper.GetBool(configTwentyFourHourClock)
-	c.SoundOnBreak = viper.GetBool(configSoundOnBreak)
-	c.Sound = viper.GetString(configSound)
-	c.SessionCmd = viper.GetString(configSessionCmd)
-	c.DarkTheme = viper.GetBool(configDarkTheme)
+func set(ctx *cli.Context) {
+	config.Stderr = os.Stderr
+	config.Stdout = os.Stdout
+	config.Stdin = os.Stdin
+
+	pathToDB, err := xdg.DataFile(filepath.Join(configDir, dbFile))
+	if err != nil {
+		pterm.Error.Printfln("%s: %s", errInitFailed.Error(), err.Error())
+		os.Exit(1)
+	}
+
+	config.PathToDB = pathToDB
+
+	// set from config file
+	config.LongBreakInterval = viper.GetInt(configLongBreakInterval)
+	config.AutoStartBreak = viper.GetBool(configAutoStartBreak)
+	config.AutoStartWork = viper.GetBool(configAutoStartWork)
+	config.Notify = viper.GetBool(configNotify)
+	config.TwentyFourHourClock = viper.GetBool(configTwentyFourHourClock)
+	config.PlaySoundOnBreak = viper.GetBool(configSoundOnBreak)
+	config.AmbientSound = viper.GetString(configAmbientSound)
+	config.SessionCmd = viper.GetString(configSessionCmd)
+	config.DarkTheme = viper.GetBool(configDarkTheme)
+	config.Message[session.Work] = viper.GetString(configWorkMessage)
+	config.Message[session.ShortBreak] = viper.GetString(
+		configShortBreakMessage,
+	)
+	config.Message[session.LongBreak] = viper.GetString(configLongBreakMessage)
+	config.Duration[session.Work] = viper.GetInt(configWorkMinutes)
+	config.Duration[session.ShortBreak] = viper.GetInt(configShortBreakMinutes)
+	config.Duration[session.LongBreak] = viper.GetInt(configLongBreakMinutes)
+
+	// set from command-line arguments
+	tagArg := ctx.String("tags")
+
+	if tagArg != "" {
+		tags := strings.Split(tagArg, ",")
+		for i := range tags {
+			tags[i] = strings.Trim(tags[i], " ")
+		}
+
+		config.Tags = tags
+	}
+
+	if ctx.Bool("disable-notification") {
+		config.Notify = false
+	}
+
+	if ctx.String("sound") != "" {
+		if ctx.String("sound") == "off" {
+			config.AmbientSound = ""
+		} else {
+			config.AmbientSound = ctx.String("sound")
+		}
+	}
+
+	if ctx.String("session-cmd") != "" {
+		config.SessionCmd = ctx.String("session-cmd")
+	}
+
+	if ctx.Uint("work") > 0 {
+		config.Duration[session.Work] = int(ctx.Uint("work"))
+	}
+
+	if ctx.Uint("short-break") > 0 {
+		config.Duration[session.ShortBreak] = int(ctx.Uint("short-break"))
+	}
+
+	if ctx.Uint("long-break") > 0 {
+		config.Duration[session.LongBreak] = int(ctx.Uint("long-break"))
+	}
+
+	if ctx.Uint("long-break-interval") > 0 {
+		config.LongBreakInterval = int(ctx.Uint("long-break-interval"))
+	}
 }
 
 // create prompts the user to set perferred values
 // for key application settings. The results are
 // saved to the user's config directory.
-func (c *Config) create() error {
-	c.prompt()
+func create() error {
+	prompt()
 
-	c.defaults()
+	defaults()
 
-	err := viper.WriteConfigAs(c.PathToConfig)
+	err := viper.WriteConfigAs(config.PathToConfig)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -280,7 +346,7 @@ func (c *Config) create() error {
 }
 
 // defaults sets program's default configuration values.
-func (c *Config) defaults() {
+func defaults() {
 	viper.SetDefault(configWorkMinutes, defaultWorkMinutes)
 	viper.SetDefault(configWorkMessage, "Focus on your task")
 	viper.SetDefault(configShortBreakMessage, "Take a breather")
@@ -297,16 +363,16 @@ func (c *Config) defaults() {
 }
 
 // Get returns the application configuration.
-func Get() *Config {
+func Get(ctx *cli.Context) *Config {
 	once.Do(func() {
-		err := config.init()
+		err := initConfig()
 		if err != nil {
 			pterm.Error.Printfln("%s: %s", errInitFailed.Error(), err.Error())
 			os.Exit(1)
 		}
 
-		config.set()
+		set(ctx)
 	})
 
-	return &config
+	return config
 }

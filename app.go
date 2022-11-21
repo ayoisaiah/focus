@@ -10,6 +10,11 @@ import (
 	"time"
 
 	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/color"
+	"github.com/ayoisaiah/focus/internal/session"
+	"github.com/ayoisaiah/focus/stats"
+	"github.com/ayoisaiah/focus/store"
+	"github.com/ayoisaiah/focus/timer"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 )
@@ -20,24 +25,38 @@ const (
 	envFocusNoColor   = "FOCUS_NO_COLOR"
 )
 
+// firstNonEmptyString returns its first non-empty argument, or "" if all
+// arguments are empty.
+func firstNonEmptyString(ss ...string) string {
+	for _, s := range ss {
+		if s != "" {
+			return s
+		}
+	}
+
+	return ""
+}
+
 func defaultAction(ctx *cli.Context) error {
 	if ctx.Bool("no-color") {
 		disableStyling()
 	}
 
-	store, err := NewStore()
+	cfg := config.Get(ctx)
+
+	dbClient, err := store.NewClient(cfg.PathToDB)
 	if err != nil {
 		return err
 	}
 
-	cfg := config.Get()
+	color.DarkTheme = cfg.DarkTheme
 
-	t := NewTimer(ctx, cfg, store)
+	timer.Init(dbClient, cfg)
 
-	return t.Run()
+	return timer.Run(&session.Session{})
 }
 
-func editConfigAction(_ *cli.Context) error {
+func editConfigAction(ctx *cli.Context) error {
 	defaultEditor := "vi"
 
 	if runtime.GOOS == "windows" {
@@ -50,7 +69,7 @@ func editConfigAction(_ *cli.Context) error {
 		defaultEditor,
 	)
 
-	cfg := config.Get()
+	cfg := config.Get(ctx)
 
 	cmd := exec.Command(editor, cfg.PathToConfig)
 
@@ -74,23 +93,21 @@ func resumeAction(ctx *cli.Context) error {
 		disableStyling()
 	}
 
-	store, err := NewStore()
+	cfg := config.Get(ctx)
+
+	color.DarkTheme = cfg.DarkTheme
+
+	dbClient, err := store.NewClient(cfg.PathToDB)
 	if err != nil {
 		return err
 	}
 
-	t := &Timer{
-		Store: store,
-	}
-
-	err = t.Resume()
+	sess, err := timer.Recover(dbClient, ctx)
 	if err != nil {
 		return err
 	}
 
-	t.SetOptions(ctx)
-
-	return t.Run()
+	return timer.Run(sess)
 }
 
 func statsAction(ctx *cli.Context) error {
@@ -98,29 +115,31 @@ func statsAction(ctx *cli.Context) error {
 		pterm.DisableColor()
 	}
 
-	store, err := NewStore()
+	cfg := config.Get(ctx)
+
+	dbClient, err := store.NewClient(cfg.PathToDB)
 	if err != nil {
 		return err
 	}
 
-	stats, err := NewStats(ctx, store)
+	s, err := stats.New(ctx, dbClient)
 	if err != nil {
 		return err
 	}
 
 	if ctx.Bool("delete") {
-		return stats.Delete(os.Stdout, os.Stdin)
+		return s.Delete(os.Stdout, os.Stdin)
 	}
 
 	if ctx.Bool("list") {
-		return stats.List(os.Stdout)
+		return s.List(os.Stdout)
 	}
 
-	if len(stats.Tags) != 0 {
-		return stats.EditTag(os.Stdout, os.Stdin)
+	if len(s.Tags) != 0 {
+		return s.EditTag(os.Stdout, os.Stdin)
 	}
 
-	return stats.Show(os.Stdout)
+	return s.Show(os.Stdout)
 }
 
 func init() {
@@ -224,22 +243,17 @@ func GetApp() *cli.App {
 		&cli.StringFlag{
 			Name:    "session-cmd",
 			Aliases: []string{"cmd"},
-			Usage:   "Execute arbitrary command after each session",
+			Usage:   "Execute an arbitrary command after each session",
 		},
 		&cli.BoolFlag{
-			Name:    "disable-notifications",
+			Name:    "disable-notification",
 			Aliases: []string{"d"},
-			Usage:   "Disable the system notification after a session is completed",
+			Usage:   "Disable the system notification that appears after a session is completed",
 		},
 		globalFlags["no-color"],
 		&cli.StringFlag{
 			Name:  "sound",
 			Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground. Disable sound by setting to 'off'",
-		},
-		&cli.BoolFlag{
-			Name:    "sound-on-break",
-			Aliases: []string{"sob"},
-			Usage:   "Play ambient sounds during a break sessions",
 		},
 		&cli.StringFlag{
 			Name:    "tag",
@@ -313,11 +327,6 @@ func GetApp() *cli.App {
 			},
 		},
 		Flags: []cli.Flag{
-			&cli.UintFlag{
-				Name:    "max-sessions",
-				Aliases: []string{"max"},
-				Usage:   "The maximum number of work sessions (unlimited by default)",
-			},
 			&cli.UintFlag{
 				Name:    "short-break",
 				Aliases: []string{"s"},
