@@ -26,8 +26,8 @@ var errNoPausedSession = errors.New(
 )
 
 type timerState struct {
-	Opts      *config.Config `json:"opts"`
-	WorkCycle int            `json:"work_cycle"`
+	Opts      *config.TimerConfig `json:"opts"`
+	WorkCycle int                 `json:"work_cycle"`
 }
 
 // Client is a BoltDB database client.
@@ -50,7 +50,7 @@ func (c *Client) UpdateSession(sess *session.Session) error {
 
 func (c *Client) SaveTimer(
 	sessionKey []byte,
-	opts *config.Config,
+	opts *config.TimerConfig,
 	workCycle int,
 ) error {
 	value, err := json.Marshal(timerState{
@@ -72,10 +72,10 @@ func (c *Client) SaveTimer(
 	})
 }
 
-func (c *Client) GetInterrupted() (opts *config.Config, sess *session.Session, workCycle int, err error) {
+func (c *Client) GetInterrupted() (opts *config.TimerConfig, sess *session.Session, workCycle int, err error) {
 	var t timerState
 
-	t.Opts = &config.Config{
+	t.Opts = &config.TimerConfig{
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 		Stdin:  os.Stdin,
@@ -167,7 +167,7 @@ func (c *Client) Open() error {
 func (c *Client) GetSessions(
 	startTime, endTime time.Time,
 	tags []string,
-) ([][]byte, error) {
+) ([]session.Session, error) {
 	var b [][]byte
 
 	err := c.View(func(tx *bolt.Tx) error {
@@ -220,7 +220,20 @@ func (c *Client) GetSessions(
 		return nil
 	})
 
-	return b, err
+	var s []session.Session
+
+	for _, v := range b {
+		sess := session.Session{}
+
+		err = json.Unmarshal(v, &sess)
+		if err != nil {
+			return nil, err
+		}
+
+		s = append(s, sess)
+	}
+
+	return s, err
 }
 
 // open creates or opens a database and locks it.

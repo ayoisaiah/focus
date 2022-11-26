@@ -42,7 +42,7 @@ func defaultAction(ctx *cli.Context) error {
 		disableStyling()
 	}
 
-	cfg := config.Get(ctx)
+	cfg := config.GetTimer(ctx)
 
 	dbClient, err := store.NewClient(cfg.PathToDB)
 	if err != nil {
@@ -54,6 +54,33 @@ func defaultAction(ctx *cli.Context) error {
 	timer.Init(dbClient, cfg)
 
 	return timer.Run(&session.Session{})
+}
+
+func listAction(ctx *cli.Context) error {
+	err := statsAction(ctx)
+	if err != nil {
+		return err
+	}
+
+	return stats.List()
+}
+
+func editTagsAction(ctx *cli.Context) error {
+	err := statsAction(ctx)
+	if err != nil {
+		return err
+	}
+
+	return stats.EditTags(ctx.Args().Slice())
+}
+
+func deleteAction(ctx *cli.Context) error {
+	err := statsAction(ctx)
+	if err != nil {
+		return err
+	}
+
+	return stats.Delete()
 }
 
 func editConfigAction(ctx *cli.Context) error {
@@ -69,7 +96,7 @@ func editConfigAction(ctx *cli.Context) error {
 		defaultEditor,
 	)
 
-	cfg := config.Get(ctx)
+	cfg := config.GetTimer(ctx)
 
 	cmd := exec.Command(editor, cfg.PathToConfig)
 
@@ -93,7 +120,7 @@ func resumeAction(ctx *cli.Context) error {
 		disableStyling()
 	}
 
-	cfg := config.Get(ctx)
+	cfg := config.GetTimer(ctx)
 
 	color.DarkTheme = cfg.DarkTheme
 
@@ -115,31 +142,25 @@ func statsAction(ctx *cli.Context) error {
 		pterm.DisableColor()
 	}
 
-	cfg := config.Get(ctx)
+	cfg := config.GetStats(ctx)
 
 	dbClient, err := store.NewClient(cfg.PathToDB)
 	if err != nil {
 		return err
 	}
 
-	s, err := stats.New(ctx, dbClient)
+	stats.Init(dbClient, cfg)
+
+	return nil
+}
+
+func showAction(ctx *cli.Context) error {
+	err := statsAction(ctx)
 	if err != nil {
 		return err
 	}
 
-	if ctx.Bool("delete") {
-		return s.Delete(os.Stdout, os.Stdin)
-	}
-
-	if ctx.Bool("list") {
-		return s.List(os.Stdout)
-	}
-
-	if len(s.Tags) != 0 {
-		return s.EditTag(os.Stdout, os.Stdin)
-	}
-
-	return s.Show(os.Stdout)
+	return stats.Show()
 }
 
 func init() {
@@ -239,6 +260,30 @@ func GetApp() *cli.App {
 		},
 	}
 
+	statsFlags := []cli.Flag{
+		&cli.StringFlag{
+			Name:    "period",
+			Aliases: []string{"p"},
+			Usage:   "Specify a time period for (defaults to 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time",
+			Value:   "7days",
+		},
+		&cli.StringFlag{
+			Name:    "start",
+			Aliases: []string{"s"},
+			Usage:   "Specify a start date in the following format: YYYY-MM-DD [HH:MM:SS PM]",
+		},
+		&cli.StringFlag{
+			Name:    "end",
+			Aliases: []string{"e"},
+			Usage:   "Specify an end date in the following format: YYYY-MM-DD [HH:MM:SS PM] (defaults to the current time)",
+		},
+		&cli.StringFlag{
+			Name:    "tag",
+			Aliases: []string{"t"},
+			Usage:   "Match only sessions with a specific tag",
+		},
+	}
+
 	timerFlags := []cli.Flag{
 		&cli.StringFlag{
 			Name:    "session-cmd",
@@ -270,14 +315,14 @@ func GetApp() *cli.App {
 				Email: "ayo@freshman.tech",
 			},
 		},
-		Usage:                "focus is a cross-platform productivity timer for the command-line. It is based on the Pomodoro Technique,\n\t\ta time management method developed by Francesco Cirillo in the late 1980s.",
+		Usage:                "Focus is a cross-platform productivity timer for the command-line. It is based on the Pomodoro Technique,\n\t\ta time management method developed by Francesco Cirillo in the late 1980s.",
 		UsageText:            "[COMMAND] [OPTIONS]",
 		Version:              "v1.2.0",
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{
 				Name:   "resume",
-				Usage:  "Resume a previously interrupted work session",
+				Usage:  "Resume a previously interrupted session",
 				Flags:  timerFlags,
 				Action: resumeAction,
 			},
@@ -287,43 +332,28 @@ func GetApp() *cli.App {
 				Action: editConfigAction,
 			},
 			{
+				Name:   "list",
+				Usage:  "List all the sessions within the specified time period",
+				Action: listAction,
+				Flags:  append(statsFlags, globalFlags["no-color"]),
+			},
+			{
+				Name:   "edit-tags",
+				Usage:  "Edit the tags for a set of focus sessions",
+				Action: editTagsAction,
+				Flags:  append(statsFlags, globalFlags["no-color"]),
+			},
+			{
+				Name:   "delete",
+				Usage:  "Permanently delete the all sessions within the specified time period. Will prompt before deleting.",
+				Action: deleteAction,
+				Flags:  append(statsFlags, globalFlags["no-color"]),
+			},
+			{
 				Name:   "stats",
 				Usage:  "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days",
-				Action: statsAction,
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "delete",
-						Aliases: []string{"d"},
-						Usage:   "Delete the all work sessions within the specified time period",
-					},
-					&cli.BoolFlag{
-						Name:    "list",
-						Aliases: []string{"l"},
-						Usage:   "List all the work sessions within the specified time period",
-					},
-					&cli.StringFlag{
-						Name:    "period",
-						Aliases: []string{"p"},
-						Usage:   "Specify a time period for (defaults to 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time",
-						Value:   "7days",
-					},
-					&cli.StringFlag{
-						Name:    "start",
-						Aliases: []string{"s"},
-						Usage:   "Specify a start date in the following format: YYYY-MM-DD [HH:MM:SS PM]",
-					},
-					&cli.StringFlag{
-						Name:    "end",
-						Aliases: []string{"e"},
-						Usage:   "Specify an end date in the following format: YYYY-MM-DD [HH:MM:SS PM] (defaults to the current time)",
-					},
-					&cli.StringFlag{
-						Name:    "tag",
-						Aliases: []string{"t"},
-						Usage:   "Match only sessions with a specific tag",
-					},
-					globalFlags["no-color"],
-				},
+				Action: showAction,
+				Flags:  append(statsFlags, globalFlags["no-color"]),
 			},
 		},
 		Flags: []cli.Flag{

@@ -1,38 +1,26 @@
+// Package stats reports Focus session statistics
 package stats
 
 import (
-	"bufio"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/araddon/dateparse"
+	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/color"
 	"github.com/ayoisaiah/focus/internal/session"
 	internaltime "github.com/ayoisaiah/focus/internal/time"
 	"github.com/ayoisaiah/focus/store"
-	"github.com/olekukonko/tablewriter"
+	"github.com/hako/durafmt"
 	"github.com/pterm/pterm"
-	"golang.org/x/exp/slices"
 )
 
 var (
-	errParsingDate = errors.New(
-		"The specified date format must be: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS PM",
-	)
-	errInvalidDateRange = errors.New(
-		"The end date must not be earlier than the start date",
-	)
-)
-
-const (
-	hoursInADay      = 24
-	maxHoursInAMonth = 744  // 31 day months
-	maxHoursInAYear  = 8784 // Leap years
-	minutesInAnHour  = 60
+	opts *config.StatsConfig
+	db   store.DB
 )
 
 const (
@@ -40,341 +28,249 @@ const (
 	noSessionsMsg = "No sessions found for the specified time range"
 )
 
-type timePeriod string
+type aggregatePeriod string
 
 const (
-	periodAllTime   timePeriod = "all-time"
-	periodToday     timePeriod = "today"
-	periodYesterday timePeriod = "yesterday"
-	period7Days     timePeriod = "7days"
-	period14Days    timePeriod = "14days"
-	period30Days    timePeriod = "30days"
-	period90Days    timePeriod = "90days"
-	period180Days   timePeriod = "180days"
-	period365Days   timePeriod = "365days"
+	monthly aggregatePeriod = "Monthly"
+	daily   aggregatePeriod = "Daily"
+	yearly  aggregatePeriod = "Yearly"
+	weekly  aggregatePeriod = "Weekly"
+	hourly  aggregatePeriod = "Hourly"
+	all     aggregatePeriod = "All"
 )
 
-var statsPeriod = []timePeriod{
-	periodAllTime,
-	periodToday,
-	periodYesterday,
-	period7Days,
-	period14Days,
-	period30Days,
-	period90Days,
-	period180Days,
-	period365Days,
+type summary struct {
+	tags         map[string]time.Duration
+	totalTime    time.Duration
+	completed    int
+	abandoned    int
+	avgCompleted int
+	avgAbandoned int
+	avgTime      time.Duration
 }
 
-// Stats represents the statistics for a time period.
-type Stats struct {
-	StartTime time.Time
-	EndTime   time.Time
-	dbClient  store.DB
-	Data      *Data
-	Sessions  []session.Session
-	Tags      []string
-	HoursDiff int
+type aggregates struct {
+	weekly  map[int]time.Duration
+	daily   map[int]time.Duration
+	yearly  map[int]time.Duration
+	monthly map[int]time.Duration
+	hourly  map[int]time.Duration
 }
 
-// Data represents the computed statistics data
-// for the current time period.
-type Data struct {
-	Weekday          map[time.Weekday]*quantity
-	HourofDay        map[int]*quantity
-	History          map[string]*quantity
-	Tags             map[string]*quantity
-	HistoryKeyFormat string
-	Totals           quantity
-	Averages         quantity
-}
+// getSessionDuration returns the elapsed time for a session within the
+// bounds of the reporting period.
+func getSessionDuration(
+	sess *session.Session,
+) time.Duration {
+	var duration time.Duration
 
-type quantity struct {
-	minutes   int
-	completed int
-	abandoned int
-}
+outer:
+	for _, event := range sess.Timeline {
+		if event.StartTime.After(opts.StartTime) && event.EndTime.Before(opts.EndTime) {
+			duration += event.EndTime.Sub(event.StartTime)
+			continue
+		}
 
-// getPeriod returns the start and end time according to the
-// specified time period.
-func getPeriod(period timePeriod) (start, end time.Time) {
-	now := time.Now()
-
-	end = time.Date(
-		now.Year(),
-		now.Month(),
-		now.Day(),
-		23,
-		59,
-		59,
-		0,
-		now.Location(),
-	)
-
-	switch period {
-	case periodToday:
-		start = now
-	case periodYesterday:
-		start = now.AddDate(0, 0, -1)
-		year, month, day := start.Date()
-		end = time.Date(year, month, day, 23, 59, 59, 0, start.Location())
-	case period7Days:
-		start = now.AddDate(0, 0, -6)
-	case period14Days:
-		start = now.AddDate(0, 0, -13)
-	case period30Days:
-		start = now.AddDate(0, 0, -29)
-	case period90Days:
-		start = now.AddDate(0, 0, -89)
-	case period180Days:
-		start = now.AddDate(0, 0, -179)
-	case period365Days:
-		start = now.AddDate(0, 0, -364)
-	case periodAllTime:
-		return start, end
-	default:
-		return start, end
-	}
-
-	return time.Date(
-		start.Year(),
-		start.Month(),
-		start.Day(),
-		0,
-		0,
-		0,
-		0,
-		start.Location(),
-	), end
-}
-
-// initData creates an instance of Data with
-// all its values initialised properly.
-func initData(start, end time.Time, hoursDiff int) *Data {
-	d := &Data{}
-
-	d.Weekday = make(map[time.Weekday]*quantity)
-	d.History = make(map[string]*quantity)
-	d.Tags = make(map[string]*quantity)
-	d.HourofDay = make(map[int]*quantity)
-
-	for i := 0; i <= 6; i++ {
-		d.Weekday[time.Weekday(i)] = &quantity{}
-	}
-
-	for i := 0; i <= 23; i++ {
-		d.HourofDay[i] = &quantity{}
-	}
-
-	// Decide whether to compute the work history
-	// in terms of days, or months
-	d.HistoryKeyFormat = "January 2006"
-	if hoursDiff > hoursInADay && hoursDiff <= maxHoursInAMonth {
-		d.HistoryKeyFormat = "January 02, 2006"
-	} else if hoursDiff > maxHoursInAYear {
-		d.HistoryKeyFormat = "2006"
-	}
-
-	for date := start; date.Before(end); date = date.Add(time.Duration(hoursInADay) * time.Hour) {
-		d.History[date.Format(d.HistoryKeyFormat)] = &quantity{}
-	}
-
-	return d
-}
-
-// computeAverages calculates the average minutes, completed sessions,
-// and abandoned sessions per day for the specified time period.
-func (d *Data) computeAverages(start, end time.Time) {
-	end = time.Date(
-		end.Year(),
-		end.Month(),
-		end.Day(),
-		23,
-		59,
-		59,
-		0,
-		end.Location(),
-	)
-	hoursDiff := internaltime.Round(end.Sub(start).Hours())
-	hoursInADay := 24
-
-	numberOfDays := hoursDiff / hoursInADay
-
-	d.Averages.minutes = internaltime.Round(
-		float64(d.Totals.minutes) / float64(numberOfDays),
-	)
-	d.Averages.completed = internaltime.Round(
-		float64(d.Totals.completed) / float64(numberOfDays),
-	)
-	d.Averages.abandoned = internaltime.Round(
-		float64(d.Totals.abandoned) / float64(numberOfDays),
-	)
-}
-
-// calculateSessionDuration returns the session duration in seconds.
-// It ensures that minutes that are not within the bounds of the
-// reporting period, are not included.
-func (d *Data) calculateSessionDuration(
-	s *session.Session,
-	statsStart, statsEnd time.Time,
-) float64 {
-	var seconds float64
-
-	hourly := map[int]float64{}
-	weekday := map[time.Weekday]float64{}
-	daily := map[string]float64{}
-
-	for _, v := range s.Timeline {
-		var durationAdded bool
-
-		for date := v.StartTime; date.Before(v.EndTime); date = date.Add(1 * time.Minute) {
+		for date := event.StartTime; date.Before(event.EndTime); date = date.Add(1 * time.Minute) {
 			// prevent minutes that fall outside the specified bounds
 			// from being included
-			if date.Before(statsStart) || date.After(statsEnd) {
+			if date.Before(opts.StartTime) {
 				continue
 			}
 
-			var end time.Time
-			if date.Add(1 * time.Minute).After(v.EndTime) {
-				end = v.EndTime
+			if date.After(opts.EndTime) {
+				break outer
+			}
+
+			duration += time.Minute * 1
+		}
+	}
+
+	return duration
+}
+
+func updateAggr(
+	event session.Timeline,
+	totals *aggregates,
+	period aggregatePeriod,
+) {
+	for date := event.StartTime; date.Before(event.EndTime); date = date.Add(1 * time.Minute) {
+		if period == "all" {
+			if date.Before(opts.StartTime) {
+				continue
+			}
+
+			if date.After(opts.EndTime) {
+				break
+			}
+		}
+
+		i := internaltime.DayFormat(date)
+
+		switch period {
+		case yearly:
+			totals.yearly[date.Year()] += time.Minute * 1
+		case monthly:
+			totals.monthly[int(date.Month())] += time.Minute * 1
+		case weekly:
+			totals.weekly[int(date.Weekday())] += time.Minute * 1
+		case daily:
+			totals.daily[i] += time.Minute * 1
+		case hourly:
+			totals.hourly[date.Hour()] += time.Minute * 1
+		case all:
+			totals.monthly[int(date.Month())] += time.Minute * 1
+			totals.weekly[int(date.Weekday())] += time.Minute * 1
+			totals.daily[i] += time.Minute * 1
+			totals.hourly[date.Hour()] += time.Minute * 1
+			totals.yearly[date.Year()] += time.Minute * 1
+		}
+	}
+}
+
+func populateMap(max int) map[int]time.Duration {
+	m := make(map[int]time.Duration)
+
+	if max == 0 {
+		return m
+	}
+
+	if max == -1 {
+		start := internaltime.RoundToStart(opts.StartTime)
+
+		for date := start; date.Before(opts.EndTime); date = date.AddDate(0, 0, 1) {
+			m[internaltime.DayFormat(date)] = time.Duration(0)
+		}
+
+		return m
+	}
+
+	for i := 0; i <= max; i++ {
+		m[i] = time.Duration(0)
+	}
+
+	return m
+}
+
+func computeAggregates(sessions []session.Session) aggregates {
+	var totals aggregates
+
+	totals.yearly = populateMap(0)
+	totals.monthly = populateMap(0)
+	//nolint:gomnd // 0-6 days
+	totals.weekly = populateMap(6)
+	totals.daily = populateMap(-1)
+	//nolint:gomnd // 0-23 hours
+	totals.hourly = populateMap(23)
+
+	for i := range sessions {
+		sess := sessions[i]
+
+		for _, event := range sess.Timeline {
+			start := event.StartTime
+			end := event.EndTime
+
+			if start.After(opts.StartTime) && end.Before(opts.EndTime) {
+				if start.Year() == end.Year() {
+					totals.yearly[start.Year()] += end.Sub(start)
+				} else {
+					updateAggr(event, &totals, yearly)
+				}
+
+				if start.Month() == end.Month() {
+					totals.monthly[int(start.Month())] += end.Sub(start)
+				} else {
+					updateAggr(event, &totals, monthly)
+				}
+
+				if start.Weekday() == end.Weekday() {
+					totals.weekly[int(start.Weekday())] += end.Sub(start)
+				} else {
+					updateAggr(event, &totals, weekly)
+				}
+
+				if start.Day() == end.Day() {
+					totals.daily[internaltime.DayFormat(start)] += end.Sub(
+						start,
+					)
+				} else {
+					updateAggr(event, &totals, daily)
+				}
+
+				if start.Hour() == end.Hour() {
+					totals.hourly[start.Hour()] += end.Sub(start)
+				} else {
+					updateAggr(event, &totals, hourly)
+				}
 			} else {
-				end = date.Add(1 * time.Minute)
-			}
-
-			secs := end.Sub(date).Seconds()
-
-			hourly[date.Hour()] += secs
-			weekday[date.Weekday()] += secs
-			daily[date.Format(d.HistoryKeyFormat)] += secs
-
-			if !durationAdded {
-				durationAdded = true
-				seconds += v.EndTime.Sub(date).Seconds()
+				updateAggr(event, &totals, all)
 			}
 		}
 	}
 
-	for k, val := range weekday {
-		d.Weekday[k].minutes += internaltime.Round(
-			val / float64(minutesInAnHour),
-		)
-	}
-
-	for k, val := range hourly {
-		d.HourofDay[k].minutes += internaltime.Round(
-			val / float64(minutesInAnHour),
-		)
-	}
-
-	for k, val := range daily {
-		if _, exists := d.History[k]; exists {
-			d.History[k].minutes += internaltime.Round(
-				val / float64(minutesInAnHour),
-			)
-		}
-	}
-
-	return seconds
+	return totals
 }
 
 // computeTotals calculates the total minutes, completed sessions,
 // and abandoned sessions for the current time period.
-func (d *Data) computeTotals(
-	sessions []session.Session,
-	startTime, endTime time.Time,
-) {
+func computeTotals(sessions []session.Session) summary {
+	var totals summary
+
+	totals.tags = make(map[string]time.Duration)
+
 	for i := range sessions {
-		s := sessions[i]
-		if len(s.Tags) == 0 {
-			s.Tags = []string{"uncategorised"}
+		sess := sessions[i]
+
+		duration := getSessionDuration(&sess)
+
+		totals.totalTime += duration
+
+		for _, tag := range sess.Tags {
+			totals.tags[tag] += duration
 		}
 
-		if s.EndTime.IsZero() {
-			continue
+		if len(sess.Tags) == 0 {
+			totals.tags["uncategorized"] += duration
 		}
 
-		duration := internaltime.Round(
-			d.calculateSessionDuration(
-				&s,
-				startTime,
-				endTime,
-			) / float64(
-				minutesInAnHour,
-			),
-		)
-
-		for _, t := range s.Tags {
-			if _, exists := d.Tags[t]; !exists {
-				d.Tags[t] = &quantity{}
-			}
-
-			d.Tags[t].minutes += duration
-
-			if s.Completed {
-				d.Tags[t].completed++
-			} else {
-				d.Tags[t].abandoned++
-			}
-		}
-
-		d.Totals.minutes += duration
-
-		if s.Completed {
-			d.Weekday[s.StartTime.Weekday()].completed++
-			d.HourofDay[s.StartTime.Hour()].completed++
-
-			if _, exists := d.History[s.StartTime.Format(d.HistoryKeyFormat)]; exists {
-				d.History[s.StartTime.Format(d.HistoryKeyFormat)].completed++
-			}
-
-			d.Totals.completed++
+		if sess.Completed {
+			totals.completed++
 		} else {
-			d.Weekday[s.StartTime.Weekday()].abandoned++
-			d.HourofDay[s.StartTime.Hour()].abandoned++
-
-			if _, exists := d.History[s.StartTime.Format(d.HistoryKeyFormat)]; exists {
-				d.History[s.StartTime.Format(d.HistoryKeyFormat)].abandoned++
-			}
-
-			d.Totals.abandoned++
+			totals.abandoned++
 		}
 	}
+
+	hoursDiff := internaltime.Round(opts.EndTime.Sub(opts.StartTime).Hours())
+
+	numberOfDays := hoursDiff / internaltime.HoursInADay
+
+	totals.avgTime = time.Duration(
+		float64(totals.totalTime) / float64(numberOfDays),
+	)
+	totals.avgCompleted = internaltime.Round(
+		float64(totals.completed) / float64(numberOfDays),
+	)
+	totals.avgAbandoned = internaltime.Round(
+		float64(totals.abandoned) / float64(numberOfDays),
+	)
+
+	return totals
 }
 
-// getSessions retrieves the work sessions
-// for the specified time period.
-func (s *Stats) getSessions() error {
-	b, err := s.dbClient.GetSessions(s.StartTime, s.EndTime, s.Tags)
-	if err != nil {
-		return err
+func getBarChart(data map[int]time.Duration, period aggregatePeriod) string {
+	if len(data) == 0 {
+		return ""
 	}
 
-	for _, v := range b {
-		sess := session.Session{}
-
-		if err != nil {
-			err = json.Unmarshal(v, &sess)
-			return err
-		}
-
-		s.Sessions = append(s.Sessions, sess)
-	}
-
-	return nil
-}
-
-// getHourlyBreakdown retrieves the hourly breakdown
-// for the current time period.
-func (s *Stats) getHourlyBreakdown() string {
-	header := fmt.Sprintf("\n%s", color.Blue("Hourly breakdown (minutes)"))
+	header := color.Blue(fmt.Sprintf("\n%s breakdown (minutes)", period))
 
 	type keyValue struct {
-		value *quantity
+		value time.Duration
 		key   int
 	}
 
-	sl := make([]keyValue, 0, len(s.Data.HourofDay))
-	for k, v := range s.Data.HourofDay {
+	sl := make([]keyValue, 0, len(data))
+	for k, v := range data {
 		sl = append(sl, keyValue{v, k})
 	}
 
@@ -385,70 +281,30 @@ func (s *Stats) getHourlyBreakdown() string {
 	var bars pterm.Bars
 
 	for _, v := range sl {
-		val := s.Data.HourofDay[v.key]
+		var label string
 
-		d := time.Date(2000, 1, 1, v.key, 0, 0, 0, time.UTC)
-
-		bars = append(bars, pterm.Bar{
-			Label: color.Cyan(d.Format("03:04 PM")),
-			Value: val.minutes,
-		})
-	}
-
-	chart, err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).
-		WithHorizontal().
-		WithShowValue().
-		WithBars(bars).
-		Srender()
-	if err != nil {
-		pterm.Error.Println(err)
-		return ""
-	}
-
-	return header + chart
-}
-
-// getWorkHistory retrieves the work history bar graph
-// for the current time period.
-func (s *Stats) getWorkHistory() string {
-	if s.Data.Totals.minutes == 0 {
-		return ""
-	}
-
-	header := fmt.Sprintf("\n%s", color.Blue("Work history (minutes)"))
-
-	type keyValue struct {
-		value *quantity
-		key   string
-	}
-
-	sl := make([]keyValue, 0, len(s.Data.History))
-	for k, v := range s.Data.History {
-		sl = append(sl, keyValue{v, k})
-	}
-
-	sort.Slice(sl, func(i, j int) bool {
-		iTime, err := time.Parse(s.Data.HistoryKeyFormat, sl[i].key)
-		if err != nil {
-			return true
+		switch period {
+		case yearly:
+			label = fmt.Sprintf("%d", v.key)
+		case monthly:
+			label = time.Month(v.key).String()
+		case weekly:
+			label = time.Weekday(v.key).String()
+		case daily:
+			date, _ := dateparse.ParseAny(strconv.Itoa(v.key))
+			label = fmt.Sprintf(
+				"%s %02d, %d",
+				date.Month().String(),
+				date.Day(),
+				date.Year(),
+			)
+		case hourly:
+			label = fmt.Sprintf("%02d:00", v.key)
 		}
 
-		jTime, err := time.Parse(s.Data.HistoryKeyFormat, sl[j].key)
-		if err != nil {
-			return true
-		}
-
-		return iTime.Before(jTime)
-	})
-
-	var bars pterm.Bars
-
-	for _, v := range sl {
-		val := s.Data.History[v.key]
-
 		bars = append(bars, pterm.Bar{
-			Label: v.key,
-			Value: val.minutes,
+			Value: internaltime.Round(v.value.Minutes()),
+			Label: label,
 		})
 	}
 
@@ -463,117 +319,40 @@ func (s *Stats) getWorkHistory() string {
 	}
 
 	return header + chart
-}
-
-// getWeeklyBreakdown retrieves weekly breakdown
-// for the current time period.
-func (s *Stats) getWeeklyBreakdown() string {
-	header := fmt.Sprintf("\n%s", color.Blue("Weekly breakdown (minutes)"))
-
-	type keyValue struct {
-		value *quantity
-		key   time.Weekday
-	}
-
-	sl := make([]keyValue, 0, len(s.Data.Weekday))
-	for k, v := range s.Data.Weekday {
-		sl = append(sl, keyValue{v, k})
-	}
-
-	sort.SliceStable(sl, func(i, j int) bool {
-		return int(sl[i].key) < int(sl[j].key)
-	})
-
-	var bars pterm.Bars
-
-	for _, v := range sl {
-		val := s.Data.Weekday[v.key]
-
-		bars = append(bars, pterm.Bar{
-			Label: color.Cyan(v.key.String()),
-			Value: val.minutes,
-		})
-	}
-
-	chart, err := pterm.DefaultBarChart.WithHorizontalBarCharacter(barChartChar).
-		WithHorizontal().
-		WithShowValue().
-		WithBars(bars).
-		Srender()
-	if err != nil {
-		pterm.Error.Println(err)
-		return ""
-	}
-
-	return header + chart
-}
-
-// getAverages retrieves the average time logged for the
-// current time period.
-func (s *Stats) getAverages() string {
-	hoursDiff := internaltime.Round(s.EndTime.Sub(s.StartTime).Hours())
-
-	if hoursDiff > hoursInADay {
-		header := fmt.Sprintf("\n%s\n", color.Blue("Averages"))
-
-		hours, minutes := internaltime.MinsToHoursAndMins(
-			s.Data.Averages.minutes,
-		)
-
-		timeLogged := fmt.Sprintln(
-			"Average time logged per day:",
-			color.Green(hours),
-			color.Green("hours"),
-			color.Green(minutes),
-			color.Green("minutes"),
-		)
-
-		completed := fmt.Sprintln(
-			"Completed sessions per day:",
-			color.Green(s.Data.Averages.completed),
-		)
-
-		abandoned := fmt.Sprintln(
-			"Abandoned sessions per day:",
-			color.Green(s.Data.Averages.abandoned),
-		)
-
-		return header + timeLogged + completed + abandoned
-	}
-
-	return ""
 }
 
 // getTags retrieves the tag breakdown for the current time period.
-func (s *Stats) getTags() string {
+func getTags(tags map[string]time.Duration) string {
 	var builder strings.Builder
+
+	if len(tags) == 0 {
+		return ""
+	}
 
 	builder.WriteString(fmt.Sprintf("\n%s\n", color.Blue("Tags")))
 
-	type KeyValue struct {
-		Key   string
-		Value int
+	type keyValue struct {
+		key   string
+		value time.Duration
 	}
 
-	kv := make([]KeyValue, 0, len(s.Data.Tags))
-	for k, v := range s.Data.Tags {
-		kv = append(kv, KeyValue{k, v.minutes})
+	kv := make([]keyValue, 0, len(tags))
+	for k, v := range tags {
+		kv = append(kv, keyValue{k, v})
 	}
 
 	sort.SliceStable(kv, func(i, j int) bool {
-		return kv[i].Value > kv[j].Value
+		return kv[i].value > kv[j].value
 	})
 
 	for _, v := range kv {
-		hrs, mins := internaltime.MinsToHoursAndMins(s.Data.Tags[v.Key].minutes)
+		//nolint:gomnd // limit to first 2 units
+		duration := durafmt.Parse(v.value).LimitToUnit("hours").LimitFirstN(2)
 
 		tag := fmt.Sprintf(
-			"%s: %s %s %s %s\n",
-			v.Key,
-			color.Green(hrs),
-			color.Green("hours"),
-			color.Green(mins),
-			color.Green("minutes"),
+			"%s: %s\n",
+			v.key,
+			color.Green(duration),
 		)
 
 		builder.WriteString(tag)
@@ -582,323 +361,114 @@ func (s *Stats) getTags() string {
 	return builder.String()
 }
 
-// getSummary retrieves the work session summary for the current
-// time period.
-func (s *Stats) getSummary() string {
-	header := fmt.Sprintf("%s\n", color.Blue("Summary"))
+func getAverages(totals summary) string {
+	header := fmt.Sprintf("\n%s\n", color.Blue("Averages"))
 
-	totalHrs, totalMins := internaltime.MinsToHoursAndMins(
-		s.Data.Totals.minutes,
-	)
+	duration := durafmt.Parse(totals.avgTime)
 
 	timeLogged := fmt.Sprintf(
-		"Total time logged: %s %s %s %s\n",
-		color.Green(totalHrs),
-		color.Green("hours"),
-		color.Green(totalMins),
-		color.Green("minutes"),
+		"Time logged: %s\n",
+		//nolint:gomnd // limit to first 2 units
+		color.Green(duration.LimitToUnit("hours").LimitFirstN(2)),
 	)
 
 	completed := fmt.Sprintln(
-		"Work sessions completed:",
-		color.Green(s.Data.Totals.completed),
+		"Sessions completed:",
+		color.Green(totals.avgCompleted),
 	)
 
 	abandoned := fmt.Sprintln(
-		"Work sessions abandoned:",
-		color.Green(s.Data.Totals.abandoned),
+		"Sessions abandoned:",
+		color.Green(totals.avgAbandoned),
 	)
 
 	return header + timeLogged + completed + abandoned
 }
 
-func (s *Stats) compute() {
-	s.Data.computeTotals(s.Sessions, s.StartTime, s.EndTime)
-	s.Data.computeAverages(s.StartTime, s.EndTime)
-}
+// getSummary retrieves the work session summary for the current time period.
+func getSummary(totals summary) string {
+	header := fmt.Sprintf("%s\n", color.Blue("Summary"))
 
-func printTable(data [][]string, w io.Writer) {
-	table := tablewriter.NewWriter(w)
-	table.SetHeader([]string{"#", "Start date", "End date", "Tag", "Status"})
-	table.SetAutoWrapText(false)
+	duration := durafmt.Parse(totals.totalTime)
 
-	for _, v := range data {
-		table.Append(v)
-	}
-
-	table.Render()
-}
-
-// EditTag.is used to edit the tags of the specified sessions.
-func (s *Stats) EditTag(w io.Writer, r io.Reader) error {
-	tag := s.Tags
-	// So that getSessions() does not filter by tag
-	s.Tags = []string{}
-
-	err := s.getSessions()
-	if err != nil {
-		return err
-	}
-
-	if len(s.Sessions) == 0 {
-		pterm.Info.Println(noSessionsMsg)
-		return nil
-	}
-
-	for i := range s.Sessions {
-		s.Sessions[i].Tags = tag
-	}
-
-	printSessionsTable(w, s.Sessions)
-
-	warning := pterm.Warning.Sprint(
-		"The sessions above will be updated. Press ENTER to proceed",
+	timeLogged := fmt.Sprintf(
+		"Time logged: %s\n",
+		//nolint:gomnd // limit to first 2 units
+		color.Green(duration.LimitToUnit("hours").LimitFirstN(2)),
 	)
-	fmt.Fprint(w, warning)
 
-	reader := bufio.NewReader(r)
-
-	_, _ = reader.ReadString('\n')
-
-	for i := range s.Sessions {
-		sess := s.Sessions[i]
-
-		err = s.dbClient.UpdateSession(&sess)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// Delete attempts to delete all sessions that fall
-// in the specified time range. It requests for
-// confirmation before proceeding with the permanent
-// removal of the sessions from the database.
-func (s *Stats) Delete(w io.Writer, r io.Reader) error {
-	err := s.List(w)
-	if err != nil {
-		return err
-	}
-
-	if len(s.Sessions) == 0 {
-		return nil
-	}
-
-	warning := pterm.Warning.Sprint(
-		"The above sessions will be deleted permanently. Press ENTER to proceed",
+	completed := fmt.Sprintln(
+		"Sessions completed:",
+		color.Green(totals.completed),
 	)
-	fmt.Fprint(w, warning)
 
-	reader := bufio.NewReader(r)
+	abandoned := fmt.Sprintln(
+		"Sessions abandoned:",
+		color.Green(totals.abandoned),
+	)
 
-	_, _ = reader.ReadString('\n')
-
-	return s.dbClient.DeleteSessions(s.Sessions)
-}
-
-func printSessionsTable(w io.Writer, sessions []session.Session) {
-	data := make([][]string, len(sessions))
-
-	for i := range sessions {
-		sess := sessions[i]
-
-		statusText := color.Green("completed")
-		if !sess.Completed {
-			statusText = color.Red("abandoned")
-		}
-
-		endDate := sess.EndTime.Format("Jan 02, 2006 03:04 PM")
-		if sess.EndTime.IsZero() {
-			endDate = ""
-		}
-
-		tags := strings.Join(sess.Tags, ", ")
-
-		sl := []string{
-			fmt.Sprintf("%d", i+1),
-			sess.StartTime.Format("Jan 02, 2006 03:04 PM"),
-			endDate,
-			tags,
-			statusText,
-		}
-
-		data = append(data, sl)
-	}
-
-	printTable(data, w)
-}
-
-// List prints out a table of all the sessions that
-// were created within the specified time range.
-func (s *Stats) List(w io.Writer) error {
-	err := s.getSessions()
-	if err != nil {
-		return err
-	}
-
-	if len(s.Sessions) == 0 {
-		pterm.Info.Println(noSessionsMsg)
-		return nil
-	}
-
-	printSessionsTable(w, s.Sessions)
-
-	return nil
+	return header + timeLogged + completed + abandoned
 }
 
 // Show displays the relevant statistics for the
 // set time period after making the necessary calculations.
-func (s *Stats) Show(w io.Writer) error {
-	defer s.dbClient.Close()
+func Show() error {
+	defer db.Close()
 
-	err := s.getSessions()
+	sessions, err := db.GetSessions(opts.StartTime, opts.EndTime, opts.Tags)
 	if err != nil {
 		return err
 	}
 
-	if s.StartTime.IsZero() && len(s.Sessions) > 0 {
-		fs := s.Sessions[0].StartTime
-		s.StartTime = time.Date(
-			fs.Year(),
-			fs.Month(),
-			fs.Day(),
-			0,
-			0,
-			0,
-			0,
-			fs.Location(),
-		)
+	// For all-time, set start time to the date of the first session
+	if opts.StartTime.IsZero() && len(sessions) > 0 {
+		firstSession := sessions[0].StartTime
+		opts.StartTime = internaltime.RoundToStart(firstSession)
 	}
 
-	diff := s.EndTime.Sub(s.StartTime)
-	s.HoursDiff = int(diff.Hours())
+	totals := computeTotals(sessions)
+	aggregates := computeAggregates(sessions)
 
-	s.Data = initData(s.StartTime, s.EndTime, s.HoursDiff)
-
-	s.compute()
-
-	reportingStart := s.StartTime.Format("January 02, 2006")
-	reportingEnd := s.EndTime.Format("January 02, 2006")
+	reportingStart := opts.StartTime.Format("January 02, 2006")
+	reportingEnd := opts.EndTime.Format("January 02, 2006")
 	timePeriod := "Reporting period: " + reportingStart + " - " + reportingEnd
 
 	header := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgYellow)).
 		WithTextStyle(pterm.NewStyle(pterm.FgBlack)).
 		Sprintfln(timePeriod)
 
-	summary := s.getSummary()
-	averages := s.getAverages()
+	hoursDiff := internaltime.Round(opts.EndTime.Sub(opts.StartTime).Hours())
 
-	var workHistory string
-	if s.HoursDiff > hoursInADay {
-		workHistory = s.getWorkHistory()
+	var history string
+	//nolint:gocritic // if-else more appropriate
+	if hoursDiff > internaltime.HoursInADay &&
+		hoursDiff <= internaltime.MaxHoursInAMonth {
+		history = getBarChart(aggregates.daily, daily)
+	} else if hoursDiff > internaltime.MaxHoursInAYear {
+		history = getBarChart(aggregates.yearly, yearly)
+	} else {
+		history = getBarChart(aggregates.monthly, monthly)
 	}
 
-	var tags string
-	if len(s.Tags) == 0 {
-		tags = s.getTags()
-	}
-
-	weekly := s.getWeeklyBreakdown()
-
-	hourly := s.getHourlyBreakdown()
+	output := fmt.Sprint(
+		header,
+		getSummary(totals),
+		getAverages(totals),
+		getTags(totals.tags),
+		history,
+		getBarChart(aggregates.weekly, weekly),
+		getBarChart(aggregates.hourly, hourly),
+	)
 
 	fmt.Fprintln(
-		w,
-		strings.TrimSpace(
-			header+summary+averages+tags+workHistory+weekly+hourly,
-		),
+		opts.Stdout,
+		strings.TrimSpace(output),
 	)
 
 	return nil
 }
 
-type statsCtx interface {
-	String(name string) string
-}
-
-// New returns an instance of Stats constructed
-// from command-line arguments.
-func New(ctx statsCtx, dbClient store.DB) (*Stats, error) {
-	s := &Stats{}
-	s.dbClient = dbClient
-
-	if (ctx.String("tag")) != "" {
-		s.Tags = strings.Split(ctx.String("tag"), ",")
-	}
-
-	period := ctx.String("period")
-
-	if period != "" && !slices.Contains(statsPeriod, timePeriod(period)) {
-		var sl []string
-		for _, v := range statsPeriod {
-			sl = append(sl, string(v))
-		}
-
-		return nil, fmt.Errorf(
-			"Period must be one of: %s",
-			strings.Join(sl, ", "),
-		)
-	}
-
-	s.StartTime, s.EndTime = getPeriod(timePeriod(period))
-
-	// start and end options will override the set period
-	start := strings.TrimSpace(ctx.String("start"))
-	end := strings.TrimSpace(ctx.String("end"))
-
-	timeFormatLength := 10 // for YYYY-MM-DD
-
-	if start != "" {
-		if len(start) == timeFormatLength {
-			start += " 12:00:00 AM"
-		}
-
-		v, err := time.Parse("2006-1-2 3:4:5 PM", start)
-		if err != nil {
-			return nil, errParsingDate
-		}
-
-		// Using time.Date allows setting the correct time zone
-		// instead of UTC time
-		s.StartTime = time.Date(
-			v.Year(),
-			v.Month(),
-			v.Day(),
-			v.Hour(),
-			v.Minute(),
-			v.Second(),
-			0,
-			time.Now().Location(),
-		)
-	}
-
-	if end != "" {
-		if len(end) == timeFormatLength {
-			end += " 11:59:59 PM"
-		}
-
-		v, err := time.Parse("2006-1-2 3:4:5 PM", end)
-		if err != nil {
-			return nil, errParsingDate
-		}
-
-		s.EndTime = time.Date(
-			v.Year(),
-			v.Month(),
-			v.Day(),
-			v.Hour(),
-			v.Minute(),
-			v.Second(),
-			0,
-			time.Now().Location(),
-		)
-	}
-
-	if int(s.EndTime.Sub(s.StartTime).Seconds()) < 0 {
-		return nil, errInvalidDateRange
-	}
-
-	return s, nil
+func Init(dbClient store.DB, cfg *config.StatsConfig) {
+	db = dbClient
+	opts = cfg
 }

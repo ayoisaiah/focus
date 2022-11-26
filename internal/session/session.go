@@ -1,7 +1,9 @@
+// Package session defines focus sessions
 package session
 
 import "time"
 
+// Name represents the session name.
 type Name string
 
 const (
@@ -10,8 +12,10 @@ const (
 	LongBreak  Name = "Long break"
 )
 
+// Message maps a session to a message.
 type Message map[Name]string
 
+// Duration maps a session to time value in minutes.
 type Duration map[Name]int
 
 type Timeline struct {

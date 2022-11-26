@@ -1,3 +1,5 @@
+// Package timer operates the Focus countdown timer and handles the recovery of
+// interrupted timers
 package timer
 
 import (
@@ -37,57 +39,29 @@ var (
 	errInvalidSoundFormat  = errors.New(
 		"Invalid sound file format. Only MP3, OGG, FLAC, and WAV files are supported",
 	)
-	errFocusRunning = errors.New(
-		"Is Focus already running? Only one instance can be active at a time",
-	)
 )
 
-type timeRemaining struct {
-	t int
-	m int
-	s int
-}
-
 var (
-	opts      *config.Config
+	opts      *config.TimerConfig
 	db        store.DB
 	workCycle int
 )
+
+const sessionSettled = "settled"
 
 // Settled fulfills the os.Signal interface.
 type Settled struct{}
 
 func (s Settled) String() string {
-	return "settled"
+	return sessionSettled
 }
 
 func (s Settled) Signal() {}
 
-// Timer represents a Focus instance.
-type Timer struct {
-	Tag            string          `json:"tag"`
-	CurrentSession session.Name    `json:"session_type"`
-	Session        session.Session `json:"-"`
-	WorkCycle      int             `json:"iteration"`
-	Counter        int             `json:"counter"`
-}
-
-// nextSession retrieves the next session.
-func nextSession(current session.Name) session.Name {
-	var next session.Name
-
-	switch current {
-	case session.Work:
-		if workCycle == opts.LongBreakInterval {
-			next = session.LongBreak
-		} else {
-			next = session.ShortBreak
-		}
-	case session.ShortBreak, session.LongBreak:
-		next = session.Work
-	}
-
-	return next
+type timeRemaining struct {
+	t int
+	m int
+	s int
 }
 
 // getTimeRemaining subtracts the endTime from the currentTime
@@ -105,15 +79,26 @@ func getTimeRemaining(endTime time.Time) timeRemaining {
 	}
 }
 
-// saveSession creates or updates a work session in the data store.
-func saveSession(sess *session.Session) error {
-	if sess.Name != session.Work {
+// runSessionCmd executes the specified command.
+func runSessionCmd(sessionCmd string) error {
+	cmdSlice, err := shellquote.Split(sessionCmd)
+	if err != nil {
+		return fmt.Errorf("unable to parse session_cmd option: %w", err)
+	}
+
+	if len(cmdSlice) == 0 {
 		return nil
 	}
 
-	sess.Normalise()
+	name := cmdSlice[0]
+	args := cmdSlice[1:]
 
-	return db.UpdateSession(sess)
+	cmd := exec.Command(name, args...)
+	cmd.Stdin = opts.Stdin
+	cmd.Stdout = opts.Stdout
+	cmd.Stderr = opts.Stderr
+
+	return cmd.Run()
 }
 
 // printSession writes the details of the current
@@ -185,7 +170,7 @@ func handleInterruption(sess *session.Session) chan os.Signal {
 	go func() {
 		s := <-c
 		// a settled signal indicates that the session was completed normally
-		if s.String() == "settled" {
+		if s.String() == sessionSettled {
 			return
 		}
 
@@ -227,9 +212,12 @@ func handleInterruption(sess *session.Session) chan os.Signal {
 func prepareAmbientSoundStream() (beep.Streamer, error) {
 	ambientSound := opts.AmbientSound
 
-	var f fs.File
-
-	var err error
+	var (
+		f        fs.File
+		err      error
+		streamer beep.StreamSeekCloser
+		format   beep.Format
+	)
 
 	ext := filepath.Ext(ambientSound)
 	// without extension, treat as OGG file
@@ -246,10 +234,6 @@ func prepareAmbientSoundStream() (beep.Streamer, error) {
 			return nil, err
 		}
 	}
-
-	var streamer beep.StreamSeekCloser
-
-	var format beep.Format
 
 	ext = filepath.Ext(ambientSound)
 
@@ -301,7 +285,7 @@ func wait() error {
 	go func() {
 		s := <-c
 
-		if s.String() == "settled" {
+		if s.String() == sessionSettled {
 			return
 		}
 
@@ -334,6 +318,160 @@ func wait() error {
 	return db.Open()
 }
 
+// countdown prints the time remaining until the end of the current session.
+func countdown(tr timeRemaining) {
+	fmt.Fprintf(
+		opts.Stdout,
+		"🕒%s:%s",
+		pterm.Yellow(fmt.Sprintf("%02d", tr.m)),
+		pterm.Yellow(fmt.Sprintf("%02d", tr.s)),
+	)
+}
+
+// nextSession retrieves the next session.
+func nextSession(current session.Name) session.Name {
+	var next session.Name
+
+	switch current {
+	case session.Work:
+		if workCycle == opts.LongBreakInterval {
+			next = session.LongBreak
+		} else {
+			next = session.ShortBreak
+		}
+	case session.ShortBreak, session.LongBreak:
+		next = session.Work
+	}
+
+	return next
+}
+
+// start begins a new session.and blocks until its completion.
+func start(sess *session.Session) {
+	endTime := sess.StartTime.
+		Add(time.Duration(opts.Duration[sess.Name] * int(time.Minute)))
+
+	if sess.Resuming() {
+		// Calculate a new end time for the interrupted work
+		// session by
+		elapsedTimeInSeconds := sess.GetElapsedTimeInSeconds()
+		endTime = time.Now().
+			Add(time.Duration(opts.Duration[sess.Name]) * time.Minute).
+			Add(-time.Second * time.Duration(elapsedTimeInSeconds))
+
+		sess.EndTime = endTime
+
+		sess.Timeline = append(sess.Timeline, session.Timeline{
+			StartTime: time.Now(),
+			EndTime:   endTime,
+		})
+	}
+
+	printSession(sess, endTime)
+
+	fmt.Fprint(opts.Stdout, "\033[s")
+
+	remainder := getTimeRemaining(endTime)
+
+	countdown(remainder)
+
+	ticker := time.NewTicker(time.Second)
+	for range ticker.C {
+		fmt.Fprint(opts.Stdout, "\033[u\033[K")
+
+		remainder = getTimeRemaining(endTime)
+
+		if remainder.t <= 0 {
+			fmt.Printf("Session completed!\n\n")
+
+			lastIndex := len(sess.Timeline) - 1
+
+			sess.EndTime = endTime
+			sess.Completed = true
+			sess.Timeline[lastIndex].EndTime = endTime
+
+			return
+		}
+
+		countdown(remainder)
+	}
+}
+
+// saveSession creates or updates a work session in the data store.
+func saveSession(sess *session.Session) error {
+	if sess.Name != session.Work {
+		return nil
+	}
+
+	sess.Normalise()
+
+	return db.UpdateSession(sess)
+}
+
+// newSession initialises a new session and saves it to the data store.
+func newSession(name session.Name) (*session.Session, error) {
+	now := time.Now()
+
+	sess := &session.Session{
+		Name:      name,
+		Duration:  opts.Duration[name],
+		Tags:      opts.Tags,
+		Completed: false,
+		StartTime: now,
+		EndTime:   now,
+		Timeline: []session.Timeline{
+			{
+				StartTime: now,
+				EndTime:   now,
+			},
+		},
+	}
+
+	err := saveSession(sess)
+	if err != nil {
+		return sess, err
+	}
+
+	return sess, nil
+}
+
+// Recover attempts to recover an interrupted session.
+func Recover(dbClient store.DB, ctx *cli.Context) (*session.Session, error) {
+	var sess *session.Session
+
+	var err error
+
+	db = dbClient
+
+	opts, sess, workCycle, err = db.GetInterrupted()
+	if err != nil {
+		return nil, err
+	}
+
+	if ctx.Bool("disable-notification") {
+		opts.Notify = false
+	}
+
+	if ctx.String("sound") != "" {
+		if ctx.String("sound") == "off" {
+			opts.AmbientSound = ""
+		} else {
+			opts.AmbientSound = ctx.String("sound")
+		}
+	}
+
+	if ctx.String("session-cmd") != "" {
+		opts.SessionCmd = ctx.String("session-cmd")
+	}
+
+	if sess == nil {
+		// Set to zero value so that a new session is initialised
+		sess = &session.Session{}
+	}
+
+	return sess, nil
+}
+
 // Run begins the timer and loops forever, alternating between work and
 // break sessions until it is terminated with Ctrl-C or a maximum number of work
 // sessions is reached.
@@ -351,7 +489,7 @@ func Run(sess *session.Session) (err error) {
 
 	for {
 		if !sess.Resuming() {
-			sess, err = initSession(sessName)
+			sess, err = newSession(sessName)
 			if err != nil {
 				return err
 			}
@@ -409,156 +547,7 @@ func Run(sess *session.Session) (err error) {
 	}
 }
 
-// Recover attempts to recover an interrupted session.
-func Recover(dbClient store.DB, ctx *cli.Context) (*session.Session, error) {
-	var sess *session.Session
-
-	var err error
-
-	db = dbClient
-
-	opts, sess, workCycle, err = db.GetInterrupted()
-	if err != nil {
-		return nil, err
-	}
-
-	if ctx.Bool("disable-notification") {
-		opts.Notify = false
-	}
-
-	if ctx.String("sound") != "" {
-		if ctx.String("sound") == "off" {
-			opts.AmbientSound = ""
-		} else {
-			opts.AmbientSound = ctx.String("sound")
-		}
-	}
-
-	if ctx.String("session-cmd") != "" {
-		opts.SessionCmd = ctx.String("session-cmd")
-	}
-
-	if sess == nil {
-		// Set to zero value so that a new session is initialised
-		sess = &session.Session{}
-	}
-
-	return sess, nil
-}
-
-// initSession initialises a new session and saves it to the data store.
-func initSession(name session.Name) (*session.Session, error) {
-	now := time.Now()
-
-	sess := &session.Session{
-		Name:      name,
-		Duration:  opts.Duration[name],
-		Tags:      opts.Tags,
-		Completed: false,
-		StartTime: now,
-		EndTime:   now,
-		Timeline: []session.Timeline{
-			{
-				StartTime: now,
-				EndTime:   now,
-			},
-		},
-	}
-
-	err := saveSession(sess)
-	if err != nil {
-		return sess, err
-	}
-
-	return sess, nil
-}
-
-// start begins a new session.and blocks until its completion.
-func start(sess *session.Session) {
-	endTime := sess.StartTime.
-		Add(time.Duration(opts.Duration[sess.Name] * int(time.Minute)))
-
-	if sess.Resuming() {
-		// Calculate a new end time for the interrupted work
-		// session by
-		elapsedTimeInSeconds := sess.GetElapsedTimeInSeconds()
-		endTime = time.Now().
-			Add(time.Duration(opts.Duration[sess.Name]) * time.Minute).
-			Add(-time.Second * time.Duration(elapsedTimeInSeconds))
-
-		sess.EndTime = endTime
-
-		sess.Timeline = append(sess.Timeline, session.Timeline{
-			StartTime: time.Now(),
-			EndTime:   endTime,
-		})
-	}
-
-	printSession(sess, endTime)
-
-	fmt.Fprint(opts.Stdout, "\033[s")
-
-	remainder := getTimeRemaining(endTime)
-
-	countdown(remainder)
-
-	ticker := time.NewTicker(time.Second)
-	for range ticker.C {
-		fmt.Fprint(opts.Stdout, "\033[u\033[K")
-
-		remainder = getTimeRemaining(endTime)
-
-		if remainder.t <= 0 {
-			fmt.Printf("Session completed!\n\n")
-
-			lastIndex := len(sess.Timeline) - 1
-
-			sess.EndTime = endTime
-			sess.Completed = true
-			sess.Timeline[lastIndex].EndTime = endTime
-
-			return
-		}
-
-		countdown(remainder)
-	}
-}
-
-// countdown prints the time remaining until the end of
-// the current session.
-func countdown(tr timeRemaining) {
-	fmt.Fprintf(
-		opts.Stdout,
-		"🕒%s:%s",
-		pterm.Yellow(fmt.Sprintf("%02d", tr.m)),
-		pterm.Yellow(fmt.Sprintf("%02d", tr.s)),
-	)
-}
-
-// runSessionCmd executes the specified command.
-func runSessionCmd(sessionCmd string) error {
-	cmdSlice, err := shellquote.Split(sessionCmd)
-	if err != nil {
-		return fmt.Errorf("unable to parse session_cmd option: %w", err)
-	}
-
-	if len(cmdSlice) == 0 {
-		return nil
-	}
-
-	name := cmdSlice[0]
-	args := cmdSlice[1:]
-
-	cmd := exec.Command(name, args...)
-	cmd.Stdin = opts.Stdin
-	cmd.Stdout = opts.Stdout
-	cmd.Stderr = opts.Stderr
-
-	return cmd.Run()
-}
-
-// Init returns a new timer.
-func Init(dbClient *store.Client, cfg *config.Config) {
+func Init(dbClient *store.Client, cfg *config.TimerConfig) {
 	db = dbClient
 	opts = cfg
 }
