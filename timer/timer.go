@@ -496,9 +496,10 @@ func Run(sess *session.Session) (err error) {
 		}
 
 		if sess.Name == session.Work && !sess.Resuming() {
-			workCycle++
 			if workCycle == opts.LongBreakInterval {
 				workCycle = 1
+			} else {
+				workCycle++
 			}
 		}
 
