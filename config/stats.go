@@ -47,7 +47,7 @@ func getTimeRange(period internaltime.Period) (start, end time.Time) {
 		return
 	case internaltime.PeriodYesterday:
 		start = now.AddDate(0, 0, internaltime.Range[period])
-		end = now.AddDate(0, 0, internaltime.Range[period])
+		end = internaltime.RoundToEnd(start)
 
 		return
 	case internaltime.PeriodAllTime:
