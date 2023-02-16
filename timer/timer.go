@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -135,11 +136,17 @@ func printSession(
 		timeFormat = "03:04:05 PM"
 	}
 
+	var tags string
+	if len(sess.Tags) > 0 {
+		tags = " >>> " + strings.Join(sess.Tags, " | ")
+	}
+
 	fmt.Fprintf(
 		opts.Stdout,
-		"%s (until %s)\n",
+		"%s (until %s)%s\n",
 		text,
 		color.Highlight(endTime.Format(timeFormat)),
+		tags,
 	)
 }
 

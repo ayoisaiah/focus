@@ -278,9 +278,9 @@ func GetApp() *cli.App {
 			Usage:   "Specify an end date in the following format: YYYY-MM-DD [HH:MM:SS PM] (defaults to the current time)",
 		},
 		&cli.StringFlag{
-			Name:    "tag",
+			Name:    "tags",
 			Aliases: []string{"t"},
-			Usage:   "Match only sessions with a specific tag",
+			Usage:   "Filter sessions by tags",
 		},
 	}
 
@@ -301,7 +301,7 @@ func GetApp() *cli.App {
 			Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground. Disable sound by setting to 'off'",
 		},
 		&cli.StringFlag{
-			Name:    "tag",
+			Name:    "tags",
 			Aliases: []string{"t"},
 			Usage:   "Add comma-delimited tags to a session",
 		},
