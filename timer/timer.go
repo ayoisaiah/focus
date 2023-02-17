@@ -450,7 +450,16 @@ func Recover(dbClient store.DB, ctx *cli.Context) (*session.Session, error) {
 
 	db = dbClient
 
-	opts, sess, workCycle, err = db.GetInterrupted()
+	var pausedKey []byte
+
+	if ctx.Bool("select") {
+		pausedKey, err = db.SelectPaused()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	opts, sess, workCycle, err = db.GetInterrupted(pausedKey)
 	if err != nil {
 		return nil, err
 	}

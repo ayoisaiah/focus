@@ -30,7 +30,7 @@ func printTable(data [][]string, writer io.Writer) {
 }
 
 func printSessionsTable(w io.Writer, sessions []session.Session) {
-	data := make([][]string, 0)
+	tableBody := make([][]string, 0)
 
 	for i := range sessions {
 		sess := sessions[i]
@@ -47,7 +47,7 @@ func printSessionsTable(w io.Writer, sessions []session.Session) {
 
 		tags := strings.Join(sess.Tags, ", ")
 
-		sl := []string{
+		row := []string{
 			fmt.Sprintf("%d", i+1),
 			sess.StartTime.Format("January 02, 2006 03:04 PM"),
 			endDate,
@@ -55,10 +55,10 @@ func printSessionsTable(w io.Writer, sessions []session.Session) {
 			statusText,
 		}
 
-		data = append(data, sl)
+		tableBody = append(tableBody, row)
 	}
 
-	printTable(data, w)
+	printTable(tableBody, w)
 }
 
 // List prints out a table of all the sessions that

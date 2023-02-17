@@ -262,6 +262,11 @@ func GetApp() *cli.App {
 
 	statsFlags := []cli.Flag{
 		&cli.StringFlag{
+			Name:    "end",
+			Aliases: []string{"e"},
+			Usage:   "Specify an end date in the following format: YYYY-MM-DD [HH:MM:SS PM] (defaults to the current time)",
+		},
+		&cli.StringFlag{
 			Name:    "period",
 			Aliases: []string{"p"},
 			Usage:   "Specify a time period for (defaults to 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time",
@@ -273,29 +278,32 @@ func GetApp() *cli.App {
 			Usage:   "Specify a start date in the following format: YYYY-MM-DD [HH:MM:SS PM]",
 		},
 		&cli.StringFlag{
-			Name:    "end",
-			Aliases: []string{"e"},
-			Usage:   "Specify an end date in the following format: YYYY-MM-DD [HH:MM:SS PM] (defaults to the current time)",
-		},
-		&cli.StringFlag{
 			Name:    "tags",
 			Aliases: []string{"t"},
 			Usage:   "Filter sessions by tags",
 		},
 	}
 
-	timerFlags := []cli.Flag{
-		&cli.StringFlag{
-			Name:    "session-cmd",
-			Aliases: []string{"cmd"},
-			Usage:   "Execute an arbitrary command after each session",
+	resumeFlags := []cli.Flag{
+		&cli.BoolFlag{
+			Name:    "select",
+			Aliases: []string{"s"},
+			Usage:   "Select a paused session from a list",
 		},
+	}
+
+	timerFlags := []cli.Flag{
 		&cli.BoolFlag{
 			Name:    "disable-notification",
 			Aliases: []string{"d"},
 			Usage:   "Disable the system notification that appears after a session is completed",
 		},
 		globalFlags["no-color"],
+		&cli.StringFlag{
+			Name:    "session-cmd",
+			Aliases: []string{"cmd"},
+			Usage:   "Execute an arbitrary command after each session",
+		},
 		&cli.StringFlag{
 			Name:  "sound",
 			Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground. Disable sound by setting to 'off'",
@@ -323,7 +331,7 @@ func GetApp() *cli.App {
 			{
 				Name:   "resume",
 				Usage:  "Resume a previously interrupted session",
-				Flags:  timerFlags,
+				Flags:  append(timerFlags, resumeFlags...),
 				Action: resumeAction,
 			},
 			{
