@@ -17,12 +17,6 @@ import (
 	"time"
 
 	"github.com/adrg/xdg"
-	"github.com/ayoisaiah/focus/config"
-	"github.com/ayoisaiah/focus/internal/color"
-	"github.com/ayoisaiah/focus/internal/session"
-	"github.com/ayoisaiah/focus/internal/static"
-	internaltime "github.com/ayoisaiah/focus/internal/time"
-	"github.com/ayoisaiah/focus/store"
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/flac"
 	"github.com/faiface/beep/mp3"
@@ -33,6 +27,13 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
+
+	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/color"
+	"github.com/ayoisaiah/focus/internal/session"
+	"github.com/ayoisaiah/focus/internal/static"
+	internaltime "github.com/ayoisaiah/focus/internal/time"
+	"github.com/ayoisaiah/focus/store"
 )
 
 var (

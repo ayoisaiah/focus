@@ -14,10 +14,11 @@ import (
 	"sync"
 
 	"github.com/adrg/xdg"
-	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/pterm/pterm"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
+
+	"github.com/ayoisaiah/focus/internal/session"
 )
 
 var timerCfg = &TimerConfig{
@@ -292,7 +293,7 @@ func setTimerConfig(ctx *cli.Context) {
 	timerCfg.Duration[session.LongBreak] = viper.GetInt(configLongBreakMinutes)
 
 	// set from command-line arguments
-	tagArg := ctx.String("tags")
+	tagArg := ctx.String("tag")
 
 	if tagArg != "" {
 		tags := strings.Split(tagArg, ",")

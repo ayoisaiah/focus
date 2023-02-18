@@ -10,10 +10,11 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/araddon/dateparse"
-	internaltime "github.com/ayoisaiah/focus/internal/time"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/exp/slices"
+
+	internaltime "github.com/ayoisaiah/focus/internal/time"
 )
 
 var errInvalidDateRange = errors.New(

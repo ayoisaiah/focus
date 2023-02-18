@@ -9,14 +9,15 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/pterm/pterm"
+	"github.com/urfave/cli/v2"
+
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/color"
 	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/ayoisaiah/focus/stats"
 	"github.com/ayoisaiah/focus/store"
 	"github.com/ayoisaiah/focus/timer"
-	"github.com/pterm/pterm"
-	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -278,7 +279,7 @@ func GetApp() *cli.App {
 			Usage:   "Specify a start date in the following format: YYYY-MM-DD [HH:MM:SS PM]",
 		},
 		&cli.StringFlag{
-			Name:    "tags",
+			Name:    "tag",
 			Aliases: []string{"t"},
 			Usage:   "Filter sessions by tags",
 		},
@@ -309,7 +310,7 @@ func GetApp() *cli.App {
 			Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground. Disable sound by setting to 'off'",
 		},
 		&cli.StringFlag{
-			Name:    "tags",
+			Name:    "tag",
 			Aliases: []string{"t"},
 			Usage:   "Add comma-delimited tags to a session",
 		},

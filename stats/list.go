@@ -5,9 +5,10 @@ import (
 	"io"
 	"strings"
 
+	"github.com/pterm/pterm"
+
 	"github.com/ayoisaiah/focus/internal/color"
 	"github.com/ayoisaiah/focus/internal/session"
-	"github.com/pterm/pterm"
 )
 
 func printTable(data [][]string, writer io.Writer) {

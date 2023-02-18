@@ -3,8 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/ayoisaiah/focus"
 	"github.com/pterm/pterm"
+
+	"github.com/ayoisaiah/focus"
 )
 
 func run(args []string) error {

@@ -14,11 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ayoisaiah/focus/config"
-	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/pterm/pterm"
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/exp/slices"
+
+	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/session"
 )
 
 var pathToDB string
@@ -35,9 +36,9 @@ var (
 
 type timerState struct {
 	Opts       *config.TimerConfig `json:"opts"`
-	WorkCycle  int                 `json:"work_cycle"`
-	SessionKey []byte              `json:"session_key"`
 	Timestamp  string              `json:"timestamp"`
+	SessionKey []byte              `json:"session_key"`
+	WorkCycle  int                 `json:"work_cycle"`
 }
 
 // Client is a BoltDB database client.
@@ -67,9 +68,9 @@ func (c *Client) SaveTimer(
 
 	value, err := json.Marshal(timerState{
 		opts,
-		workCycle,
-		sessionKey,
 		timestamp,
+		sessionKey,
+		workCycle,
 	})
 	if err != nil {
 		return err
@@ -256,11 +257,12 @@ func (c *Client) SelectPaused() ([]byte, error) {
 			return err
 		}
 
-		if key, ok := m[num]; !ok {
+		key, ok := m[num]
+		if !ok {
 			return fmt.Errorf("%d is not associated with a session", num)
-		} else {
-			selected = key
 		}
+
+		selected = key
 
 		return nil
 	})
@@ -324,7 +326,7 @@ func (c *Client) GetSessions(
 		return nil
 	})
 
-	var s []session.Session
+	s := make([]session.Session, len(b))
 
 	for _, v := range b {
 		sess := session.Session{}

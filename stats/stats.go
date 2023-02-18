@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/araddon/dateparse"
+	"github.com/hako/durafmt"
+	"github.com/pterm/pterm"
+
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/color"
 	"github.com/ayoisaiah/focus/internal/session"
 	internaltime "github.com/ayoisaiah/focus/internal/time"
 	"github.com/ayoisaiah/focus/store"
-	"github.com/hako/durafmt"
-	"github.com/pterm/pterm"
 )
 
 var (
@@ -283,6 +284,7 @@ func getBarChart(data map[int]time.Duration, period aggregatePeriod) string {
 	for _, v := range sl {
 		var label string
 
+		//nolint:exhaustive // `all` case is not needed
 		switch period {
 		case yearly:
 			label = fmt.Sprintf("%d", v.key)
