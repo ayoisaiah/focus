@@ -12,7 +12,7 @@ linters-settings:
       - performance
       - style
   goimports:
-    local-prefixes: github.com/ayoisaiah/f2
+    local-prefixes: github.com/ayoisaiah/focus
   gomnd:
     settings:
       mnd:
@@ -30,7 +30,6 @@ linters:
   disable-all: true
   enable:
     - bodyclose
-    - deadcode
     - depguard
     - dogsled
     - dupl
@@ -57,13 +56,12 @@ linters:
     - predeclared
     - revive
     - staticcheck
-    - structcheck
     - stylecheck
     - thelper
     - tparallel
     - unconvert
     - unparam
-    - varcheck
+    - unused
     - whitespace
     - wsl
 
@@ -78,6 +76,9 @@ issues:
     - linters:
         - stylecheck
       text: 'error strings should not be capitalized'
+    - linters:
+        - typecheck
+      text: 'has no field or method'
     - linters:
         - typecheck
       text: 'undeclared name'
