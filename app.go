@@ -281,7 +281,7 @@ func GetApp() *cli.App {
 		&cli.StringFlag{
 			Name:    "tag",
 			Aliases: []string{"t"},
-			Usage:   "Filter sessions by tags",
+			Usage:   "Filter sessions by tag",
 		},
 	}
 
@@ -308,6 +308,11 @@ func GetApp() *cli.App {
 		&cli.StringFlag{
 			Name:  "sound",
 			Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground. Disable sound by setting to 'off'",
+		},
+		&cli.StringFlag{
+			Name:    "sound-on-break",
+			Aliases: []string{"sob"},
+			Usage:   "Enable ambient sound in break sessions",
 		},
 		&cli.StringFlag{
 			Name:    "tag",
@@ -347,7 +352,7 @@ func GetApp() *cli.App {
 				Flags:  append(statsFlags, globalFlags["no-color"]),
 			},
 			{
-				Name:   "edit-tags",
+				Name:   "edit-tag",
 				Usage:  "Edit the tags for a set of focus sessions",
 				Action: editTagsAction,
 				Flags:  append(statsFlags, globalFlags["no-color"]),

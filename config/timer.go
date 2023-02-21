@@ -64,7 +64,7 @@ const (
 const (
 	configWorkMinutes         = "work_mins"
 	configWorkMessage         = "work_msg"
-	configAmbientSound        = "ambient_sound"
+	configAmbientSound        = "sound"
 	configShortBreakMinutes   = "short_break_mins"
 	configShortBreakMessage   = "short_break_msg"
 	configLongBreakMinutes    = "long_break_mins"
@@ -73,7 +73,7 @@ const (
 	configAutoStartWork       = "auto_start_work"
 	configAutoStartBreak      = "auto_start_break"
 	configNotify              = "notify"
-	configSoundOnBreak        = "ambient_sound_on_break"
+	configSoundOnBreak        = "sound_on_break"
 	configTwentyFourHourClock = "24hr_clock"
 	configSessionCmd          = "session_cmd"
 	configDarkTheme           = "dark_theme"
@@ -87,7 +87,7 @@ type TimerConfig struct {
 	Stdin               io.Reader        `json:"-"`
 	Duration            session.Duration `json:"duration"`
 	Message             session.Message  `json:"message"`
-	AmbientSound        string           `json:"ambient_sound"`
+	AmbientSound        string           `json:"sound"`
 	PathToConfig        string           `json:"path_to_config"`
 	PathToDB            string           `json:"path_to_db"`
 	SessionCmd          string           `json:"session_cmd"`
@@ -96,7 +96,7 @@ type TimerConfig struct {
 	Notify              bool             `json:"notify"`
 	DarkTheme           bool             `json:"dark_theme"`
 	TwentyFourHourClock bool             `json:"twenty_four_hour_clock"`
-	PlaySoundOnBreak    bool             `json:"ambient_sound_on_break"`
+	PlaySoundOnBreak    bool             `json:"sound_on_break"`
 	AutoStartBreak      bool             `json:"auto_start_break"`
 	AutoStartWork       bool             `json:"auto_start_work"`
 }
@@ -308,6 +308,10 @@ func setTimerConfig(ctx *cli.Context) {
 		timerCfg.Notify = false
 	}
 
+	if ctx.Bool("sound-on-break") {
+		timerCfg.PlaySoundOnBreak = true
+	}
+
 	if ctx.String("sound") != "" {
 		if ctx.String("sound") == "off" {
 			timerCfg.AmbientSound = ""
@@ -372,6 +376,7 @@ func timerDefaults() {
 	viper.SetDefault(configAutoStartWork, false)
 	viper.SetDefault(configNotify, true)
 	viper.SetDefault(configSoundOnBreak, false)
+	viper.SetDefault(configAmbientSound, "")
 	viper.SetDefault(configSessionCmd, "")
 	viper.SetDefault(configDarkTheme, true)
 }

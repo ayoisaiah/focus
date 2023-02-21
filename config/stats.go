@@ -87,7 +87,7 @@ func setStatsConfig(ctx *cli.Context) error {
 			return err
 		}
 
-		statsCfg.StartTime = internaltime.RoundToStart(dateTime)
+		statsCfg.StartTime = dateTime
 	}
 
 	end := ctx.String("end")
@@ -97,7 +97,7 @@ func setStatsConfig(ctx *cli.Context) error {
 			return err
 		}
 
-		statsCfg.EndTime = internaltime.RoundToEnd(dateTime)
+		statsCfg.EndTime = dateTime
 	}
 
 	if int(statsCfg.EndTime.Sub(statsCfg.StartTime).Seconds()) < 0 {
