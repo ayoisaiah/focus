@@ -17,18 +17,10 @@ builds:
         goarch: arm64
     main: ./cmd/focus
 archives:
-  -
-    replacements:
-      darwin: darwin
-      linux: linux
-      windows: windows
-      amd64: amd64
-      arm64: arm64
-
-    files:
-      - LICENCE
-      - README.md
-      - CHANGELOG.md
+  files:
+    - LICENCE
+    - README.md
+    - CHANGELOG.md
 checksum:
   name_template: 'checksums.txt'
 snapshot:
@@ -40,20 +32,23 @@ changelog:
       - '^docs:'
       - '^test:'
 nfpms:
-  -
-    id: focus
+  - id: focus
     package_name: focus
-    file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    file_name_template:
+      '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
     vendor: Freshman
     homepage: https://freshman.tech
     maintainer: Ayooluwa Isaiah <ayo@freshman.tech>
-    description: Focus is a command-line productivity timer based on the Pomodoro Technique
+    description:
+      Focus is a command-line productivity timer based on the Pomodoro Technique
     license: MIT
     formats:
       - deb
       - rpm
 scoop:
-  url_template: 'https://github.com/ayoisaiah/focus/releases/download/{{ .Tag }}/{{ .ArtifactName }}'
+  url_template:
+    'https://github.com/ayoisaiah/focus/releases/download/{{ .Tag }}/{{
+    .ArtifactName }}'
   bucket:
     owner: ayoisaiah
     name: scoop-bucket
@@ -63,5 +58,14 @@ scoop:
     email: goreleaser@carlosbecker.com
   commit_msg_template: 'Scoop update for {{ .ProjectName }} version {{ .Tag }}'
   homepage: 'https://github.com/ayoisaiah/focus'
-  description: 'Focus is a command-line productivity timer based on the Pomodoro Technique'
+  description:
+    'Focus is a command-line productivity timer based on the Pomodoro Technique'
   license: MIT
+
+brews:
+  - install: |-
+      bin.install "focus"
+
+    homepage: 'https://github.com/ayoisaiah/focus'
+
+    license: 'MIT'

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 jobs:
   build:
@@ -13,26 +13,22 @@ jobs:
 
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Set up Go 1.17
-        uses: actions/setup-go@v2
+      - name: Set up Go 1.20
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.20
         id: go
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
+        uses: elgohr/Github-Release-Action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          body: ${{ env.CHANGELOG }}
-          draft: false
-          prerelease: false
+          title: ${{ github.ref }}
 
       - name: Install libasound2-dev
         run: sudo apt install libasound2-dev
@@ -42,6 +38,7 @@ jobs:
         uses: goreleaser/goreleaser-action@master
         with:
           version: latest
-          args: release --rm-dist
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SCOOP_BUCKET_GITHUB_TOKEN: ${{ secrets.SCOOP_BUCKET_GITHUB_TOKEN }}
