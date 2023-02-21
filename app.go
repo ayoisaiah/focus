@@ -85,7 +85,7 @@ func deleteAction(ctx *cli.Context) error {
 }
 
 func editConfigAction(ctx *cli.Context) error {
-	defaultEditor := "vi"
+	defaultEditor := "nano"
 
 	if runtime.GOOS == "windows" {
 		defaultEditor = "C:\\Windows\\system32\\notepad.exe"
