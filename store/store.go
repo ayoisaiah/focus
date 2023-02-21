@@ -326,7 +326,8 @@ func (c *Client) GetSessions(
 		return nil
 	})
 
-	s := make([]session.Session, len(b))
+	//nolint:prealloc // TODO: figure out why pre-allocating causes empty sessions
+	var s []session.Session
 
 	for _, v := range b {
 		sess := session.Session{}

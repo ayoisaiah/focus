@@ -96,14 +96,12 @@ func updateAggr(
 	period aggregatePeriod,
 ) {
 	for date := event.StartTime; date.Before(event.EndTime); date = date.Add(1 * time.Minute) {
-		if period == "all" {
-			if date.Before(opts.StartTime) {
-				continue
-			}
+		if date.Before(opts.StartTime) {
+			continue
+		}
 
-			if date.After(opts.EndTime) {
-				break
-			}
+		if date.After(opts.EndTime) {
+			break
 		}
 
 		i := internaltime.DayFormat(date)
