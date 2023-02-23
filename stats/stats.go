@@ -410,6 +410,23 @@ func getSummary(totals summary) string {
 	return header + timeLogged + completed + abandoned
 }
 
+// filterSessions ensures that sessions with an invalid end date are ignored.
+func filterSessions(sessions []session.Session) []session.Session {
+	filtered := sessions[:0]
+
+	for i := range sessions {
+		sess := sessions[i]
+
+		if sess.EndTime.IsZero() || sess.EndTime.Before(sess.StartTime) {
+			continue
+		}
+
+		filtered = append(filtered, sess)
+	}
+
+	return filtered
+}
+
 // Show displays the relevant statistics for the
 // set time period after making the necessary calculations.
 func Show() error {
@@ -419,6 +436,8 @@ func Show() error {
 	if err != nil {
 		return err
 	}
+
+	sessions = filterSessions(sessions)
 
 	// For all-time, set start time to the date of the first session
 	if opts.StartTime.IsZero() && len(sessions) > 0 {
