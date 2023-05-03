@@ -345,7 +345,9 @@ func setTimerConfig(ctx *cli.Context) {
 // for key application settings. The results are
 // saved to the user's config directory.
 func createTimerConfig() error {
-	prompt()
+	if os.Getenv("FOCUS_ENV") != "testing" {
+		prompt()
+	}
 
 	timerDefaults()
 

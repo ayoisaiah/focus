@@ -1,4 +1,4 @@
-package focus
+package app
 
 import (
 	"fmt"
