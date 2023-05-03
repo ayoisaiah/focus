@@ -1,3 +1,4 @@
+---
 linters-settings:
   errcheck:
     check-type-assertions: true
@@ -68,7 +69,8 @@ linters:
 issues:
   fix: true
   exclude-rules:
-    - path: _test\.go # disable some linters for test files
+    # disable some linters for test files
+    - path: _test\.go
       linters:
         - gocyclo
         - gosec
@@ -88,3 +90,4 @@ issues:
 
 run:
   issues-exit-code: 1
+  allow-parallel-runners: true
