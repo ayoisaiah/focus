@@ -2,6 +2,8 @@ package focus
 
 import (
 	"github.com/urfave/cli/v2"
+
+	"github.com/ayoisaiah/focus/app"
 )
 
 // GetApp retrieves the focus app instance.
@@ -87,39 +89,39 @@ func GetApp() *cli.App {
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{
-				Name:  "resume",
-				Usage: "Resume a previously interrupted session",
-				Flags: append(timerFlags, resumeFlags...),
-				// Action: app.ResumeAction,
+				Name:   "resume",
+				Usage:  "Resume a previously interrupted session",
+				Flags:  append(timerFlags, resumeFlags...),
+				Action: app.ResumeAction,
 			},
 			{
-				Name:  "edit-config",
-				Usage: "Edit the configuration file",
-				// Action: app.EditConfigAction,
+				Name:   "edit-config",
+				Usage:  "Edit the configuration file",
+				Action: app.EditConfigAction,
 			},
 			{
-				Name:  "list",
-				Usage: "List all the sessions within the specified time period",
-				// Action: app.ListAction,
-				Flags: append(statsFlags, globalFlags["no-color"]),
+				Name:   "list",
+				Usage:  "List all the sessions within the specified time period",
+				Action: app.ListAction,
+				Flags:  append(statsFlags, globalFlags["no-color"]),
 			},
 			{
-				Name:  "edit-tag",
-				Usage: "Edit the tags for a set of focus sessions",
-				// Action: app.EditTagsAction,
-				Flags: append(statsFlags, globalFlags["no-color"]),
+				Name:   "edit-tag",
+				Usage:  "Edit the tags for a set of focus sessions",
+				Action: app.EditTagsAction,
+				Flags:  append(statsFlags, globalFlags["no-color"]),
 			},
 			{
-				Name:  "delete",
-				Usage: "Permanently delete the all sessions within the specified time period. Will prompt before deleting.",
-				// Action: app.DeleteAction,
-				Flags: append(statsFlags, globalFlags["no-color"]),
+				Name:   "delete",
+				Usage:  "Permanently delete the all sessions within the specified time period. Will prompt before deleting.",
+				Action: app.DeleteAction,
+				Flags:  append(statsFlags, globalFlags["no-color"]),
 			},
 			{
-				Name:  "stats",
-				Usage: "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days",
-				// Action: app.ShowAction,
-				Flags: append(statsFlags, globalFlags["no-color"]),
+				Name:   "stats",
+				Usage:  "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days",
+				Action: app.ShowAction,
+				Flags:  append(statsFlags, globalFlags["no-color"]),
 			},
 		},
 		Flags: []cli.Flag{
@@ -144,7 +146,7 @@ func GetApp() *cli.App {
 				Usage:   "Work duration in minutes (default: 25)",
 			},
 		},
-		// Action: app.DefaultAction,
+		Action: app.DefaultAction,
 	}
 
 	focusApp.Flags = append(focusApp.Flags, timerFlags...)

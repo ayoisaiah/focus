@@ -21,10 +21,7 @@ import (
 	"github.com/ayoisaiah/focus/internal/session"
 )
 
-var timerCfg = &TimerConfig{
-	Message:  make(session.Message),
-	Duration: make(session.Duration),
-}
+var timerCfg *TimerConfig
 
 var once sync.Once
 
@@ -102,9 +99,10 @@ type TimerConfig struct {
 }
 
 func init() {
-	if os.Getenv("FOCUS_ENV") == "development" {
-		configFileName = "config_dev.yml"
-		dbFileName = "focus_dev.db"
+	focusEnv := strings.TrimSpace(os.Getenv("FOCUS_ENV"))
+	if focusEnv != "" {
+		configFileName = fmt.Sprintf("config_%s.yml", focusEnv)
+		dbFileName = fmt.Sprintf("focus_%s.db", focusEnv)
 	}
 }
 
@@ -220,79 +218,9 @@ Edit the configuration file (focus edit-config) to change any settings, or use c
 	}
 }
 
-// initTimerConfig initialises the application configuration.
-// If the config file does not exist,.it prompts the user
-// and saves the inputted preferences and defaults in a config file.
-func initTimerConfig() error {
-	viper.SetConfigName(configFileName)
-	viper.SetConfigType("yaml")
-
-	relPath := filepath.Join(configDir, configFileName)
-
-	pathToConfigFile, err := xdg.ConfigFile(relPath)
-	if err != nil {
-		pterm.Error.Println(err)
-		os.Exit(1)
-	}
-
-	timerCfg.PathToConfig = pathToConfigFile
-
-	viper.AddConfigPath(filepath.Dir(timerCfg.PathToConfig))
-
-	if err := viper.ReadInConfig(); err != nil {
-		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
-			return createTimerConfig()
-		}
-
-		return err
-	}
-
-	return nil
-}
-
-func setTimerConfig(ctx *cli.Context) {
-	timerCfg.Stderr = os.Stderr
-	timerCfg.Stdout = os.Stdout
-	timerCfg.Stdin = os.Stdin
-
-	pathToDB, err := xdg.DataFile(filepath.Join(configDir, dbFileName))
-	if err != nil {
-		pterm.Error.Printfln("%s: %s", errInitFailed.Error(), err.Error())
-		os.Exit(1)
-	}
-
-	timerCfg.PathToDB = pathToDB
-
-	// set from config file
-	timerCfg.LongBreakInterval = viper.GetInt(configLongBreakInterval)
-	timerCfg.AutoStartBreak = viper.GetBool(configAutoStartBreak)
-	timerCfg.AutoStartWork = viper.GetBool(configAutoStartWork)
-	timerCfg.Notify = viper.GetBool(configNotify)
-	timerCfg.TwentyFourHourClock = viper.GetBool(configTwentyFourHourClock)
-	timerCfg.PlaySoundOnBreak = viper.GetBool(configSoundOnBreak)
-	timerCfg.AmbientSound = viper.GetString(configAmbientSound)
-	timerCfg.SessionCmd = viper.GetString(configSessionCmd)
-
-	if viper.IsSet(configDarkTheme) {
-		timerCfg.DarkTheme = viper.GetBool(configDarkTheme)
-	} else {
-		timerCfg.DarkTheme = true
-	}
-
-	timerCfg.Message[session.Work] = viper.GetString(configWorkMessage)
-	timerCfg.Message[session.ShortBreak] = viper.GetString(
-		configShortBreakMessage,
-	)
-	timerCfg.Message[session.LongBreak] = viper.GetString(
-		configLongBreakMessage,
-	)
-	timerCfg.Duration[session.Work] = viper.GetInt(configWorkMinutes)
-	timerCfg.Duration[session.ShortBreak] = viper.GetInt(
-		configShortBreakMinutes,
-	)
-	timerCfg.Duration[session.LongBreak] = viper.GetInt(configLongBreakMinutes)
-
-	// set from command-line arguments
+// overrideConfigFromArgs retrieves user-defined configuration set through
+// command-line arguments and updates the timer configuration.
+func overrideConfigFromArgs(ctx *cli.Context) {
 	tagArg := ctx.String("tag")
 
 	if tagArg != "" {
@@ -341,15 +269,98 @@ func setTimerConfig(ctx *cli.Context) {
 	}
 }
 
-// createTimerConfig prompts the user to set perferred values
-// for key application settings. The results are
-// saved to the user's config directory.
-func createTimerConfig() error {
-	if os.Getenv("FOCUS_ENV") != "testing" {
-		prompt()
+func warnOnInvalidConfig(configKey string, defaultVal int) {
+	pterm.Warning.Printfln(
+		"config error: invalid %s value, using default (%d)",
+		configKey,
+		defaultVal,
+	)
+}
+
+// updateConfigFromFile retrieves configuration values from the config
+// file and uses to update the timer configuration.
+func updateConfigFromFile() {
+	longBreakInterval := viper.GetInt(configLongBreakInterval)
+	if longBreakInterval < 1 {
+		warnOnInvalidConfig(configLongBreakInterval, defaultLongBreakInterval)
+		longBreakInterval = defaultLongBreakInterval
 	}
 
-	timerDefaults()
+	workMins := viper.GetInt(configWorkMinutes)
+	if workMins < 1 {
+		warnOnInvalidConfig(configWorkMinutes, defaultWorkMinutes)
+		workMins = defaultWorkMinutes
+	}
+
+	shortBreakMins := viper.GetInt(configShortBreakMinutes)
+	if shortBreakMins < 1 {
+		warnOnInvalidConfig(configShortBreakMinutes, defaultShortBreakMinutes)
+		shortBreakMins = defaultShortBreakMinutes
+	}
+
+	longBreakMins := viper.GetInt(configLongBreakMinutes)
+	if longBreakMins < 1 {
+		warnOnInvalidConfig(configLongBreakMinutes, defaultLongBreakMinutes)
+		longBreakMins = defaultLongBreakMinutes
+	}
+
+	timerCfg.LongBreakInterval = longBreakInterval
+	timerCfg.Duration[session.Work] = workMins
+	timerCfg.Duration[session.ShortBreak] = shortBreakMins
+	timerCfg.Duration[session.LongBreak] = longBreakMins
+
+	timerCfg.AutoStartBreak = viper.GetBool(configAutoStartBreak)
+	timerCfg.AutoStartWork = viper.GetBool(configAutoStartWork)
+	timerCfg.Notify = viper.GetBool(configNotify)
+	timerCfg.TwentyFourHourClock = viper.GetBool(configTwentyFourHourClock)
+	timerCfg.PlaySoundOnBreak = viper.GetBool(configSoundOnBreak)
+	timerCfg.AmbientSound = viper.GetString(configAmbientSound)
+	timerCfg.SessionCmd = viper.GetString(configSessionCmd)
+
+	if viper.IsSet(configDarkTheme) {
+		timerCfg.DarkTheme = viper.GetBool(configDarkTheme)
+	} else {
+		timerCfg.DarkTheme = true
+	}
+
+	timerCfg.Message[session.Work] = viper.GetString(configWorkMessage)
+	timerCfg.Message[session.ShortBreak] = viper.GetString(
+		configShortBreakMessage,
+	)
+	timerCfg.Message[session.LongBreak] = viper.GetString(
+		configLongBreakMessage,
+	)
+}
+
+// setTimerConfig overrides the default configuaration with user-defined
+// settings retrieved from the config file and command-line arguments. The
+// latter overrides the former.
+func setTimerConfig(ctx *cli.Context) {
+	timerCfg.Stderr = os.Stderr
+	timerCfg.Stdout = os.Stdout
+	timerCfg.Stdin = os.Stdin
+
+	pathToDB, err := xdg.DataFile(filepath.Join(configDir, dbFileName))
+	if err != nil {
+		pterm.Error.Printfln("%s: %s", errInitFailed.Error(), err.Error())
+		os.Exit(1)
+	}
+
+	timerCfg.PathToDB = pathToDB
+
+	// set from config file
+	updateConfigFromFile()
+
+	// set from command-line arguments
+	overrideConfigFromArgs(ctx)
+}
+
+// createTimerConfig saves the user's configuration to disk
+// after prompting for key settings.
+func createTimerConfig() error {
+	if configDir == "focus" {
+		prompt()
+	}
 
 	err := viper.WriteConfigAs(timerCfg.PathToConfig)
 	if err != nil {
@@ -365,7 +376,7 @@ func createTimerConfig() error {
 	return nil
 }
 
-// timerDefaults sets program's default configuration values.
+// timerDefaults sets the timer's default configuration values.
 func timerDefaults() {
 	viper.SetDefault(configWorkMinutes, defaultWorkMinutes)
 	viper.SetDefault(configWorkMessage, "Focus on your task")
@@ -383,11 +394,46 @@ func timerDefaults() {
 	viper.SetDefault(configDarkTheme, true)
 }
 
+// initTimerConfig initialises the application configuration.
+// If the config file does not exist,.it prompts the user
+// and saves the inputted preferences and defaults in a config file.
+func initTimerConfig() error {
+	timerDefaults()
+
+	viper.SetConfigName(configFileName)
+	viper.SetConfigType("yaml")
+
+	relPath := filepath.Join(configDir, configFileName)
+
+	pathToConfigFile, err := xdg.ConfigFile(relPath)
+	if err != nil {
+		pterm.Error.Println(err)
+		os.Exit(1)
+	}
+
+	timerCfg.PathToConfig = pathToConfigFile
+
+	viper.AddConfigPath(filepath.Dir(timerCfg.PathToConfig))
+
+	if err := viper.ReadInConfig(); err != nil {
+		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
+			return createTimerConfig()
+		}
+
+		return err
+	}
+
+	return nil
+}
+
 // GetTimer initializes and returns the timer configuration.
-// This initialization is done just once no matter how many times
-// it is called.
 func GetTimer(ctx *cli.Context) *TimerConfig {
-	once.Do(func() {
+	if timerCfg == nil {
+		timerCfg = &TimerConfig{
+			Message:  make(session.Message),
+			Duration: make(session.Duration),
+		}
+
 		err := initTimerConfig()
 		if err != nil {
 			pterm.Error.Printfln("%s: %s", errInitFailed.Error(), err.Error())
@@ -395,7 +441,7 @@ func GetTimer(ctx *cli.Context) *TimerConfig {
 		}
 
 		setTimerConfig(ctx)
-	})
+	}
 
 	return timerCfg
 }

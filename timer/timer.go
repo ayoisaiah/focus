@@ -185,7 +185,7 @@ func handleInterruption(sess *session.Session) chan os.Signal {
 		exitFunc := func(err error) {
 			pterm.Error.Printfln(
 				"%s",
-				fmt.Errorf("%s: %w", errUnableToSaveSession, err),
+				fmt.Errorf("%w: %w", errUnableToSaveSession, err),
 			)
 			os.Exit(1)
 		}
