@@ -140,9 +140,9 @@ func DefaultAction(ctx *cli.Context) error {
 
 	color.DarkTheme = cfg.DarkTheme
 
-	timer.Init(dbClient, cfg)
+	t := timer.New(dbClient, cfg)
 
-	return timer.Run(&session.Session{})
+	return t.Run(&session.Session{})
 }
 
 func ListAction(ctx *cli.Context) error {
@@ -209,21 +209,19 @@ func ResumeAction(ctx *cli.Context) error {
 		disableStyling()
 	}
 
-	cfg := config.GetTimer(ctx)
-
-	color.DarkTheme = cfg.DarkTheme
-
-	dbClient, err := store.NewClient(cfg.PathToDB)
+	dbClient, err := store.NewClient(config.GetPathToDB())
 	if err != nil {
 		return err
 	}
 
-	sess, err := timer.Recover(dbClient, ctx)
+	t, sess, err := timer.Recover(dbClient, ctx)
 	if err != nil {
 		return err
 	}
 
-	return timer.Run(sess)
+	color.DarkTheme = t.Opts.DarkTheme
+
+	return t.Run(sess)
 }
 
 func StatsAction(ctx *cli.Context) error {

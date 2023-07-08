@@ -3,14 +3,12 @@ package store
 import (
 	"time"
 
-	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/session"
 )
 
 // DB is the database storage interface.
 type DB interface {
-	// SelectPaused prompts the user to select a paused session from a list
-	SelectPaused() (selectedKey []byte, err error)
+	RetrievePausedTimers() ([][]byte, error)
 	// GetSessions returns saved sessions according to the time and tag
 	// constraints
 	GetSessions(
@@ -27,10 +25,10 @@ type DB interface {
 	// GetInterrupted returns a previously stored timer and a curresponding work session
 	// (if any)
 	GetInterrupted(
-		pausedKey []byte,
-	) (opts *config.TimerConfig, sess *session.Session, workCycle int, err error)
+		sessionKey []byte,
+	) (sess *session.Session, err error)
 	// SaveTimer stores a timer and the key of an interrupted session
-	SaveTimer(sessionKey []byte, opts *config.TimerConfig, workCycle int) error
+	SaveTimer(pausedTime, timerBytes []byte) error
 	// Close ends the database connection
 	Close() error
 	// Open begins a databse connection

@@ -22,6 +22,10 @@ func GetDir() string {
 	return configDir
 }
 
+func GetPathToDB() string {
+	return pathToDB
+}
+
 func InitializePaths() {
 	focusEnv := strings.TrimSpace(os.Getenv("FOCUS_ENV"))
 	if focusEnv != "" {
