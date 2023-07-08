@@ -1,4 +1,6 @@
-package time
+// Package timeutil provides utility functions and types for working with
+// time-related operations.
+package timeutil
 
 import (
 	"fmt"

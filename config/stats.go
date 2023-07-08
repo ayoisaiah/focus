@@ -4,17 +4,15 @@ import (
 	"errors"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/adrg/xdg"
 	"github.com/araddon/dateparse"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/exp/slices"
 
-	internaltime "github.com/ayoisaiah/focus/internal/time"
+	"github.com/ayoisaiah/focus/internal/timeutil"
 )
 
 var errInvalidDateRange = errors.New(
@@ -35,29 +33,29 @@ type StatsConfig struct {
 
 // getTimeRange returns the start and end time according to the
 // specified time period.
-func getTimeRange(period internaltime.Period) (start, end time.Time) {
+func getTimeRange(period timeutil.Period) (start, end time.Time) {
 	now := time.Now()
 
-	start = internaltime.RoundToStart(now)
+	start = timeutil.RoundToStart(now)
 
-	end = internaltime.RoundToEnd(now)
+	end = timeutil.RoundToEnd(now)
 
 	//nolint:exhaustive // delibrate inexhaustive switch
 	switch period {
-	case internaltime.PeriodToday:
+	case timeutil.PeriodToday:
 		return
-	case internaltime.PeriodYesterday:
-		start = now.AddDate(0, 0, internaltime.Range[period])
-		start = internaltime.RoundToStart(start)
-		end = internaltime.RoundToEnd(start)
+	case timeutil.PeriodYesterday:
+		start = now.AddDate(0, 0, timeutil.Range[period])
+		start = timeutil.RoundToStart(start)
+		end = timeutil.RoundToEnd(start)
 
 		return
-	case internaltime.PeriodAllTime:
+	case timeutil.PeriodAllTime:
 		start = time.Time{}
 		return
 	}
 
-	start = now.AddDate(0, 0, internaltime.Range[period])
+	start = now.AddDate(0, 0, timeutil.Range[period])
 
 	return
 }
@@ -72,10 +70,10 @@ func setStatsConfig(ctx *cli.Context) error {
 		statsCfg.Tags = strings.Split(ctx.String("tag"), ",")
 	}
 
-	period := internaltime.Period(ctx.String("period"))
+	period := timeutil.Period(ctx.String("period"))
 
-	if !slices.Contains(internaltime.PeriodCollection, period) {
-		period = internaltime.Period7Days
+	if !slices.Contains(timeutil.PeriodCollection, period) {
+		period = timeutil.Period7Days
 	}
 
 	statsCfg.StartTime, statsCfg.EndTime = getTimeRange(period)
@@ -112,17 +110,11 @@ func setStatsConfig(ctx *cli.Context) error {
 func GetStats(ctx *cli.Context) *StatsConfig {
 	once.Do(func() {
 		now := time.Now()
-		start := internaltime.RoundToStart(now)
-
-		pathToDB, err := xdg.DataFile(filepath.Join(configDir, dbFileName))
-		if err != nil {
-			pterm.Error.Printfln("%s: %s", errInitFailed.Error(), err.Error())
-			os.Exit(1)
-		}
+		start := timeutil.RoundToStart(now)
 
 		statsCfg = &StatsConfig{
 			StartTime: start.AddDate(0, 0, -6),
-			EndTime:   internaltime.RoundToEnd(start),
+			EndTime:   timeutil.RoundToEnd(start),
 			PathToDB:  pathToDB,
 		}
 

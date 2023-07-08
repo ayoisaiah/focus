@@ -13,7 +13,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/adrg/xdg"
 	"github.com/pterm/pterm"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
@@ -21,9 +20,15 @@ import (
 	"github.com/ayoisaiah/focus/internal/session"
 )
 
-var timerCfg *TimerConfig
-
 var once sync.Once
+
+var timerCfg = &TimerConfig{
+	Message:  make(session.Message),
+	Duration: make(session.Duration),
+	Stderr:   os.Stderr,
+	Stdout:   os.Stdout,
+	Stdin:    os.Stdin,
+}
 
 var (
 	errReadingInput = errors.New(
@@ -35,12 +40,6 @@ var (
 	errInitFailed = errors.New(
 		"Unable to initialise Focus settings from the configuration file",
 	)
-)
-
-var (
-	configDir      = "focus"
-	configFileName = "config.yml"
-	dbFileName     = "focus.db"
 )
 
 const ascii = `
@@ -98,21 +97,11 @@ type TimerConfig struct {
 	AutoStartWork       bool             `json:"auto_start_work"`
 }
 
-func init() {
-	focusEnv := strings.TrimSpace(os.Getenv("FOCUS_ENV"))
-	if focusEnv != "" {
-		configFileName = fmt.Sprintf("config_%s.yml", focusEnv)
-		dbFileName = fmt.Sprintf("focus_%s.db", focusEnv)
-	}
-}
-
 func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 	input, err := reader.ReadString('\n')
 	if err != nil {
 		return 0, errReadingInput
 	}
-
-	reader.Reset(os.Stdin)
 
 	input = strings.TrimSpace(strings.TrimSuffix(input, "\n"))
 	if input == "" {
@@ -135,7 +124,7 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 // important timer settings. It is run only when a configuration file
 // is not already present (e.g on first run).
 func prompt() {
-	fmt.Printf("%s\n\n", ascii)
+	pterm.Printf("%s\n\n", ascii)
 
 	pterm.Info.Printfln(
 		"Your preferences will be saved to: %s\n\n",
@@ -149,13 +138,13 @@ Edit the configuration file (focus edit-config) to change any settings, or use c
 
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Print("Press ENTER to continue")
+	pterm.Print("Press ENTER to continue")
 
 	_, _ = reader.ReadString('\n')
 
 	for {
 		if !viper.IsSet(configWorkMinutes) {
-			fmt.Printf(
+			pterm.Printf(
 				"\nWork length in minutes (default: %s): ",
 				pterm.Green(defaultWorkMinutes),
 			)
@@ -170,7 +159,7 @@ Edit the configuration file (focus edit-config) to change any settings, or use c
 		}
 
 		if !viper.IsSet(configShortBreakMinutes) {
-			fmt.Printf(
+			pterm.Printf(
 				"Short break length in minutes (default: %s): ",
 				pterm.Green(defaultShortBreakMinutes),
 			)
@@ -185,7 +174,7 @@ Edit the configuration file (focus edit-config) to change any settings, or use c
 		}
 
 		if !viper.IsSet(configLongBreakMinutes) {
-			fmt.Printf(
+			pterm.Printf(
 				"Long break length in minutes (default: %s): ",
 				pterm.Green(defaultLongBreakMinutes),
 			)
@@ -200,7 +189,7 @@ Edit the configuration file (focus edit-config) to change any settings, or use c
 		}
 
 		if !viper.IsSet(configLongBreakInterval) {
-			fmt.Printf(
+			pterm.Printf(
 				"Work sessions before long break (default: %s): ",
 				pterm.Green(defaultLongBreakInterval),
 			)
@@ -336,16 +325,6 @@ func updateConfigFromFile() {
 // settings retrieved from the config file and command-line arguments. The
 // latter overrides the former.
 func setTimerConfig(ctx *cli.Context) {
-	timerCfg.Stderr = os.Stderr
-	timerCfg.Stdout = os.Stdout
-	timerCfg.Stdin = os.Stdin
-
-	pathToDB, err := xdg.DataFile(filepath.Join(configDir, dbFileName))
-	if err != nil {
-		pterm.Error.Printfln("%s: %s", errInitFailed.Error(), err.Error())
-		os.Exit(1)
-	}
-
 	timerCfg.PathToDB = pathToDB
 
 	// set from config file
@@ -358,9 +337,9 @@ func setTimerConfig(ctx *cli.Context) {
 // createTimerConfig saves the user's configuration to disk
 // after prompting for key settings.
 func createTimerConfig() error {
-	if configDir == "focus" {
-		prompt()
-	}
+	prompt()
+
+	timerDefaults()
 
 	err := viper.WriteConfigAs(timerCfg.PathToConfig)
 	if err != nil {
@@ -398,20 +377,10 @@ func timerDefaults() {
 // If the config file does not exist,.it prompts the user
 // and saves the inputted preferences and defaults in a config file.
 func initTimerConfig() error {
-	timerDefaults()
-
 	viper.SetConfigName(configFileName)
 	viper.SetConfigType("yaml")
 
-	relPath := filepath.Join(configDir, configFileName)
-
-	pathToConfigFile, err := xdg.ConfigFile(relPath)
-	if err != nil {
-		pterm.Error.Println(err)
-		os.Exit(1)
-	}
-
-	timerCfg.PathToConfig = pathToConfigFile
+	timerCfg.PathToConfig = pathToConfig
 
 	viper.AddConfigPath(filepath.Dir(timerCfg.PathToConfig))
 
@@ -428,12 +397,7 @@ func initTimerConfig() error {
 
 // GetTimer initializes and returns the timer configuration.
 func GetTimer(ctx *cli.Context) *TimerConfig {
-	if timerCfg == nil {
-		timerCfg = &TimerConfig{
-			Message:  make(session.Message),
-			Duration: make(session.Duration),
-		}
-
+	once.Do(func() {
 		err := initTimerConfig()
 		if err != nil {
 			pterm.Error.Printfln("%s: %s", errInitFailed.Error(), err.Error())
@@ -441,7 +405,7 @@ func GetTimer(ctx *cli.Context) *TimerConfig {
 		}
 
 		setTimerConfig(ctx)
-	}
+	})
 
 	return timerCfg
 }

@@ -1,3 +1,5 @@
+// Package static provides utilities for working with static files embedded in
+// the executable
 package static
 
 import (
@@ -8,14 +10,15 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/pterm/pterm"
+
+	"github.com/ayoisaiah/focus/config"
 )
 
 //go:embed files/*
 var Files embed.FS
 
 const (
-	dir       = "files"
-	configDir = "focus"
+	dir = "files"
 )
 
 // FilePath returns the path to the specified file.
@@ -37,7 +40,7 @@ func init() {
 					os.Exit(1)
 				}
 
-				relPath := filepath.Join(configDir, path)
+				relPath := filepath.Join(config.GetDir(), path)
 
 				var pathToFile string
 

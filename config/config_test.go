@@ -8,13 +8,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/adrg/xdg"
 	"github.com/pterm/pterm"
-)
-
-var (
-	pathToConfig string
-	pathToDB     string
 )
 
 func init() {
@@ -33,25 +27,15 @@ func TestMain(m *testing.M) {
 	// replace focus directory to avoid overriding configuration
 	configDir = "focus_test"
 
+	InitializePaths()
+
 	pterm.DisableOutput()
 
 	var err error
 
-	pathToDB, err = xdg.DataFile(filepath.Join(configDir, dbFileName))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	pathToConfig, err = xdg.ConfigFile(
-		filepath.Join(configDir, configFileName),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	code := m.Run()
 
-	// Remove test config directory
+	// Cleanup test directory
 	err = os.RemoveAll(filepath.Dir(pathToConfig))
 	if err != nil {
 		log.Fatal(err)

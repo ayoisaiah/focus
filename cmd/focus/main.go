@@ -6,6 +6,7 @@ import (
 	"github.com/pterm/pterm"
 
 	"github.com/ayoisaiah/focus"
+	"github.com/ayoisaiah/focus/config"
 )
 
 func run(args []string) error {
@@ -13,6 +14,8 @@ func run(args []string) error {
 }
 
 func main() {
+	config.InitializePaths()
+
 	err := run(os.Args)
 	if err != nil {
 		pterm.Error.Println(err)

@@ -32,14 +32,14 @@ import (
 	"github.com/ayoisaiah/focus/internal/color"
 	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/ayoisaiah/focus/internal/static"
-	internaltime "github.com/ayoisaiah/focus/internal/time"
+	"github.com/ayoisaiah/focus/internal/timeutil"
 	"github.com/ayoisaiah/focus/store"
 )
 
 var (
 	errUnableToSaveSession = errors.New("Unable to persist interrupted session")
 	errInvalidSoundFormat  = errors.New(
-		"Invalid sound file format. Only MP3, OGG, FLAC, and WAV files are supported",
+		"unsupported sound file format: Only MP3, OGG, FLAC, and WAV files are allowed",
 	)
 )
 
@@ -70,7 +70,7 @@ type timeRemaining struct {
 // and returns the total number of minutes and seconds left.
 func getTimeRemaining(endTime time.Time) timeRemaining {
 	difference := time.Until(endTime)
-	total := internaltime.Round(difference.Seconds())
+	total := timeutil.Round(difference.Seconds())
 	minutes := total / 60
 	seconds := total % 60
 

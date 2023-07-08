@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -16,10 +17,11 @@ import (
 type ConfigTest struct {
 	Name       string
 	ConfigFile string
+	PromptFile string
 	Expected   TimerConfig
 }
 
-var configs = []ConfigTest{
+var testCases = []ConfigTest{
 	{
 		Name:       "Normal config",
 		ConfigFile: "config1.yml",
@@ -46,6 +48,7 @@ var configs = []ConfigTest{
 	{
 		Name:       "No config (defaults)",
 		ConfigFile: "",
+		PromptFile: "defaults.txt",
 		Expected: TimerConfig{
 			Duration: map[session.Name]int{
 				session.Work:       25,
@@ -67,8 +70,33 @@ var configs = []ConfigTest{
 		},
 	},
 	{
+		Name:       "No config (prompt)",
+		ConfigFile: "",
+		PromptFile: "prompt.txt",
+		Expected: TimerConfig{
+			Duration: map[session.Name]int{
+				session.Work:       40,
+				session.ShortBreak: 12,
+				session.LongBreak:  22,
+			},
+			Message: map[session.Name]string{
+				session.Work:       "Focus on your task",
+				session.ShortBreak: "Take a breather",
+				session.LongBreak:  "Take a long break",
+			},
+			LongBreakInterval:   5,
+			Notify:              true,
+			DarkTheme:           true,
+			TwentyFourHourClock: false,
+			PlaySoundOnBreak:    false,
+			AutoStartBreak:      true,
+			AutoStartWork:       false,
+		},
+	},
+	{
 		Name:       "invalid config",
 		ConfigFile: "config2.yml",
+		PromptFile: "",
 		Expected: TimerConfig{
 			Duration: map[session.Name]int{
 				session.Work:       25,
@@ -106,10 +134,8 @@ func copyFile(src, dest string) error {
 }
 
 func TestTimerConfig(t *testing.T) {
-	for _, tc := range configs {
+	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			viper.Reset()
-
 			tc.Expected.PathToConfig = pathToConfig
 			tc.Expected.PathToDB = pathToDB
 
@@ -131,9 +157,32 @@ func TestTimerConfig(t *testing.T) {
 			ctx := cli.NewContext(&cli.App{}, nil, nil)
 
 			// reset the config
-			timerCfg = nil
+			timerCfg = &TimerConfig{
+				Message:  make(session.Message),
+				Duration: make(session.Duration),
+				Stderr:   os.Stderr,
+				Stdout:   os.Stdout,
+				Stdin:    os.Stdin,
+			}
+
+			once = sync.Once{}
+			viper.Reset()
+
+			oldStdin := os.Stdin
+
+			if tc.PromptFile != "" {
+				f, err := os.Open(filepath.Join("testdata", tc.PromptFile))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				os.Stdin = f
+			}
 
 			result := GetTimer(ctx)
+
+			// restore stdin
+			os.Stdin = oldStdin
 
 			if diff := cmp.Diff(
 				result,

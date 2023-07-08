@@ -15,7 +15,7 @@ import (
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/color"
 	"github.com/ayoisaiah/focus/internal/session"
-	internaltime "github.com/ayoisaiah/focus/internal/time"
+	"github.com/ayoisaiah/focus/internal/timeutil"
 	"github.com/ayoisaiah/focus/store"
 )
 
@@ -104,7 +104,7 @@ func updateAggr(
 			break
 		}
 
-		i := internaltime.DayFormat(date)
+		i := timeutil.DayFormat(date)
 
 		switch period {
 		case yearly:
@@ -135,10 +135,10 @@ func populateMap(max int) map[int]time.Duration {
 	}
 
 	if max == -1 {
-		start := internaltime.RoundToStart(opts.StartTime)
+		start := timeutil.RoundToStart(opts.StartTime)
 
 		for date := start; date.Before(opts.EndTime); date = date.AddDate(0, 0, 1) {
-			m[internaltime.DayFormat(date)] = time.Duration(0)
+			m[timeutil.DayFormat(date)] = time.Duration(0)
 		}
 
 		return m
@@ -189,7 +189,7 @@ func computeAggregates(sessions []session.Session) aggregates {
 				}
 
 				if start.Day() == end.Day() {
-					totals.daily[internaltime.DayFormat(start)] += end.Sub(
+					totals.daily[timeutil.DayFormat(start)] += end.Sub(
 						start,
 					)
 				} else {
@@ -239,17 +239,17 @@ func computeTotals(sessions []session.Session) summary {
 		}
 	}
 
-	hoursDiff := internaltime.Round(opts.EndTime.Sub(opts.StartTime).Hours())
+	hoursDiff := timeutil.Round(opts.EndTime.Sub(opts.StartTime).Hours())
 
-	numberOfDays := hoursDiff / internaltime.HoursInADay
+	numberOfDays := hoursDiff / timeutil.HoursInADay
 
 	totals.avgTime = time.Duration(
 		float64(totals.totalTime) / float64(numberOfDays),
 	)
-	totals.avgCompleted = internaltime.Round(
+	totals.avgCompleted = timeutil.Round(
 		float64(totals.completed) / float64(numberOfDays),
 	)
-	totals.avgAbandoned = internaltime.Round(
+	totals.avgAbandoned = timeutil.Round(
 		float64(totals.abandoned) / float64(numberOfDays),
 	)
 
@@ -303,7 +303,7 @@ func getBarChart(data map[int]time.Duration, period aggregatePeriod) string {
 		}
 
 		bars = append(bars, pterm.Bar{
-			Value: internaltime.Round(v.value.Minutes()),
+			Value: timeutil.Round(v.value.Minutes()),
 			Label: label,
 		})
 	}
@@ -442,7 +442,7 @@ func Show() error {
 	// For all-time, set start time to the date of the first session
 	if opts.StartTime.IsZero() && len(sessions) > 0 {
 		firstSession := sessions[0].StartTime
-		opts.StartTime = internaltime.RoundToStart(firstSession)
+		opts.StartTime = timeutil.RoundToStart(firstSession)
 	}
 
 	totals := computeTotals(sessions)
@@ -456,14 +456,14 @@ func Show() error {
 		WithTextStyle(pterm.NewStyle(pterm.FgBlack)).
 		Sprintfln(timePeriod)
 
-	hoursDiff := internaltime.Round(opts.EndTime.Sub(opts.StartTime).Hours())
+	hoursDiff := timeutil.Round(opts.EndTime.Sub(opts.StartTime).Hours())
 
 	var history string
 	//nolint:gocritic // if-else more appropriate
-	if hoursDiff > internaltime.HoursInADay &&
-		hoursDiff <= internaltime.MaxHoursInAMonth {
+	if hoursDiff > timeutil.HoursInADay &&
+		hoursDiff <= timeutil.MaxHoursInAMonth {
 		history = getBarChart(aggregates.daily, daily)
-	} else if hoursDiff > internaltime.MaxHoursInAYear {
+	} else if hoursDiff > timeutil.MaxHoursInAYear {
 		history = getBarChart(aggregates.yearly, yearly)
 	} else {
 		history = getBarChart(aggregates.monthly, monthly)
