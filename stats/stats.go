@@ -13,9 +13,9 @@ import (
 	"github.com/pterm/pterm"
 
 	"github.com/ayoisaiah/focus/config"
-	"github.com/ayoisaiah/focus/internal/color"
 	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/ayoisaiah/focus/internal/timeutil"
+	"github.com/ayoisaiah/focus/internal/ui"
 	"github.com/ayoisaiah/focus/store"
 )
 
@@ -261,7 +261,7 @@ func getBarChart(data map[int]time.Duration, period aggregatePeriod) string {
 		return ""
 	}
 
-	header := color.Blue(fmt.Sprintf("\n%s breakdown (minutes)", period))
+	header := ui.Blue(fmt.Sprintf("\n%s breakdown (minutes)", period))
 
 	type keyValue struct {
 		value time.Duration
@@ -329,7 +329,7 @@ func getTags(tags map[string]time.Duration) string {
 		return ""
 	}
 
-	builder.WriteString(fmt.Sprintf("\n%s\n", color.Blue("Tags")))
+	builder.WriteString(fmt.Sprintf("\n%s\n", ui.Blue("Tags")))
 
 	type keyValue struct {
 		key   string
@@ -352,7 +352,7 @@ func getTags(tags map[string]time.Duration) string {
 		tag := fmt.Sprintf(
 			"%s: %s\n",
 			v.key,
-			color.Green(duration),
+			ui.Green(duration),
 		)
 
 		builder.WriteString(tag)
@@ -362,24 +362,24 @@ func getTags(tags map[string]time.Duration) string {
 }
 
 func getAverages(totals summary) string {
-	header := fmt.Sprintf("\n%s\n", color.Blue("Averages"))
+	header := fmt.Sprintf("\n%s\n", ui.Blue("Averages"))
 
 	duration := durafmt.Parse(totals.avgTime)
 
 	timeLogged := fmt.Sprintf(
 		"Time logged: %s\n",
 		//nolint:gomnd // limit to first 2 units
-		color.Green(duration.LimitToUnit("hours").LimitFirstN(2)),
+		ui.Green(duration.LimitToUnit("hours").LimitFirstN(2)),
 	)
 
 	completed := fmt.Sprintln(
 		"Sessions completed:",
-		color.Green(totals.avgCompleted),
+		ui.Green(totals.avgCompleted),
 	)
 
 	abandoned := fmt.Sprintln(
 		"Sessions abandoned:",
-		color.Green(totals.avgAbandoned),
+		ui.Green(totals.avgAbandoned),
 	)
 
 	return header + timeLogged + completed + abandoned
@@ -387,24 +387,24 @@ func getAverages(totals summary) string {
 
 // getSummary retrieves the work session summary for the current time period.
 func getSummary(totals summary) string {
-	header := fmt.Sprintf("%s\n", color.Blue("Summary"))
+	header := fmt.Sprintf("%s\n", ui.Blue("Summary"))
 
 	duration := durafmt.Parse(totals.totalTime)
 
 	timeLogged := fmt.Sprintf(
 		"Time logged: %s\n",
 		//nolint:gomnd // limit to first 2 units
-		color.Green(duration.LimitToUnit("hours").LimitFirstN(2)),
+		ui.Green(duration.LimitToUnit("hours").LimitFirstN(2)),
 	)
 
 	completed := fmt.Sprintln(
 		"Sessions completed:",
-		color.Green(totals.completed),
+		ui.Green(totals.completed),
 	)
 
 	abandoned := fmt.Sprintln(
 		"Sessions abandoned:",
-		color.Green(totals.abandoned),
+		ui.Green(totals.abandoned),
 	)
 
 	return header + timeLogged + completed + abandoned

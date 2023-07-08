@@ -13,8 +13,8 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/ayoisaiah/focus/config"
-	"github.com/ayoisaiah/focus/internal/color"
 	"github.com/ayoisaiah/focus/internal/session"
+	"github.com/ayoisaiah/focus/internal/ui"
 	"github.com/ayoisaiah/focus/stats"
 	"github.com/ayoisaiah/focus/store"
 	"github.com/ayoisaiah/focus/timer"
@@ -138,7 +138,7 @@ func DefaultAction(ctx *cli.Context) error {
 		return err
 	}
 
-	color.DarkTheme = cfg.DarkTheme
+	ui.DarkTheme = cfg.DarkTheme
 
 	t := timer.New(dbClient, cfg)
 
@@ -219,7 +219,12 @@ func ResumeAction(ctx *cli.Context) error {
 		return err
 	}
 
-	color.DarkTheme = t.Opts.DarkTheme
+	if sess == nil {
+		// Set to zero value so that a new session is initialised
+		sess = &session.Session{}
+	}
+
+	ui.DarkTheme = t.Opts.DarkTheme
 
 	return t.Run(sess)
 }

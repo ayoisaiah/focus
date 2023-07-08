@@ -31,10 +31,10 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/ayoisaiah/focus/config"
-	"github.com/ayoisaiah/focus/internal/color"
 	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/ayoisaiah/focus/internal/static"
 	"github.com/ayoisaiah/focus/internal/timeutil"
+	"github.com/ayoisaiah/focus/internal/ui"
 	"github.com/ayoisaiah/focus/store"
 )
 
@@ -65,7 +65,8 @@ type timeRemaining struct {
 type Timer struct {
 	db         store.DB            `json:"-"`
 	Opts       *config.TimerConfig `json:"opts"`
-	PausedTime []byte              `json:"paused_time"`
+	PausedTime time.Time           `json:"paused_time"`
+	Started    time.Time           `json:"date_started"`
 	SessionKey []byte              `json:"session_key"`
 	WorkCycle  int                 `json:"work_cycle"`
 }
@@ -83,6 +84,32 @@ func getTimeRemaining(endTime time.Time) timeRemaining {
 		m: minutes,
 		s: seconds,
 	}
+}
+
+// persist updates the timer in the database so that it may be
+// recovered later.
+func (t *Timer) persist(sess *session.Session) error {
+	if sess.Name == session.Work {
+		return nil
+	}
+
+	if !sess.Completed {
+		t.SessionKey = []byte(sess.StartTime.Format(time.RFC3339))
+	}
+
+	t.PausedTime = time.Now()
+
+	timerBytes, err := json.Marshal(t)
+	if err != nil {
+		return err
+	}
+
+	err = t.db.UpdateTimer(timeutil.ToKey(t.Started), timerBytes)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // runSessionCmd executes the specified command.
@@ -120,16 +147,16 @@ func (t *Timer) printSession(
 		total := t.Opts.LongBreakInterval
 
 		text = fmt.Sprintf(
-			color.Green("[Work %d/%d]"),
+			ui.Green("[Work %d/%d]"),
 			t.WorkCycle,
 			total,
 		) + ": " + t.Opts.Message[session.Work]
 	case session.ShortBreak:
-		text = color.Blue(
+		text = ui.Blue(
 			"[Short break]",
 		) + ": " + t.Opts.Message[session.ShortBreak]
 	case session.LongBreak:
-		text = color.Magenta(
+		text = ui.Magenta(
 			"[Long break]",
 		) + ": " + t.Opts.Message[session.LongBreak]
 	}
@@ -150,7 +177,7 @@ func (t *Timer) printSession(
 		os.Stdout,
 		"%s (until %s)%s\n",
 		text,
-		color.Highlight(endTime.Format(timeFormat)),
+		ui.Highlight(endTime.Format(timeFormat)),
 		tags,
 	)
 }
@@ -205,15 +232,7 @@ func (t *Timer) handleInterruption(sess *session.Session) chan os.Signal {
 			exitFunc(err)
 		}
 
-		t.SessionKey = []byte(sess.StartTime.Format(time.RFC3339))
-		t.PausedTime = []byte(time.Now().Format(time.RFC3339))
-
-		timerBytes, err := json.Marshal(t)
-		if err != nil {
-			exitFunc(err)
-		}
-
-		err = t.db.SaveTimer(t.PausedTime, timerBytes)
+		err = t.persist(sess)
 		if err != nil {
 			exitFunc(err)
 		}
@@ -453,50 +472,32 @@ func (t *Timer) newSession(name session.Name) (*session.Session, error) {
 	return sess, nil
 }
 
-func printTable(data [][]string, writer io.Writer) {
-	d := [][]string{
-		{"#", "PAUSED DATE", "TAGS"},
-	}
-
-	d = append(d, data...)
-
-	table := pterm.DefaultTable
-	table.Boxed = true
-
-	str, err := table.WithHasHeader().WithData(d).Srender()
-	if err != nil {
-		pterm.Error.Printfln("Failed to output session table: %s", err.Error())
-		return
-	}
-
-	fmt.Fprintln(writer, str)
-}
-
-func printPausedTimers(timers []Timer) error {
+// printPausedTimers outputs a list of resumable timers.
+func printPausedTimers(timers []Timer) {
 	tableBody := make([][]string, len(timers))
 
 	for i := range timers {
 		t := timers[i]
 
-		keyTime, err := time.Parse(time.RFC3339, string(t.PausedTime))
-		if err != nil {
-			return err
-		}
-
 		row := []string{
 			fmt.Sprintf("%d", i+1),
-			keyTime.Format("January 02, 2006 03:04:05 PM"),
+			t.Started.Format("January 02, 2006 03:04:05 PM"),
+			t.PausedTime.Format("January 02, 2006 03:04:05 PM"),
 			strings.Join(t.Opts.Tags, ", "),
 		}
 
 		tableBody[i] = row
 	}
 
-	printTable(tableBody, os.Stdout)
+	tableBody = append([][]string{
+		{"#", "DATE STARTED", "DATE PAUSED", "TAGS"},
+	}, tableBody...)
 
-	return nil
+	ui.PrintTable(tableBody, os.Stdout)
 }
 
+// selectPausedTimers prompts the user to select from a list of resumable
+// timers.
 func selectPausedTimers(
 	timers []Timer,
 ) (*Timer, error) {
@@ -516,11 +517,31 @@ func selectPausedTimers(
 	}
 
 	index := num - 1
-	if len(timers) > index {
+	if index >= len(timers) {
 		return nil, fmt.Errorf("%d is not associated with a session", num)
 	}
 
 	return &timers[index], nil
+}
+
+// overrideOptsOnResume overrides timer options if specified through
+// command-line arguments.
+func (t *Timer) overrideOptsOnResume(ctx *cli.Context) {
+	if ctx.Bool("disable-notification") {
+		t.Opts.Notify = false
+	}
+
+	if ctx.String("sound") != "" {
+		if ctx.String("sound") == "off" {
+			t.Opts.AmbientSound = ""
+		} else {
+			t.Opts.AmbientSound = ctx.String("sound")
+		}
+	}
+
+	if ctx.String("session-cmd") != "" {
+		t.Opts.SessionCmd = ctx.String("session-cmd")
+	}
 }
 
 // Recover attempts to recover an interrupted session.
@@ -553,10 +574,7 @@ func Recover(
 	var t *Timer
 
 	if ctx.Bool("select") {
-		err = printPausedTimers(pausedTimers)
-		if err != nil {
-			return nil, nil, err
-		}
+		printPausedTimers(pausedTimers)
 
 		t, err = selectPausedTimers(pausedTimers)
 		if err != nil {
@@ -572,36 +590,17 @@ func Recover(
 	t.Opts.Stdout = os.Stdout
 	t.Opts.Stderr = os.Stderr
 
-	sess, err = t.db.GetInterrupted(t.SessionKey)
+	sess, err = t.db.GetSession(t.SessionKey)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = t.db.DeleteTimer(t.PausedTime)
+	err = t.db.DeleteTimer(timeutil.ToKey(t.Started))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if ctx.Bool("disable-notification") {
-		t.Opts.Notify = false
-	}
-
-	if ctx.String("sound") != "" {
-		if ctx.String("sound") == "off" {
-			t.Opts.AmbientSound = ""
-		} else {
-			t.Opts.AmbientSound = ctx.String("sound")
-		}
-	}
-
-	if ctx.String("session-cmd") != "" {
-		t.Opts.SessionCmd = ctx.String("session-cmd")
-	}
-
-	if sess == nil {
-		// Set to zero value so that a new session is initialised
-		sess = &session.Session{}
-	}
+	t.overrideOptsOnResume(ctx)
 
 	return t, sess, nil
 }
@@ -651,6 +650,11 @@ func (t *Timer) Run(sess *session.Session) (err error) {
 
 		c <- Settled{}
 
+		err = t.persist(sess)
+		if err != nil {
+			return err
+		}
+
 		err = t.saveSession(sess)
 		if err != nil {
 			return err
@@ -684,9 +688,9 @@ func (t *Timer) Run(sess *session.Session) (err error) {
 
 // New creates a new timer.
 func New(dbClient *store.Client, cfg *config.TimerConfig) *Timer {
-	t := Timer{}
-	t.db = dbClient
-	t.Opts = cfg
-
-	return &t
+	return &Timer{
+		Started: time.Now(),
+		db:      dbClient,
+		Opts:    cfg,
+	}
 }

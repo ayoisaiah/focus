@@ -1,4 +1,4 @@
-package color
+package ui
 
 import (
 	"github.com/pterm/pterm"

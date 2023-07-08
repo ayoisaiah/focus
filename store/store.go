@@ -43,18 +43,18 @@ func (c *Client) UpdateSession(sess *session.Session) error {
 	})
 }
 
-func (c *Client) SaveTimer(
-	pausedTime,
+func (c *Client) UpdateTimer(
+	dateStarted,
 	timerBytes []byte,
 ) error {
 	return c.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("timers"))
 
-		return b.Put(pausedTime, timerBytes)
+		return b.Put(dateStarted, timerBytes)
 	})
 }
 
-func (c *Client) GetInterrupted(
+func (c *Client) GetSession(
 	sessionKey []byte,
 ) (*session.Session, error) {
 	var sess session.Session

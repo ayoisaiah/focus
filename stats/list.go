@@ -7,38 +7,20 @@ import (
 
 	"github.com/pterm/pterm"
 
-	"github.com/ayoisaiah/focus/internal/color"
 	"github.com/ayoisaiah/focus/internal/session"
+	"github.com/ayoisaiah/focus/internal/ui"
 )
 
-func printTable(data [][]string, writer io.Writer) {
-	d := [][]string{
-		{"#", "START DATE", "END DATE", "TAGGED", "STATUS"},
-	}
-
-	d = append(d, data...)
-
-	table := pterm.DefaultTable
-	table.Boxed = true
-
-	str, err := table.WithHasHeader().WithData(d).Srender()
-	if err != nil {
-		pterm.Error.Printfln("Failed to output session table: %s", err.Error())
-		return
-	}
-
-	fmt.Fprintln(writer, str)
-}
-
+// printSessionsTable prints a session table to the command-line.
 func printSessionsTable(w io.Writer, sessions []session.Session) {
-	tableBody := make([][]string, 0)
+	tableBody := make([][]string, len(sessions))
 
 	for i := range sessions {
 		sess := sessions[i]
 
-		statusText := color.Green("completed")
+		statusText := ui.Green("completed")
 		if !sess.Completed {
-			statusText = color.Red("abandoned")
+			statusText = ui.Red("abandoned")
 		}
 
 		endDate := sess.EndTime.Format("Jan 02, 2006 03:04 PM")
@@ -56,10 +38,14 @@ func printSessionsTable(w io.Writer, sessions []session.Session) {
 			statusText,
 		}
 
-		tableBody = append(tableBody, row)
+		tableBody[i] = row
 	}
 
-	printTable(tableBody, w)
+	tableBody = append([][]string{
+		{"#", "START DATE", "END DATE", "TAGGED", "STATUS"},
+	}, tableBody...)
+
+	ui.PrintTable(tableBody, w)
 }
 
 // List prints out a table of all the sessions that
