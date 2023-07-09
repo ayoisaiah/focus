@@ -43,6 +43,8 @@ var testCases = []ConfigTest{
 			PlaySoundOnBreak:    false,
 			AutoStartBreak:      true,
 			AutoStartWork:       false,
+			WorkSound:           "loud_bell",
+			BreakSound:          "bell",
 		},
 	},
 	{
@@ -67,6 +69,8 @@ var testCases = []ConfigTest{
 			PlaySoundOnBreak:    false,
 			AutoStartBreak:      true,
 			AutoStartWork:       false,
+			WorkSound:           "loud_bell",
+			BreakSound:          "bell",
 		},
 	},
 	{
@@ -91,6 +95,8 @@ var testCases = []ConfigTest{
 			PlaySoundOnBreak:    false,
 			AutoStartBreak:      true,
 			AutoStartWork:       false,
+			WorkSound:           "loud_bell",
+			BreakSound:          "bell",
 		},
 	},
 	{
@@ -115,6 +121,8 @@ var testCases = []ConfigTest{
 			PlaySoundOnBreak:    false,
 			AutoStartBreak:      false,
 			AutoStartWork:       false,
+			WorkSound:           "",
+			BreakSound:          "",
 		},
 	},
 }
@@ -133,9 +141,25 @@ func copyFile(src, dest string) error {
 	return nil
 }
 
-func TestTimerConfig(t *testing.T) {
+func resetTimerConfig() {
+	timerCfg = &TimerConfig{
+		Message:  make(session.Message),
+		Duration: make(session.Duration),
+		Stderr:   os.Stderr,
+		Stdout:   os.Stdout,
+		Stdin:    os.Stdin,
+	}
+
+	once = sync.Once{}
+
+	viper.Reset()
+}
+
+func TestGetTimer(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
+			resetTimerConfig()
+
 			tc.Expected.PathToConfig = pathToConfig
 			tc.Expected.PathToDB = pathToDB
 
@@ -155,18 +179,6 @@ func TestTimerConfig(t *testing.T) {
 			}
 
 			ctx := cli.NewContext(&cli.App{}, nil, nil)
-
-			// reset the config
-			timerCfg = &TimerConfig{
-				Message:  make(session.Message),
-				Duration: make(session.Duration),
-				Stderr:   os.Stderr,
-				Stdout:   os.Stdout,
-				Stdin:    os.Stdin,
-			}
-
-			once = sync.Once{}
-			viper.Reset()
 
 			oldStdin := os.Stdin
 

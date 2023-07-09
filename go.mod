@@ -5,12 +5,12 @@ go 1.19
 require (
 	github.com/adrg/xdg v0.4.0
 	github.com/faiface/beep v1.1.0
-	github.com/gen2brain/beeep v0.0.0-20220909211152-5a9ec94374f6
+	github.com/gen2brain/beeep v0.0.0-20230602101333-f384c29b62dd
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/pterm/pterm v0.12.28
 	github.com/urfave/cli/v2 v2.23.5
 	go.etcd.io/bbolt v1.3.6
-	golang.org/x/sys v0.2.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 

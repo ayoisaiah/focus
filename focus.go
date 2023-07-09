@@ -61,12 +61,22 @@ func GetApp() *cli.App {
 		},
 		&cli.StringFlag{
 			Name:  "sound",
-			Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, summer_night, playground. Disable sound by setting to 'off'",
+			Usage: "Play ambient sounds continuously during a session. Default options: coffee_shop, fireplace, rain,\n\t\t\t\twind, birds, playground, tick_tock. Disable sound by setting to 'off'",
 		},
-		&cli.StringFlag{
+		&cli.BoolFlag{
 			Name:    "sound-on-break",
 			Aliases: []string{"sob"},
 			Usage:   "Enable ambient sound in break sessions",
+		},
+		&cli.StringFlag{
+			Name:    "work-sound",
+			Aliases: []string{"ws"},
+			Usage:   "Sound to play when a break session has ended. Defaults to loud_bell",
+		},
+		&cli.StringFlag{
+			Name:    "break-sound",
+			Aliases: []string{"bs"},
+			Usage:   "Sound to play when a work session has ended. Defaults to bell",
 		},
 		&cli.StringFlag{
 			Name:    "tag",

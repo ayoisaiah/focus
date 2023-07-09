@@ -38,11 +38,8 @@ import (
 	"github.com/ayoisaiah/focus/store"
 )
 
-var (
-	errUnableToSaveSession = errors.New("unable to persist interrupted session")
-	errInvalidSoundFormat  = errors.New(
-		"unsupported sound file format: Only MP3, OGG, FLAC, and WAV files are allowed",
-	)
+var errInvalidSoundFormat = errors.New(
+	"file must be in mp3, ogg, flaC, or wav format",
 )
 
 const sessionSettled = "settled"
@@ -89,7 +86,7 @@ func getTimeRemaining(endTime time.Time) timeRemaining {
 // persist updates the timer in the database so that it may be
 // recovered later.
 func (t *Timer) persist(sess *session.Session) error {
-	if sess.Name == session.Work {
+	if sess.Name != session.Work {
 		return nil
 	}
 
@@ -182,8 +179,8 @@ func (t *Timer) printSession(
 	)
 }
 
-// notify sends a desktop notification.
-func (t *Timer) notify(title, msg string) {
+// notify sends a desktop notification and plays a notification sound.
+func (t *Timer) notify(title, msg, sound string) {
 	configDir := filepath.Base(filepath.Dir(t.Opts.PathToConfig))
 
 	// pathToIcon will be an empty string if file is not found
@@ -191,12 +188,30 @@ func (t *Timer) notify(title, msg string) {
 		filepath.Join(configDir, "static", "icon.png"),
 	)
 
-	err := beeep.Alert(title, msg, pathToIcon)
+	err := beeep.Notify(title, msg, pathToIcon)
 	if err != nil {
-		pterm.Error.Println(
-			fmt.Errorf("Unable to display notification: %w", err),
-		)
+		pterm.Error.Printfln("unable to display notification: %v", err)
 	}
+
+	if sound == "off" || sound == "" {
+		return
+	}
+
+	stream, err := t.prepSoundStream(sound)
+	if err != nil {
+		pterm.Error.Printfln("unable to play sound: %v", err)
+		return
+	}
+
+	done := make(chan bool)
+
+	speaker.Play(beep.Seq(stream, beep.Callback(func() {
+		done <- true
+	})))
+
+	<-done
+
+	speaker.Clear()
 }
 
 // handleInterruption saves the current state of the timer whenever it is
@@ -214,10 +229,7 @@ func (t *Timer) handleInterruption(sess *session.Session) chan os.Signal {
 		}
 
 		exitFunc := func(err error) {
-			pterm.Error.Printfln(
-				"%s",
-				fmt.Errorf("%w: %w", errUnableToSaveSession, err),
-			)
+			pterm.Error.Printfln("unable to save interrupted timer: %v", err)
 			os.Exit(1)
 		}
 
@@ -245,44 +257,44 @@ func (t *Timer) handleInterruption(sess *session.Session) chan os.Signal {
 	return c
 }
 
-// prepareAmbientSoundStream returns an audio stream for the ambient sound.
-func (t *Timer) prepareAmbientSoundStream() (beep.Streamer, error) {
-	ambientSound := t.Opts.AmbientSound
-
+// prepSoundStream returns an audio stream for the specified sound.
+func (t *Timer) prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
 	var (
-		f        fs.File
-		err      error
-		streamer beep.StreamSeekCloser
-		format   beep.Format
+		f      fs.File
+		err    error
+		stream beep.StreamSeekCloser
+		format beep.Format
 	)
 
-	ext := filepath.Ext(ambientSound)
+	ext := filepath.Ext(sound)
 	// without extension, treat as OGG file
 	if ext == "" {
-		ambientSound += ".ogg"
+		sound += ".ogg"
 
-		f, err = static.Files.Open(static.FilePath(ambientSound))
+		f, err = static.Files.Open(static.FilePath(sound))
 		if err != nil {
+			// TODO: Update error
 			return nil, err
 		}
 	} else {
-		f, err = os.Open(t.Opts.AmbientSound)
+		f, err = os.Open(sound)
+		// TODO: Update error
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	ext = filepath.Ext(ambientSound)
+	ext = filepath.Ext(sound)
 
 	switch ext {
 	case ".ogg":
-		streamer, format, err = vorbis.Decode(f)
+		stream, format, err = vorbis.Decode(f)
 	case ".mp3":
-		streamer, format, err = mp3.Decode(f)
+		stream, format, err = mp3.Decode(f)
 	case ".flac":
-		streamer, format, err = flac.Decode(f)
+		stream, format, err = flac.Decode(f)
 	case ".wav":
-		streamer, format, err = wav.Decode(f)
+		stream, format, err = wav.Decode(f)
 	default:
 		return nil, errInvalidSoundFormat
 	}
@@ -301,14 +313,12 @@ func (t *Timer) prepareAmbientSoundStream() (beep.Streamer, error) {
 		return nil, err
 	}
 
-	err = streamer.Seek(0)
+	err = stream.Seek(0)
 	if err != nil {
 		return nil, err
 	}
 
-	s := beep.Loop(-1, streamer)
-
-	return s, nil
+	return stream, nil
 }
 
 // wait releases the handle to the datastore and waits for user input
@@ -611,13 +621,15 @@ func Recover(
 func (t *Timer) Run(sess *session.Session) (err error) {
 	sessName := session.Work
 
-	var streamer beep.Streamer
+	var infiniteStream beep.Streamer
 
 	if t.Opts.AmbientSound != "" {
-		streamer, err = t.prepareAmbientSoundStream()
-		if err != nil {
-			return err
+		stream, streamErr := t.prepSoundStream(t.Opts.AmbientSound)
+		if streamErr != nil {
+			return streamErr
 		}
+
+		infiniteStream = beep.Loop(-1, stream)
 	}
 
 	for {
@@ -640,7 +652,8 @@ func (t *Timer) Run(sess *session.Session) (err error) {
 
 		if t.Opts.AmbientSound != "" {
 			if sess.Name == session.Work || t.Opts.PlaySoundOnBreak {
-				speaker.Play(streamer)
+				speaker.Clear()
+				speaker.Play(infiniteStream)
 			} else {
 				speaker.Clear()
 			}
@@ -664,7 +677,14 @@ func (t *Timer) Run(sess *session.Session) (err error) {
 
 		if t.Opts.Notify {
 			title := sessName + " is finished"
-			t.notify(string(title), t.Opts.Message[next])
+
+			notifySound := t.Opts.BreakSound
+
+			if sessName != session.Work {
+				notifySound = t.Opts.WorkSound
+			}
+
+			t.notify(string(title), t.Opts.Message[next], notifySound)
 		}
 
 		sessName = next

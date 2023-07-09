@@ -25,6 +25,11 @@ var (
 	)
 )
 
+const (
+	sessionBucket = "sessions"
+	timerBucket   = "timers"
+)
+
 // Client is a BoltDB database client.
 type Client struct {
 	*bolt.DB
@@ -39,7 +44,7 @@ func (c *Client) UpdateSession(sess *session.Session) error {
 	}
 
 	return c.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket([]byte("sessions")).Put(key, value)
+		return tx.Bucket([]byte(sessionBucket)).Put(key, value)
 	})
 }
 
@@ -48,7 +53,7 @@ func (c *Client) UpdateTimer(
 	timerBytes []byte,
 ) error {
 	return c.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("timers"))
+		b := tx.Bucket([]byte(timerBucket))
 
 		return b.Put(dateStarted, timerBytes)
 	})
@@ -60,7 +65,7 @@ func (c *Client) GetSession(
 	var sess session.Session
 
 	err := c.View(func(tx *bolt.Tx) error {
-		sessBytes := tx.Bucket([]byte("sessions")).Get(sessionKey)
+		sessBytes := tx.Bucket([]byte(sessionBucket)).Get(sessionKey)
 		if len(sessBytes) == 0 {
 			// this will initialise a new session
 			return nil
@@ -78,7 +83,7 @@ func (c *Client) DeleteSessions(sessions []session.Session) error {
 			sess := sessions[i]
 			id := sess.StartTime.Format(time.RFC3339)
 
-			err := tx.Bucket([]byte("sessions")).Delete([]byte(id))
+			err := tx.Bucket([]byte(sessionBucket)).Delete([]byte(id))
 			if err != nil {
 				return err
 			}
@@ -90,7 +95,7 @@ func (c *Client) DeleteSessions(sessions []session.Session) error {
 
 func (c *Client) DeleteTimer(timerKey []byte) error {
 	return c.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket([]byte("timers")).Delete(timerKey)
+		return tx.Bucket([]byte(timerBucket)).Delete(timerKey)
 	})
 }
 
@@ -111,7 +116,7 @@ func (c *Client) RetrievePausedTimers() ([][]byte, error) {
 	var timers [][]byte
 
 	err := c.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket([]byte("timers")).Cursor()
+		c := tx.Bucket([]byte(timerBucket)).Cursor()
 
 		for k, v := c.Last(); k != nil; k, v = c.Prev() {
 			timers = append(timers, v)
@@ -134,7 +139,7 @@ func (c *Client) GetSessions(
 	var b [][]byte
 
 	err := c.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket([]byte("sessions")).Cursor()
+		c := tx.Bucket([]byte(sessionBucket)).Cursor()
 		min := []byte(startTime.Format(time.RFC3339))
 		max := []byte(endTime.Format(time.RFC3339))
 
@@ -231,12 +236,12 @@ func NewClient(dbPath string) (*Client, error) {
 	}
 	// Create the necessary buckets for storing data if they do not exist already
 	err = db.Update(func(tx *bolt.Tx) error {
-		_, err = tx.CreateBucketIfNotExists([]byte("sessions"))
+		_, err = tx.CreateBucketIfNotExists([]byte(sessionBucket))
 		if err != nil {
 			return err
 		}
 
-		_, err = tx.CreateBucketIfNotExists([]byte("timers"))
+		_, err = tx.CreateBucketIfNotExists([]byte(timerBucket))
 		return err
 	})
 	if err != nil {

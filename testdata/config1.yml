@@ -12,3 +12,5 @@ auto_start_break: true
 24hr_clock: false
 sound:
 sound_on_break: false
+work_sound: loud_bell
+break_sound: bell

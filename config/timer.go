@@ -57,6 +57,8 @@ const (
 	defaultLongBreakInterval = 4
 )
 
+const soundOff = "off"
+
 const (
 	configWorkMinutes         = "work_mins"
 	configWorkMessage         = "work_msg"
@@ -73,6 +75,8 @@ const (
 	configTwentyFourHourClock = "24hr_clock"
 	configSessionCmd          = "session_cmd"
 	configDarkTheme           = "dark_theme"
+	configBreakSound          = "break_sound"
+	configWorkSound           = "work_sound"
 )
 
 // TimerConfig represents the program configuration derived from the config file
@@ -84,6 +88,8 @@ type TimerConfig struct {
 	Duration            session.Duration `json:"duration"`
 	Message             session.Message  `json:"message"`
 	AmbientSound        string           `json:"sound"`
+	BreakSound          string           `json:"break_sound"`
+	WorkSound           string           `json:"work_sound"`
 	PathToConfig        string           `json:"path_to_config"`
 	PathToDB            string           `json:"path_to_db"`
 	SessionCmd          string           `json:"session_cmd"`
@@ -225,15 +231,32 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 		timerCfg.Notify = false
 	}
 
-	if ctx.Bool("sound-on-break") {
-		timerCfg.PlaySoundOnBreak = true
-	}
+	timerCfg.PlaySoundOnBreak = ctx.Bool("sound-on-break")
 
-	if ctx.String("sound") != "" {
-		if ctx.String("sound") == "off" {
+	ambientSound := ctx.String("sound")
+	if ambientSound != "" {
+		if ambientSound == soundOff {
 			timerCfg.AmbientSound = ""
 		} else {
-			timerCfg.AmbientSound = ctx.String("sound")
+			timerCfg.AmbientSound = ambientSound
+		}
+	}
+
+	breakSound := ctx.String("break-sound")
+	if breakSound != "" {
+		if breakSound == soundOff {
+			timerCfg.BreakSound = ""
+		} else {
+			timerCfg.BreakSound = breakSound
+		}
+	}
+
+	workSound := ctx.String("work-sound")
+	if workSound != "" {
+		if workSound == soundOff {
+			timerCfg.WorkSound = ""
+		} else {
+			timerCfg.WorkSound = workSound
 		}
 	}
 
@@ -305,6 +328,8 @@ func updateConfigFromFile() {
 	timerCfg.PlaySoundOnBreak = viper.GetBool(configSoundOnBreak)
 	timerCfg.AmbientSound = viper.GetString(configAmbientSound)
 	timerCfg.SessionCmd = viper.GetString(configSessionCmd)
+	timerCfg.BreakSound = viper.GetString(configBreakSound)
+	timerCfg.WorkSound = viper.GetString(configWorkSound)
 
 	if viper.IsSet(configDarkTheme) {
 		timerCfg.DarkTheme = viper.GetBool(configDarkTheme)
@@ -371,6 +396,8 @@ func timerDefaults() {
 	viper.SetDefault(configAmbientSound, "")
 	viper.SetDefault(configSessionCmd, "")
 	viper.SetDefault(configDarkTheme, true)
+	viper.SetDefault(configBreakSound, "bell")
+	viper.SetDefault(configWorkSound, "loud_bell")
 }
 
 // initTimerConfig initialises the application configuration.
