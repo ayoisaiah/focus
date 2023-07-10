@@ -57,7 +57,7 @@ const (
 	defaultLongBreakInterval = 4
 )
 
-const soundOff = "off"
+const SoundOff = "off"
 
 const (
 	configWorkMinutes         = "work_mins"
@@ -235,7 +235,7 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 
 	ambientSound := ctx.String("sound")
 	if ambientSound != "" {
-		if ambientSound == soundOff {
+		if ambientSound == SoundOff {
 			timerCfg.AmbientSound = ""
 		} else {
 			timerCfg.AmbientSound = ambientSound
@@ -244,7 +244,7 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 
 	breakSound := ctx.String("break-sound")
 	if breakSound != "" {
-		if breakSound == soundOff {
+		if breakSound == SoundOff {
 			timerCfg.BreakSound = ""
 		} else {
 			timerCfg.BreakSound = breakSound
@@ -253,7 +253,7 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 
 	workSound := ctx.String("work-sound")
 	if workSound != "" {
-		if workSound == soundOff {
+		if workSound == SoundOff {
 			timerCfg.WorkSound = ""
 		} else {
 			timerCfg.WorkSound = workSound

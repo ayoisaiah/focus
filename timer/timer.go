@@ -541,11 +541,30 @@ func (t *Timer) overrideOptsOnResume(ctx *cli.Context) {
 		t.Opts.Notify = false
 	}
 
-	if ctx.String("sound") != "" {
-		if ctx.String("sound") == "off" {
+	ambientSound := ctx.String("sound")
+	if ambientSound != "" {
+		if ambientSound == config.SoundOff {
 			t.Opts.AmbientSound = ""
 		} else {
-			t.Opts.AmbientSound = ctx.String("sound")
+			t.Opts.AmbientSound = ambientSound
+		}
+	}
+
+	breakSound := ctx.String("break-sound")
+	if breakSound != "" {
+		if breakSound == config.SoundOff {
+			t.Opts.BreakSound = ""
+		} else {
+			t.Opts.BreakSound = breakSound
+		}
+	}
+
+	workSound := ctx.String("work-sound")
+	if workSound != "" {
+		if workSound == config.SoundOff {
+			t.Opts.WorkSound = ""
+		} else {
+			t.Opts.WorkSound = workSound
 		}
 	}
 
