@@ -205,12 +205,12 @@ func (c *Client) GetSessions(
 	return s, err
 }
 
-// open creates or opens a database and locks it.
-func openDB(pathToDB string) (*bolt.DB, error) {
+// openDB creates or opens a database.
+func openDB(dbFilePath string) (*bolt.DB, error) {
 	var fileMode fs.FileMode = 0o600
 
 	db, err := bolt.Open(
-		pathToDB,
+		dbFilePath,
 		fileMode,
 		&bolt.Options{Timeout: 1 * time.Second},
 	)
@@ -227,10 +227,8 @@ func openDB(pathToDB string) (*bolt.DB, error) {
 }
 
 // NewClient returns a wrapper to a BoltDB connection.
-func NewClient(dbPath string) (*Client, error) {
-	pathToDB = dbPath
-
-	db, err := openDB(pathToDB)
+func NewClient(dbFilePath string) (*Client, error) {
+	db, err := openDB(dbFilePath)
 	if err != nil {
 		return nil, err
 	}

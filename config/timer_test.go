@@ -160,18 +160,18 @@ func TestGetTimer(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			resetTimerConfig()
 
-			tc.Expected.PathToConfig = pathToConfig
-			tc.Expected.PathToDB = pathToDB
+			tc.Expected.PathToConfig = configFilePath
+			tc.Expected.PathToDB = dbFilePath
 
 			if tc.ConfigFile == "" {
-				err := os.Remove(pathToConfig)
+				err := os.Remove(configFilePath)
 				if err != nil {
 					t.Fatal(err)
 				}
 			} else {
 				err := copyFile(
 					filepath.Join("testdata", tc.ConfigFile),
-					pathToConfig,
+					configFilePath,
 				)
 				if err != nil {
 					t.Fatal(err)

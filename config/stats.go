@@ -115,7 +115,7 @@ func GetStats(ctx *cli.Context) *StatsConfig {
 		statsCfg = &StatsConfig{
 			StartTime: start.AddDate(0, 0, -6),
 			EndTime:   timeutil.RoundToEnd(start),
-			PathToDB:  pathToDB,
+			PathToDB:  dbFilePath,
 		}
 
 		if err := setStatsConfig(ctx); err != nil {

@@ -14,16 +14,22 @@ var (
 	configDir      = "focus"
 	configFileName = "config.yml"
 	dbFileName     = "focus.db"
-	pathToDB       string
-	pathToConfig   string
+	statusFileName = "status.json"
+	dbFilePath     string
+	configFilePath string
+	statusFilePath string
 )
 
 func GetDir() string {
 	return configDir
 }
 
-func GetPathToDB() string {
-	return pathToDB
+func GetDBFilePath() string {
+	return dbFilePath
+}
+
+func GetStatusFilePath() string {
+	return statusFilePath
 }
 
 func InitializePaths() {
@@ -37,15 +43,19 @@ func InitializePaths() {
 
 	relPath := filepath.Join(configDir, configFileName)
 
-	pathToConfig, err = xdg.ConfigFile(relPath)
+	configFilePath, err = xdg.ConfigFile(relPath)
 	if err != nil {
 		pterm.Error.Println(err)
 		os.Exit(1)
 	}
 
-	pathToDB, err = xdg.DataFile(filepath.Join(configDir, dbFileName))
+	dataDir, err := xdg.DataFile(configDir)
 	if err != nil {
 		pterm.Error.Println(err)
 		os.Exit(1)
 	}
+
+	dbFilePath = filepath.Join(dataDir, dbFileName)
+
+	statusFilePath = filepath.Join(dataDir, statusFileName)
 }

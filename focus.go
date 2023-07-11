@@ -133,6 +133,11 @@ func GetApp() *cli.App {
 				Action: app.ShowAction,
 				Flags:  append(statsFlags, globalFlags["no-color"]),
 			},
+			{
+				Name:   "status",
+				Usage:  "Print the status of the timer",
+				Action: app.StatusAction,
+			},
 		},
 		Flags: []cli.Flag{
 			&cli.UintFlag{

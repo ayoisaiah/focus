@@ -209,7 +209,7 @@ func ResumeAction(ctx *cli.Context) error {
 		disableStyling()
 	}
 
-	dbClient, err := store.NewClient(config.GetPathToDB())
+	dbClient, err := store.NewClient(config.GetDBFilePath())
 	if err != nil {
 		return err
 	}
@@ -253,4 +253,10 @@ func ShowAction(ctx *cli.Context) error {
 	}
 
 	return stats.Show()
+}
+
+func StatusAction(_ *cli.Context) error {
+	t := &timer.Timer{}
+
+	return t.ReportStatus()
 }

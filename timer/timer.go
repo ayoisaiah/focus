@@ -30,6 +30,8 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 
+	bolt "go.etcd.io/bbolt"
+
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/ayoisaiah/focus/internal/static"
@@ -39,7 +41,7 @@ import (
 )
 
 var errInvalidSoundFormat = errors.New(
-	"file must be in mp3, ogg, flaC, or wav format",
+	"file must be in mp3, ogg, flac, or wav format",
 )
 
 const sessionSettled = "settled"
@@ -53,12 +55,14 @@ func (s Settled) String() string {
 
 func (s Settled) Signal() {}
 
+// timeRemaining is the time remaining in a session.
 type timeRemaining struct {
 	t int
 	m int
 	s int
 }
 
+// Timer represents a running timer.
 type Timer struct {
 	db         store.DB            `json:"-"`
 	Opts       *config.TimerConfig `json:"opts"`
@@ -66,6 +70,15 @@ type Timer struct {
 	Started    time.Time           `json:"date_started"`
 	SessionKey []byte              `json:"session_key"`
 	WorkCycle  int                 `json:"work_cycle"`
+}
+
+// Status represents the status of a running timer.
+type Status struct {
+	EndTime           time.Time    `json:"end_date"`
+	Name              session.Name `json:"name"`
+	Tags              []string     `json:"tags"`
+	WorkCycle         int          `json:"work_cycle"`
+	LongBreakInterval int          `json:"long_break_interval"`
 }
 
 // getTimeRemaining subtracts the endTime from the currentTime
@@ -129,6 +142,102 @@ func (t *Timer) runSessionCmd(sessionCmd string) error {
 	cmd.Stderr = t.Opts.Stderr
 
 	return cmd.Run()
+}
+
+// ReportStatus reports the status of the currently running timer.
+func (t *Timer) ReportStatus() error {
+	dbFilePath := config.GetDBFilePath()
+	statusFilePath := config.GetStatusFilePath()
+
+	var fileMode fs.FileMode = 0o600
+
+	_, err := bolt.Open(dbFilePath, fileMode, &bolt.Options{
+		Timeout: 100 * time.Millisecond,
+	})
+	// This means focus is not running, so no status to report
+	if err == nil {
+		return nil
+	}
+
+	if !errors.Is(err, bolt.ErrDatabaseOpen) &&
+		!errors.Is(err, bolt.ErrTimeout) {
+		return err
+	}
+
+	fileBytes, err := os.ReadFile(statusFilePath)
+	if err != nil {
+		// missing file should not return an error
+		pterm.Error.Printfln("unable to read status file: %v", err)
+		return nil
+	}
+
+	var s Status
+
+	err = json.Unmarshal(fileBytes, &s)
+	if err != nil {
+		return err
+	}
+
+	tr := getTimeRemaining(s.EndTime)
+
+	var text string
+
+	switch s.Name {
+	case session.Work:
+		text = fmt.Sprintf("[Work %d/%d]",
+			s.WorkCycle,
+			s.LongBreakInterval,
+		)
+	case session.ShortBreak:
+		text = "[Short break]"
+	case session.LongBreak:
+		text = "[Long break]"
+	}
+
+	pterm.Printfln("%s: %02d:%02d", text, tr.m, tr.s)
+
+	return nil
+}
+
+func (t *Timer) writeStatusFile(
+	sess *session.Session,
+	endTime time.Time,
+) error {
+	s := Status{
+		Name:              sess.Name,
+		WorkCycle:         t.WorkCycle,
+		Tags:              sess.Tags,
+		LongBreakInterval: t.Opts.LongBreakInterval,
+		EndTime:           endTime,
+	}
+
+	statusFilePath := config.GetStatusFilePath()
+
+	statusFile, err := os.Create(statusFilePath)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		ferr := statusFile.Close()
+		if ferr != nil {
+			err = ferr
+		}
+	}()
+
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+
+	writer := bufio.NewWriter(statusFile)
+
+	_, err = writer.Write(b)
+	if err != nil {
+		return err
+	}
+
+	return writer.Flush()
 }
 
 // printSession writes the details of the current
@@ -238,6 +347,8 @@ func (t *Timer) handleInterruption(sess *session.Session) chan os.Signal {
 
 		lastIndex := len(sess.Timeline) - 1
 		sess.Timeline[lastIndex].EndTime = interrruptedTime
+
+		_ = os.Remove(config.GetStatusFilePath())
 
 		err := t.saveSession(sess)
 		if err != nil {
@@ -415,6 +526,8 @@ func (t *Timer) start(sess *session.Session) {
 	}
 
 	t.printSession(sess, endTime)
+
+	_ = t.writeStatusFile(sess, endTime)
 
 	fmt.Fprint(t.Opts.Stdout, "\033[s")
 

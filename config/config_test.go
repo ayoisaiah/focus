@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	// Cleanup test directory
-	err = os.RemoveAll(filepath.Dir(pathToConfig))
+	err = os.RemoveAll(filepath.Dir(configFilePath))
 	if err != nil {
 		log.Fatal(err)
 	}

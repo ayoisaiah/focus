@@ -350,7 +350,7 @@ func updateConfigFromFile() {
 // settings retrieved from the config file and command-line arguments. The
 // latter overrides the former.
 func setTimerConfig(ctx *cli.Context) {
-	timerCfg.PathToDB = pathToDB
+	timerCfg.PathToDB = dbFilePath
 
 	// set from config file
 	updateConfigFromFile()
@@ -407,7 +407,7 @@ func initTimerConfig() error {
 	viper.SetConfigName(configFileName)
 	viper.SetConfigType("yaml")
 
-	timerCfg.PathToConfig = pathToConfig
+	timerCfg.PathToConfig = configFilePath
 
 	viper.AddConfigPath(filepath.Dir(timerCfg.PathToConfig))
 
