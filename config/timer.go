@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/viper"
@@ -51,21 +52,28 @@ const ascii = `
 ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝`
 
 const (
-	defaultWorkMinutes       = 25
-	defaultShortBreakMinutes = 5
-	defaultLongBreakMinutes  = 15
+	defaultWorkMins          = 25
+	defaultShortBreakMins    = 5
+	defaultLongBreakMins     = 15
 	defaultLongBreakInterval = 4
 )
 
 const SoundOff = "off"
 
+// Legacy config.
 const (
-	configWorkMinutes         = "work_mins"
+	legacyWorkMins       = "work_mins"
+	legacyShortBreakMins = "short_break_mins"
+	legacyLongBreakMins  = "long_break_mins"
+)
+
+const (
+	configWorkDur             = "work_duration"
 	configWorkMessage         = "work_msg"
 	configAmbientSound        = "sound"
-	configShortBreakMinutes   = "short_break_mins"
+	configShortBreakDur       = "short_break_duration"
 	configShortBreakMessage   = "short_break_msg"
-	configLongBreakMinutes    = "long_break_mins"
+	configLongBreakDur        = "long_break_duration"
 	configLongBreakMessage    = "long_break_msg"
 	configLongBreakInterval   = "long_break_interval"
 	configAutoStartWork       = "auto_start_work"
@@ -126,6 +134,22 @@ func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 	return num, nil
 }
 
+func parseTime(s, key string, d int) time.Duration {
+	_, err := strconv.Atoi(s)
+	if err == nil {
+		s += "m"
+	}
+
+	dur, err := time.ParseDuration(s)
+	if err != nil {
+		warnOnInvalidConfig(key, d)
+
+		dur = time.Duration(d) * time.Minute
+	}
+
+	return dur
+}
+
 // prompt allows the user to state their preferred values for the most
 // important timer settings. It is run only when a configuration file
 // is not already present (e.g on first run).
@@ -149,49 +173,49 @@ Edit the configuration file (focus edit-config) to change any settings, or use c
 	_, _ = reader.ReadString('\n')
 
 	for {
-		if !viper.IsSet(configWorkMinutes) {
+		if !viper.IsSet(configWorkDur) {
 			pterm.Printf(
 				"\nWork length in minutes (default: %s): ",
-				pterm.Green(defaultWorkMinutes),
+				pterm.Green(defaultWorkMins),
 			)
 
-			num, err := numberPrompt(reader, defaultWorkMinutes)
+			num, err := numberPrompt(reader, defaultWorkMins)
 			if err != nil {
 				pterm.Error.Println(err)
 				continue
 			}
 
-			viper.Set(configWorkMinutes, num)
+			viper.Set(configWorkDur, strconv.Itoa(num)+"m")
 		}
 
-		if !viper.IsSet(configShortBreakMinutes) {
+		if !viper.IsSet(configShortBreakDur) {
 			pterm.Printf(
 				"Short break length in minutes (default: %s): ",
-				pterm.Green(defaultShortBreakMinutes),
+				pterm.Green(defaultShortBreakMins),
 			)
 
-			num, err := numberPrompt(reader, defaultShortBreakMinutes)
+			num, err := numberPrompt(reader, defaultShortBreakMins)
 			if err != nil {
 				pterm.Error.Println(err)
 				continue
 			}
 
-			viper.Set(configShortBreakMinutes, num)
+			viper.Set(configShortBreakDur, strconv.Itoa(num)+"m")
 		}
 
-		if !viper.IsSet(configLongBreakMinutes) {
+		if !viper.IsSet(configLongBreakDur) {
 			pterm.Printf(
 				"Long break length in minutes (default: %s): ",
-				pterm.Green(defaultLongBreakMinutes),
+				pterm.Green(defaultLongBreakMins),
 			)
 
-			num, err := numberPrompt(reader, defaultLongBreakMinutes)
+			num, err := numberPrompt(reader, defaultLongBreakMins)
 			if err != nil {
 				pterm.Error.Println(err)
 				continue
 			}
 
-			viper.Set(configLongBreakMinutes, num)
+			viper.Set(configLongBreakDur, strconv.Itoa(num)+"m")
 		}
 
 		if !viper.IsSet(configLongBreakInterval) {
@@ -264,16 +288,28 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 		timerCfg.SessionCmd = ctx.String("session-cmd")
 	}
 
-	if ctx.Uint("work") > 0 {
-		timerCfg.Duration[session.Work] = int(ctx.Uint("work"))
+	if ctx.String("work") != "" {
+		timerCfg.Duration[session.Work] = parseTime(
+			ctx.String("work"),
+			configWorkDur,
+			defaultWorkMins,
+		)
 	}
 
-	if ctx.Uint("short-break") > 0 {
-		timerCfg.Duration[session.ShortBreak] = int(ctx.Uint("short-break"))
+	if ctx.String("short-break") != "" {
+		timerCfg.Duration[session.ShortBreak] = parseTime(
+			ctx.String("short-break"),
+			configShortBreakDur,
+			defaultShortBreakMins,
+		)
 	}
 
-	if ctx.Uint("long-break") > 0 {
-		timerCfg.Duration[session.LongBreak] = int(ctx.Uint("long-break"))
+	if ctx.String("long-break") != "" {
+		timerCfg.Duration[session.LongBreak] = parseTime(
+			ctx.String("short-break"),
+			configShortBreakDur,
+			defaultShortBreakMins,
+		)
 	}
 
 	if ctx.Uint("long-break-interval") > 0 {
@@ -298,28 +334,42 @@ func updateConfigFromFile() {
 		longBreakInterval = defaultLongBreakInterval
 	}
 
-	workMins := viper.GetInt(configWorkMinutes)
-	if workMins < 1 {
-		warnOnInvalidConfig(configWorkMinutes, defaultWorkMinutes)
-		workMins = defaultWorkMinutes
+	workDurConfig := viper.GetString(legacyWorkMins)
+
+	if viper.GetString(configWorkDur) != "" {
+		workDurConfig = viper.GetString(configWorkDur)
 	}
 
-	shortBreakMins := viper.GetInt(configShortBreakMinutes)
-	if shortBreakMins < 1 {
-		warnOnInvalidConfig(configShortBreakMinutes, defaultShortBreakMinutes)
-		shortBreakMins = defaultShortBreakMinutes
+	workDur := parseTime(workDurConfig, configWorkDur, defaultWorkMins)
+
+	shortBreakDurConfig := viper.GetString(legacyShortBreakMins)
+
+	if viper.GetString(configShortBreakDur) != "" {
+		shortBreakDurConfig = viper.GetString(configShortBreakDur)
 	}
 
-	longBreakMins := viper.GetInt(configLongBreakMinutes)
-	if longBreakMins < 1 {
-		warnOnInvalidConfig(configLongBreakMinutes, defaultLongBreakMinutes)
-		longBreakMins = defaultLongBreakMinutes
+	shortBreakDur := parseTime(
+		shortBreakDurConfig,
+		configShortBreakDur,
+		defaultShortBreakMins,
+	)
+
+	longBreakDurConfig := viper.GetString(legacyLongBreakMins)
+
+	if viper.GetString(configLongBreakDur) != "" {
+		longBreakDurConfig = viper.GetString(configLongBreakDur)
 	}
+
+	longBreakDur := parseTime(
+		longBreakDurConfig,
+		configLongBreakDur,
+		defaultLongBreakMins,
+	)
 
 	timerCfg.LongBreakInterval = longBreakInterval
-	timerCfg.Duration[session.Work] = workMins
-	timerCfg.Duration[session.ShortBreak] = shortBreakMins
-	timerCfg.Duration[session.LongBreak] = longBreakMins
+	timerCfg.Duration[session.Work] = workDur
+	timerCfg.Duration[session.ShortBreak] = shortBreakDur
+	timerCfg.Duration[session.LongBreak] = longBreakDur
 
 	timerCfg.AutoStartBreak = viper.GetBool(configAutoStartBreak)
 	timerCfg.AutoStartWork = viper.GetBool(configAutoStartWork)
@@ -382,12 +432,12 @@ func createTimerConfig() error {
 
 // timerDefaults sets the timer's default configuration values.
 func timerDefaults() {
-	viper.SetDefault(configWorkMinutes, defaultWorkMinutes)
+	viper.SetDefault(configWorkDur, defaultWorkMins*time.Minute)
 	viper.SetDefault(configWorkMessage, "Focus on your task")
 	viper.SetDefault(configShortBreakMessage, "Take a breather")
-	viper.SetDefault(configShortBreakMinutes, defaultShortBreakMinutes)
+	viper.SetDefault(configShortBreakDur, defaultShortBreakMins*time.Minute)
 	viper.SetDefault(configLongBreakMessage, "Take a long break")
-	viper.SetDefault(configLongBreakMinutes, defaultLongBreakMinutes)
+	viper.SetDefault(configLongBreakDur, defaultLongBreakMins*time.Minute)
 	viper.SetDefault(configLongBreakInterval, defaultLongBreakInterval)
 	viper.SetDefault(configAutoStartBreak, true)
 	viper.SetDefault(configAutoStartWork, false)

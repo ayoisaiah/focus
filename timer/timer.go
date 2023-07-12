@@ -507,14 +507,14 @@ func (t *Timer) nextSession(current session.Name) session.Name {
 // start begins a new session.and blocks until its completion.
 func (t *Timer) start(sess *session.Session) {
 	endTime := sess.StartTime.
-		Add(time.Duration(t.Opts.Duration[sess.Name] * int(time.Minute)))
+		Add(t.Opts.Duration[sess.Name])
 
 	if sess.Resuming() {
 		// Calculate a new end time for the interrupted work
 		// session by
 		elapsedTimeInSeconds := sess.GetElapsedTimeInSeconds()
 		endTime = time.Now().
-			Add(time.Duration(t.Opts.Duration[sess.Name]) * time.Minute).
+			Add(t.Opts.Duration[sess.Name]).
 			Add(-time.Second * time.Duration(elapsedTimeInSeconds))
 
 		sess.EndTime = endTime

@@ -140,12 +140,12 @@ func GetApp() *cli.App {
 			},
 		},
 		Flags: []cli.Flag{
-			&cli.UintFlag{
+			&cli.StringFlag{
 				Name:    "short-break",
 				Aliases: []string{"s"},
 				Usage:   "Short break duration in minutes (default: 5)",
 			},
-			&cli.UintFlag{
+			&cli.StringFlag{
 				Name:    "long-break",
 				Aliases: []string{"l"},
 				Usage:   "Long break duration in minutes (default: 15)",
@@ -155,7 +155,7 @@ func GetApp() *cli.App {
 				Aliases: []string{"int"},
 				Usage:   "The number of work sessions before a long break (default: 4)",
 			},
-			&cli.UintFlag{
+			&cli.StringFlag{
 				Name:    "work",
 				Aliases: []string{"w"},
 				Usage:   "Work duration in minutes (default: 25)",

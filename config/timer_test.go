@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -26,10 +27,10 @@ var testCases = []ConfigTest{
 		Name:       "Normal config",
 		ConfigFile: "config1.yml",
 		Expected: TimerConfig{
-			Duration: map[session.Name]int{
-				session.Work:       50,
-				session.ShortBreak: 10,
-				session.LongBreak:  30,
+			Duration: map[session.Name]time.Duration{
+				session.Work:       50 * time.Minute,
+				session.ShortBreak: 10 * time.Minute,
+				session.LongBreak:  30 * time.Minute,
 			},
 			Message: map[session.Name]string{
 				session.Work:       "Focus on your task",
@@ -48,14 +49,14 @@ var testCases = []ConfigTest{
 		},
 	},
 	{
-		Name:       "No config (defaults)",
+		Name:       "No config (accept all defaults)",
 		ConfigFile: "",
 		PromptFile: "defaults.txt",
 		Expected: TimerConfig{
-			Duration: map[session.Name]int{
-				session.Work:       25,
-				session.ShortBreak: 5,
-				session.LongBreak:  15,
+			Duration: map[session.Name]time.Duration{
+				session.Work:       25 * time.Minute,
+				session.ShortBreak: 5 * time.Minute,
+				session.LongBreak:  15 * time.Minute,
 			},
 			Message: map[session.Name]string{
 				session.Work:       "Focus on your task",
@@ -74,14 +75,14 @@ var testCases = []ConfigTest{
 		},
 	},
 	{
-		Name:       "No config (prompt)",
+		Name:       "No config (prompt with custom values)",
 		ConfigFile: "",
 		PromptFile: "prompt.txt",
 		Expected: TimerConfig{
-			Duration: map[session.Name]int{
-				session.Work:       40,
-				session.ShortBreak: 12,
-				session.LongBreak:  22,
+			Duration: map[session.Name]time.Duration{
+				session.Work:       40 * time.Minute,
+				session.ShortBreak: 12 * time.Minute,
+				session.LongBreak:  22 * time.Minute,
 			},
 			Message: map[session.Name]string{
 				session.Work:       "Focus on your task",
@@ -104,10 +105,10 @@ var testCases = []ConfigTest{
 		ConfigFile: "config2.yml",
 		PromptFile: "",
 		Expected: TimerConfig{
-			Duration: map[session.Name]int{
-				session.Work:       25,
-				session.ShortBreak: 5,
-				session.LongBreak:  15,
+			Duration: map[session.Name]time.Duration{
+				session.Work:       25 * time.Minute,
+				session.ShortBreak: 5 * time.Minute,
+				session.LongBreak:  15 * time.Minute,
 			},
 			Message: map[session.Name]string{
 				session.Work:       "Focus on your task",
@@ -164,10 +165,7 @@ func TestGetTimer(t *testing.T) {
 			tc.Expected.PathToDB = dbFilePath
 
 			if tc.ConfigFile == "" {
-				err := os.Remove(configFilePath)
-				if err != nil {
-					t.Fatal(err)
-				}
+				_ = os.Remove(configFilePath)
 			} else {
 				err := copyFile(
 					filepath.Join("testdata", tc.ConfigFile),
@@ -207,7 +205,7 @@ func TestGetTimer(t *testing.T) {
 				),
 			); diff != "" {
 				t.Errorf(
-					"TestTimerConfig(): [%s] mismatch (-want +got):\n%s",
+					"TestTimerConfig(): [%s] mismatch (-got +want):\n%s",
 					tc.Name,
 					diff,
 				)

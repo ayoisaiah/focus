@@ -15,8 +15,8 @@ const (
 // Message maps a session to a message.
 type Message map[Name]string
 
-// Duration maps a session to time value in minutes.
-type Duration map[Name]int
+// Duration maps a session to time duration value.
+type Duration map[Name]time.Duration
 
 type Timeline struct {
 	// StartTime is the start of the session including
@@ -29,13 +29,13 @@ type Timeline struct {
 
 // Session represents a work or break session.
 type Session struct {
-	StartTime time.Time  `json:"start_time"`
-	EndTime   time.Time  `json:"end_time"`
-	Name      Name       `json:"name"`
-	Tags      []string   `json:"tags"`
-	Timeline  []Timeline `json:"timeline"`
-	Duration  int        `json:"duration"` // minutes
-	Completed bool       `json:"completed"`
+	StartTime time.Time     `json:"start_time"`
+	EndTime   time.Time     `json:"end_time"`
+	Name      Name          `json:"name"`
+	Tags      []string      `json:"tags"`
+	Timeline  []Timeline    `json:"timeline"`
+	Duration  time.Duration `json:"duration"` // minutes
+	Completed bool          `json:"completed"`
 }
 
 // Resuming determines if a session is being resumed or not.
@@ -49,10 +49,10 @@ func (s *Session) Resuming() bool {
 
 // getElapsedTimeInSeconds returns the time elapsed
 // for the current session in seconds.
-func (s *Session) GetElapsedTimeInSeconds() int {
-	var elapsedTimeInSeconds int
+func (s *Session) GetElapsedTimeInSeconds() float64 {
+	var elapsedTimeInSeconds float64
 	for _, v := range s.Timeline {
-		elapsedTimeInSeconds += int(v.EndTime.Sub(v.StartTime).Seconds())
+		elapsedTimeInSeconds += v.EndTime.Sub(v.StartTime).Seconds()
 	}
 
 	return elapsedTimeInSeconds
@@ -69,23 +69,23 @@ func (s *Session) Normalise() {
 	// of the session, the end time must be normalised
 	// to a time that will fulfill the exact duration
 	// of the session
-	if elapsed > s.Duration*60 {
+	if elapsed > s.Duration.Seconds() {
 		// secondsBeforeLastPart represents the number of seconds
 		// elapsed without including the concluding part of the
 		// session timeline
-		var secondsBeforeLastPart int
+		var secondsBeforeLastPart float64
 
 		for i := 0; i < len(s.Timeline)-1; i++ {
 			v := s.Timeline[i]
-			secondsBeforeLastPart += int(v.EndTime.Sub(v.StartTime).Seconds())
+			secondsBeforeLastPart += v.EndTime.Sub(v.StartTime).Seconds()
 		}
 
 		lastIndex := len(s.Timeline) - 1
 		lastPart := s.Timeline[lastIndex]
 
-		secondsLeft := (60 * s.Duration) - secondsBeforeLastPart
+		secondsLeft := s.Duration.Seconds() - secondsBeforeLastPart
 		end := lastPart.StartTime.Add(
-			time.Duration(secondsLeft * int(time.Second)),
+			time.Duration(secondsLeft * float64(time.Second)),
 		)
 		s.Timeline[lastIndex].EndTime = end
 		s.EndTime = end

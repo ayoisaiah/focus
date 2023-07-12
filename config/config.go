@@ -37,6 +37,7 @@ func InitializePaths() {
 	if focusEnv != "" {
 		configFileName = fmt.Sprintf("config_%s.yml", focusEnv)
 		dbFileName = fmt.Sprintf("focus_%s.db", focusEnv)
+		statusFileName = fmt.Sprintf("status_%s.json", focusEnv)
 	}
 
 	var err error
