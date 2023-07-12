@@ -11,10 +11,9 @@ import (
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/exp/slices"
 
+	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/session"
 )
-
-var pathToDB string
 
 var (
 	errFocusRunning = errors.New(
@@ -100,7 +99,7 @@ func (c *Client) DeleteTimer(timerKey []byte) error {
 }
 
 func (c *Client) Open() error {
-	db, err := openDB(pathToDB)
+	db, err := openDB(config.GetDBFilePath())
 	if err != nil {
 		return err
 	}
