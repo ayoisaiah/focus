@@ -4,6 +4,7 @@ package timer
 
 import (
 	"bufio"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -179,6 +181,10 @@ func (t *Timer) ReportStatus() error {
 	}
 
 	tr := getTimeRemaining(s.EndTime)
+
+	if tr.t < 0 {
+		return nil
+	}
 
 	var text string
 
@@ -604,8 +610,8 @@ func printPausedTimers(timers []Timer) {
 
 		row := []string{
 			fmt.Sprintf("%d", i+1),
-			t.Started.Format("January 02, 2006 03:04:05 PM"),
 			t.PausedTime.Format("January 02, 2006 03:04:05 PM"),
+			t.Started.Format("January 02, 2006 03:04:05 PM"),
 			strings.Join(t.Opts.Tags, ", "),
 		}
 
@@ -613,7 +619,7 @@ func printPausedTimers(timers []Timer) {
 	}
 
 	tableBody = append([][]string{
-		{"#", "DATE STARTED", "DATE PAUSED", "TAGS"},
+		{"#", "DATE PAUSED", "DATE STARTED", "TAGS"},
 	}, tableBody...)
 
 	ui.PrintTable(tableBody, os.Stdout)
@@ -712,6 +718,10 @@ func Recover(
 
 		pausedTimers[i] = t
 	}
+
+	slices.SortStableFunc(pausedTimers, func(a, b Timer) int {
+		return cmp.Compare(b.PausedTime.UnixNano(), a.PausedTime.UnixNano())
+	})
 
 	var t *Timer
 
