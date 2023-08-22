@@ -1,7 +1,11 @@
 // Package session defines focus sessions
 package session
 
-import "time"
+import (
+	"time"
+
+	"github.com/ayoisaiah/focus/internal/timeutil"
+)
 
 // Name represents the session name.
 type Name string
@@ -34,8 +38,15 @@ type Session struct {
 	Name      Name          `json:"name"`
 	Tags      []string      `json:"tags"`
 	Timeline  []Timeline    `json:"timeline"`
-	Duration  time.Duration `json:"duration"` // minutes
+	Duration  time.Duration `json:"duration"`
 	Completed bool          `json:"completed"`
+}
+
+// Remainder is the time remaining in a session.
+type Remainder struct {
+	T int // total
+	M int // minutes
+	S int // seconds
 }
 
 // Resuming determines if a session is being resumed or not.
@@ -47,9 +58,47 @@ func (s *Session) Resuming() bool {
 	return true
 }
 
+// SetEndTime calculates the end time for the session.
+func (s *Session) SetEndTime() {
+	endTime := s.StartTime.Add(s.Duration)
+
+	if s.Resuming() {
+		elapsedTimeInSeconds := s.ElapsedTimeInSeconds()
+		endTime = time.Now().
+			Add(s.Duration).
+			Add(-time.Second * time.Duration(elapsedTimeInSeconds))
+	}
+
+	s.EndTime = endTime
+
+	s.Timeline = append(s.Timeline, Timeline{
+		StartTime: time.Now(),
+		EndTime:   endTime,
+	})
+}
+
+// Remaining calculates the time remaining for the session to end.
+func (s *Session) Remaining() Remainder {
+	difference := time.Until(s.EndTime)
+	total := timeutil.Round(difference.Seconds())
+
+	if total < 0 {
+		total = 0
+	}
+
+	minutes := total / 60
+	seconds := total % 60
+
+	return Remainder{
+		T: total,
+		M: minutes,
+		S: seconds,
+	}
+}
+
 // getElapsedTimeInSeconds returns the time elapsed
 // for the current session in seconds.
-func (s *Session) GetElapsedTimeInSeconds() float64 {
+func (s *Session) ElapsedTimeInSeconds() float64 {
 	var elapsedTimeInSeconds float64
 	for _, v := range s.Timeline {
 		elapsedTimeInSeconds += v.EndTime.Sub(v.StartTime).Seconds()
@@ -63,7 +112,7 @@ func (s *Session) GetElapsedTimeInSeconds() float64 {
 // the end time when the system is hibernated with a session in progress, and
 // resumed at a later time in the future that surpasses the normal end time.
 func (s *Session) Normalise() {
-	elapsed := s.GetElapsedTimeInSeconds()
+	elapsed := s.ElapsedTimeInSeconds()
 
 	// If the elapsed time is greater than the duration
 	// of the session, the end time must be normalised

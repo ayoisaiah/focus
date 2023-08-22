@@ -57,13 +57,6 @@ func (s Settled) String() string {
 
 func (s Settled) Signal() {}
 
-// timeRemaining is the time remaining in a session.
-type timeRemaining struct {
-	t int
-	m int
-	s int
-}
-
 // Timer represents a running timer.
 type Timer struct {
 	db         store.DB            `json:"-"`
@@ -81,21 +74,6 @@ type Status struct {
 	Tags              []string     `json:"tags"`
 	WorkCycle         int          `json:"work_cycle"`
 	LongBreakInterval int          `json:"long_break_interval"`
-}
-
-// getTimeRemaining subtracts the endTime from the currentTime
-// and returns the total number of minutes and seconds left.
-func getTimeRemaining(endTime time.Time) timeRemaining {
-	difference := time.Until(endTime)
-	total := timeutil.Round(difference.Seconds())
-	minutes := total / 60
-	seconds := total % 60
-
-	return timeRemaining{
-		t: total,
-		m: minutes,
-		s: seconds,
-	}
 }
 
 // persist updates the timer in the database so that it may be
@@ -180,9 +158,12 @@ func (t *Timer) ReportStatus() error {
 		return err
 	}
 
-	tr := getTimeRemaining(s.EndTime)
+	sess := &session.Session{
+		EndTime: s.EndTime,
+	}
+	tr := sess.Remaining()
 
-	if tr.t < 0 {
+	if tr.T < 0 {
 		return nil
 	}
 
@@ -200,21 +181,20 @@ func (t *Timer) ReportStatus() error {
 		text = "[Long break]"
 	}
 
-	pterm.Printfln("%s: %02d:%02d", text, tr.m, tr.s)
+	pterm.Printfln("%s: %02d:%02d", text, tr.M, tr.S)
 
 	return nil
 }
 
 func (t *Timer) writeStatusFile(
 	sess *session.Session,
-	endTime time.Time,
 ) error {
 	s := Status{
 		Name:              sess.Name,
 		WorkCycle:         t.WorkCycle,
 		Tags:              sess.Tags,
 		LongBreakInterval: t.Opts.LongBreakInterval,
-		EndTime:           endTime,
+		EndTime:           sess.EndTime,
 	}
 
 	statusFilePath := config.StatusFilePath()
@@ -250,7 +230,6 @@ func (t *Timer) writeStatusFile(
 // session to the standard output.
 func (t *Timer) printSession(
 	sess *session.Session,
-	endTime time.Time,
 ) {
 	var text string
 
@@ -289,7 +268,7 @@ func (t *Timer) printSession(
 		os.Stdout,
 		"%s (until %s)%s\n",
 		text,
-		ui.Highlight(endTime.Format(timeFormat)),
+		ui.Highlight(sess.EndTime.Format(timeFormat)),
 		tags,
 	)
 }
@@ -483,12 +462,12 @@ func (t *Timer) wait() error {
 }
 
 // countdown prints the time remaining until the end of the current session.
-func (t *Timer) countdown(tr timeRemaining) {
+func (t *Timer) countdown(tr session.Remainder) {
 	fmt.Fprintf(
 		t.Opts.Stdout,
 		"🕒%s:%s",
-		pterm.Yellow(fmt.Sprintf("%02d", tr.m)),
-		pterm.Yellow(fmt.Sprintf("%02d", tr.s)),
+		pterm.Yellow(fmt.Sprintf("%02d", tr.M)),
+		pterm.Yellow(fmt.Sprintf("%02d", tr.S)),
 	)
 }
 
@@ -510,34 +489,17 @@ func (t *Timer) nextSession(current session.Name) session.Name {
 	return next
 }
 
-// start begins a new session.and blocks until its completion.
+// start starts or resumes a session.and blocks until its completion.
 func (t *Timer) start(sess *session.Session) {
-	endTime := sess.StartTime.
-		Add(t.Opts.Duration[sess.Name])
+	sess.SetEndTime()
 
-	if sess.Resuming() {
-		// Calculate a new end time for the interrupted work
-		// session by
-		elapsedTimeInSeconds := sess.GetElapsedTimeInSeconds()
-		endTime = time.Now().
-			Add(t.Opts.Duration[sess.Name]).
-			Add(-time.Second * time.Duration(elapsedTimeInSeconds))
+	t.printSession(sess)
 
-		sess.EndTime = endTime
-
-		sess.Timeline = append(sess.Timeline, session.Timeline{
-			StartTime: time.Now(),
-			EndTime:   endTime,
-		})
-	}
-
-	t.printSession(sess, endTime)
-
-	_ = t.writeStatusFile(sess, endTime)
+	_ = t.writeStatusFile(sess)
 
 	fmt.Fprint(t.Opts.Stdout, "\033[s")
 
-	remainder := getTimeRemaining(endTime)
+	remainder := sess.Remaining()
 
 	t.countdown(remainder)
 
@@ -545,16 +507,12 @@ func (t *Timer) start(sess *session.Session) {
 	for range ticker.C {
 		fmt.Fprint(t.Opts.Stdout, "\033[u\033[K")
 
-		remainder = getTimeRemaining(endTime)
+		remainder = sess.Remaining()
 
-		if remainder.t <= 0 {
+		if remainder.T <= 0 {
 			fmt.Printf("Session completed!\n\n")
 
-			lastIndex := len(sess.Timeline) - 1
-
-			sess.EndTime = endTime
 			sess.Completed = true
-			sess.Timeline[lastIndex].EndTime = endTime
 
 			return
 		}
@@ -602,16 +560,30 @@ func (t *Timer) newSession(name session.Name) (*session.Session, error) {
 }
 
 // printPausedTimers outputs a list of resumable timers.
-func printPausedTimers(timers []Timer) {
+func printPausedTimers(timers []Timer, pausedSess map[string]session.Session) {
 	tableBody := make([][]string, len(timers))
 
 	for i := range timers {
 		t := timers[i]
 
+		sess := pausedSess[string(t.SessionKey)]
+
+		sess.SetEndTime()
+
+		r := sess.Remaining()
+
+		cycle := fmt.Sprintf("%d/%d", t.WorkCycle, t.Opts.LongBreakInterval)
+
+		remainder := fmt.Sprintf("%s -> completed", cycle)
+		if r.T > 0 {
+			remainder = fmt.Sprintf("%s -> %02d:%02d", cycle, r.M, r.S)
+		}
+
 		row := []string{
 			fmt.Sprintf("%d", i+1),
-			t.PausedTime.Format("January 02, 2006 03:04:05 PM"),
-			t.Started.Format("January 02, 2006 03:04:05 PM"),
+			t.PausedTime.Format("Jan 02, 2006 03:04:05 PM"),
+			t.Started.Format("Jan 02, 2006 03:04:05 PM"),
+			remainder,
 			strings.Join(t.Opts.Tags, ", "),
 		}
 
@@ -619,15 +591,21 @@ func printPausedTimers(timers []Timer) {
 	}
 
 	tableBody = append([][]string{
-		{"#", "DATE PAUSED", "DATE STARTED", "TAGS"},
+		{
+			"#",
+			"DATE PAUSED",
+			"DATE STARTED",
+			"CYCLE",
+			"TAGS",
+		},
 	}, tableBody...)
 
 	ui.PrintTable(tableBody, os.Stdout)
 }
 
-// selectPausedTimers prompts the user to select from a list of resumable
+// selectPausedTimer prompts the user to select from a list of resumable
 // timers.
-func selectPausedTimers(
+func selectPausedTimer(
 	timers []Timer,
 ) (*Timer, error) {
 	reader := bufio.NewReader(os.Stdin)
@@ -692,26 +670,16 @@ func (t *Timer) overrideOptsOnResume(ctx *cli.Context) {
 	}
 }
 
-// Recover attempts to recover an interrupted session.
-func Recover(
+func getTimerSessions(
+	timers [][]byte,
 	db store.DB,
-	ctx *cli.Context,
-) (*Timer, *session.Session, error) {
-	var sess *session.Session
+) ([]Timer, map[string]session.Session, error) {
+	pausedTimers := make([]Timer, len(timers))
 
-	var err error
-
-	b, err := db.RetrievePausedTimers()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pausedTimers := make([]Timer, len(b))
-
-	for i := range b {
+	for i := range timers {
 		var t Timer
 
-		err = json.Unmarshal(b[i], &t)
+		err := json.Unmarshal(timers[i], &t)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -719,16 +687,45 @@ func Recover(
 		pausedTimers[i] = t
 	}
 
+	pausedSessions := make(map[string]session.Session)
+
+	for _, v := range pausedTimers {
+		s, dbErr := db.GetSession(v.SessionKey)
+		if dbErr != nil {
+			return nil, nil, dbErr
+		}
+
+		pausedSessions[string(v.SessionKey)] = *s
+	}
+
 	slices.SortStableFunc(pausedTimers, func(a, b Timer) int {
 		return cmp.Compare(b.PausedTime.UnixNano(), a.PausedTime.UnixNano())
 	})
 
+	return pausedTimers, pausedSessions, nil
+}
+
+// Recover attempts to recover an interrupted session.
+func Recover(
+	db store.DB,
+	ctx *cli.Context,
+) (*Timer, *session.Session, error) {
+	b, err := db.RetrievePausedTimers()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pausedTimers, pausedSessions, err := getTimerSessions(b, db)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var t *Timer
 
 	if ctx.Bool("select") {
-		printPausedTimers(pausedTimers)
+		printPausedTimers(pausedTimers, pausedSessions)
 
-		t, err = selectPausedTimers(pausedTimers)
+		t, err = selectPausedTimer(pausedTimers)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -742,7 +739,7 @@ func Recover(
 	t.Opts.Stdout = os.Stdout
 	t.Opts.Stderr = os.Stderr
 
-	sess, err = t.db.GetSession(t.SessionKey)
+	sess, err := t.db.GetSession(t.SessionKey)
 	if err != nil {
 		return nil, nil, err
 	}
