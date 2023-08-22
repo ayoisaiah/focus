@@ -4,7 +4,6 @@ package timer
 
 import (
 	"bufio"
-	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,8 +13,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"slices"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -44,6 +41,10 @@ import (
 
 var errInvalidSoundFormat = errors.New(
 	"file must be in mp3, ogg, flac, or wav format",
+)
+
+var errInvalidInput = errors.New(
+	"invalid input: only comma-separated numbers are accepted",
 )
 
 const sessionSettled = "settled"
@@ -559,78 +560,6 @@ func (t *Timer) newSession(name session.Name) (*session.Session, error) {
 	return sess, nil
 }
 
-// printPausedTimers outputs a list of resumable timers.
-func printPausedTimers(timers []Timer, pausedSess map[string]session.Session) {
-	tableBody := make([][]string, len(timers))
-
-	for i := range timers {
-		t := timers[i]
-
-		sess := pausedSess[string(t.SessionKey)]
-
-		sess.SetEndTime()
-
-		r := sess.Remaining()
-
-		cycle := fmt.Sprintf("%d/%d", t.WorkCycle, t.Opts.LongBreakInterval)
-
-		remainder := fmt.Sprintf("%s -> completed", cycle)
-		if r.T > 0 {
-			remainder = fmt.Sprintf("%s -> %02d:%02d", cycle, r.M, r.S)
-		}
-
-		row := []string{
-			fmt.Sprintf("%d", i+1),
-			t.PausedTime.Format("Jan 02, 2006 03:04:05 PM"),
-			t.Started.Format("Jan 02, 2006 03:04:05 PM"),
-			remainder,
-			strings.Join(t.Opts.Tags, ", "),
-		}
-
-		tableBody[i] = row
-	}
-
-	tableBody = append([][]string{
-		{
-			"#",
-			"DATE PAUSED",
-			"DATE STARTED",
-			"CYCLE",
-			"TAGS",
-		},
-	}, tableBody...)
-
-	ui.PrintTable(tableBody, os.Stdout)
-}
-
-// selectPausedTimer prompts the user to select from a list of resumable
-// timers.
-func selectPausedTimer(
-	timers []Timer,
-) (*Timer, error) {
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Fprint(os.Stdout, "\033[s")
-	fmt.Fprint(os.Stdout, "Type a number and press ENTER: ")
-
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return nil, err
-	}
-
-	num, err := strconv.Atoi(strings.TrimSpace(input))
-	if err != nil {
-		return nil, err
-	}
-
-	index := num - 1
-	if index >= len(timers) {
-		return nil, fmt.Errorf("%d is not associated with a session", num)
-	}
-
-	return &timers[index], nil
-}
-
 // overrideOptsOnResume overrides timer options if specified through
 // command-line arguments.
 func (t *Timer) overrideOptsOnResume(ctx *cli.Context) {
@@ -668,90 +597,6 @@ func (t *Timer) overrideOptsOnResume(ctx *cli.Context) {
 	if ctx.String("session-cmd") != "" {
 		t.Opts.SessionCmd = ctx.String("session-cmd")
 	}
-}
-
-func getTimerSessions(
-	timers [][]byte,
-	db store.DB,
-) ([]Timer, map[string]session.Session, error) {
-	pausedTimers := make([]Timer, len(timers))
-
-	for i := range timers {
-		var t Timer
-
-		err := json.Unmarshal(timers[i], &t)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		pausedTimers[i] = t
-	}
-
-	pausedSessions := make(map[string]session.Session)
-
-	for _, v := range pausedTimers {
-		s, dbErr := db.GetSession(v.SessionKey)
-		if dbErr != nil {
-			return nil, nil, dbErr
-		}
-
-		pausedSessions[string(v.SessionKey)] = *s
-	}
-
-	slices.SortStableFunc(pausedTimers, func(a, b Timer) int {
-		return cmp.Compare(b.PausedTime.UnixNano(), a.PausedTime.UnixNano())
-	})
-
-	return pausedTimers, pausedSessions, nil
-}
-
-// Recover attempts to recover an interrupted session.
-func Recover(
-	db store.DB,
-	ctx *cli.Context,
-) (*Timer, *session.Session, error) {
-	b, err := db.RetrievePausedTimers()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pausedTimers, pausedSessions, err := getTimerSessions(b, db)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var t *Timer
-
-	if ctx.Bool("select") {
-		printPausedTimers(pausedTimers, pausedSessions)
-
-		t, err = selectPausedTimer(pausedTimers)
-		if err != nil {
-			return nil, nil, err
-		}
-	} else {
-		t = &pausedTimers[0]
-	}
-
-	t.db = db
-
-	t.Opts.Stdin = os.Stdin
-	t.Opts.Stdout = os.Stdout
-	t.Opts.Stderr = os.Stderr
-
-	sess, err := t.db.GetSession(t.SessionKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = t.db.DeleteTimer(timeutil.ToKey(t.Started))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	t.overrideOptsOnResume(ctx)
-
-	return t, sess, nil
 }
 
 // Run begins the timer and loops forever, alternating between work and
@@ -843,6 +688,62 @@ func (t *Timer) Run(sess *session.Session) (err error) {
 			}
 		}
 	}
+}
+
+// Delete permanently removes one or more paused timers.
+func Delete(db store.DB) error {
+	pausedTimers, pausedSessions, err := getTimerSessions(db)
+	if err != nil {
+		return err
+	}
+
+	printPausedTimers(pausedTimers, pausedSessions)
+
+	return selectAndDeleteTimers(db, pausedTimers)
+}
+
+// Recover attempts to recover an interrupted session.
+func Recover(
+	db store.DB,
+	ctx *cli.Context,
+) (*Timer, *session.Session, error) {
+	pausedTimers, pausedSessions, err := getTimerSessions(db)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var t *Timer
+
+	if ctx.Bool("select") {
+		printPausedTimers(pausedTimers, pausedSessions)
+
+		t, err = selectPausedTimer(pausedTimers)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		t = &pausedTimers[0]
+	}
+
+	t.db = db
+
+	t.Opts.Stdin = os.Stdin
+	t.Opts.Stdout = os.Stdout
+	t.Opts.Stderr = os.Stderr
+
+	sess, err := t.db.GetSession(t.SessionKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = t.db.DeleteTimer(timeutil.ToKey(t.Started))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	t.overrideOptsOnResume(ctx)
+
+	return t, sess, nil
 }
 
 // New creates a new timer.

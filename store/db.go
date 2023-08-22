@@ -29,6 +29,8 @@ type DB interface {
 	UpdateTimer(dateStarted, timerBytes []byte) error
 	// DeleteTimer deletes a previously saved timer state
 	DeleteTimer(timerKey []byte) error
+	// DeleteAllTimers deletes all the saved timers in the database
+	DeleteAllTimers() error
 	// Close ends the database connection
 	Close() error
 	// Open begins a databse connection

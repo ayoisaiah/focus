@@ -19,8 +19,8 @@ var (
 	errFocusRunning = errors.New(
 		"is Focus already running? Only one instance can be active at a time",
 	)
-	errNoPausedSession = errors.New(
-		"session not found: please start a new session",
+	errNoPausedTimer = errors.New(
+		"no paused timers were found",
 	)
 )
 
@@ -98,6 +98,23 @@ func (c *Client) DeleteTimer(timerKey []byte) error {
 	})
 }
 
+func (c *Client) DeleteAllTimers() error {
+	err := c.Update(func(tx *bolt.Tx) error {
+		c := tx.Bucket([]byte(timerBucket)).Cursor()
+
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			err := c.Delete()
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return err
+}
+
 func (c *Client) Open() error {
 	db, err := openDB(config.DBFilePath())
 	if err != nil {
@@ -125,7 +142,7 @@ func (c *Client) RetrievePausedTimers() ([][]byte, error) {
 	})
 
 	if len(timers) == 0 {
-		return nil, errNoPausedSession
+		return nil, errNoPausedTimer
 	}
 
 	return timers, err

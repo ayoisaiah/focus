@@ -18,6 +18,7 @@ func GetApp() *cli.App {
 			Name:    "period",
 			Aliases: []string{"p"},
 			Usage:   "Specify a time period for (defaults to 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time",
+			Value:   "7days",
 		},
 		"start-time": &cli.StringFlag{
 			Name:    "start",
@@ -103,7 +104,7 @@ func GetApp() *cli.App {
 		flags["start-time"],
 		flags["end-time"],
 		flags["period"],
-		flags["tag"],
+		flags["filter-tag"],
 		flags["no-color"],
 	}
 
@@ -132,9 +133,15 @@ func GetApp() *cli.App {
 		Commands: []*cli.Command{
 			{
 				Name:   "delete",
-				Usage:  "Permanently delete the all sessions within the specified time period. Requires confirmation",
+				Usage:  "Permanently delete the specified sessions",
 				Action: app.DeleteAction,
 				Flags:  statsFlags,
+			},
+			{
+				Name:      "delete-timer",
+				Usage:     "Permanently delete the specified paused timers",
+				UsageText: "Provide one or more timer numbers to delete, separated by commas. If you enter 0, all timers will be deleted.",
+				Action:    app.DeleteTimerAction,
 			},
 			{
 				Name:   "edit-config",

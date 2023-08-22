@@ -262,3 +262,16 @@ func StatusAction(_ *cli.Context) error {
 
 	return t.ReportStatus()
 }
+
+func DeleteTimerAction(ctx *cli.Context) error {
+	if ctx.Bool("no-color") {
+		disableStyling()
+	}
+
+	dbClient, err := store.NewClient(config.DBFilePath())
+	if err != nil {
+		return err
+	}
+
+	return timer.Delete(dbClient)
+}
