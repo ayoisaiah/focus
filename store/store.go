@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"slices"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
-	"golang.org/x/exp/slices"
 
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/session"
@@ -99,7 +99,7 @@ func (c *Client) DeleteTimer(timerKey []byte) error {
 }
 
 func (c *Client) Open() error {
-	db, err := openDB(config.GetDBFilePath())
+	db, err := openDB(config.DBFilePath())
 	if err != nil {
 		return err
 	}

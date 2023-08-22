@@ -156,7 +156,7 @@ func resetTimerConfig() {
 	viper.Reset()
 }
 
-func TestGetTimer(t *testing.T) {
+func TestTimer(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			resetTimerConfig()
@@ -189,7 +189,7 @@ func TestGetTimer(t *testing.T) {
 				os.Stdin = f
 			}
 
-			result := GetTimer(ctx)
+			result := Timer(ctx)
 
 			// restore stdin
 			os.Stdin = oldStdin

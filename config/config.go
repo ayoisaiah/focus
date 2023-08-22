@@ -20,15 +20,15 @@ var (
 	statusFilePath string
 )
 
-func GetDir() string {
+func Dir() string {
 	return configDir
 }
 
-func GetDBFilePath() string {
+func DBFilePath() string {
 	return dbFilePath
 }
 
-func GetStatusFilePath() string {
+func StatusFilePath() string {
 	return statusFilePath
 }
 

@@ -105,17 +105,12 @@ func setStatsConfig(ctx *cli.Context) error {
 	return nil
 }
 
-// GetStats initializes and returns the stats configuration from
+// Stats initializes and returns the stats configuration from
 // command-line arguments.
-func GetStats(ctx *cli.Context) *StatsConfig {
+func Stats(ctx *cli.Context) *StatsConfig {
 	once.Do(func() {
-		now := time.Now()
-		start := timeutil.RoundToStart(now)
-
 		statsCfg = &StatsConfig{
-			StartTime: start.AddDate(0, 0, -6),
-			EndTime:   timeutil.RoundToEnd(start),
-			PathToDB:  dbFilePath,
+			PathToDB: dbFilePath,
 		}
 
 		if err := setStatsConfig(ctx); err != nil {

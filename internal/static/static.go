@@ -40,7 +40,7 @@ func init() {
 					os.Exit(1)
 				}
 
-				relPath := filepath.Join(config.GetDir(), path)
+				relPath := filepath.Join(config.Dir(), path)
 
 				var pathToFile string
 

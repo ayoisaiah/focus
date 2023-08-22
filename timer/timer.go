@@ -146,8 +146,8 @@ func (t *Timer) runSessionCmd(sessionCmd string) error {
 
 // ReportStatus reports the status of the currently running timer.
 func (t *Timer) ReportStatus() error {
-	dbFilePath := config.GetDBFilePath()
-	statusFilePath := config.GetStatusFilePath()
+	dbFilePath := config.DBFilePath()
+	statusFilePath := config.StatusFilePath()
 
 	var fileMode fs.FileMode = 0o600
 
@@ -211,7 +211,7 @@ func (t *Timer) writeStatusFile(
 		EndTime:           endTime,
 	}
 
-	statusFilePath := config.GetStatusFilePath()
+	statusFilePath := config.StatusFilePath()
 
 	statusFile, err := os.Create(statusFilePath)
 	if err != nil {
@@ -348,7 +348,7 @@ func (t *Timer) handleInterruption(sess *session.Session) chan os.Signal {
 		lastIndex := len(sess.Timeline) - 1
 		sess.Timeline[lastIndex].EndTime = interrruptedTime
 
-		_ = os.Remove(config.GetStatusFilePath())
+		_ = os.Remove(config.StatusFilePath())
 
 		err := t.saveSession(sess)
 		if err != nil {

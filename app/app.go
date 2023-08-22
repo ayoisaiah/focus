@@ -131,7 +131,7 @@ func DefaultAction(ctx *cli.Context) error {
 		disableStyling()
 	}
 
-	cfg := config.GetTimer(ctx)
+	cfg := config.Timer(ctx)
 
 	dbClient, err := store.NewClient(cfg.PathToDB)
 	if err != nil {
@@ -185,7 +185,7 @@ func EditConfigAction(ctx *cli.Context) error {
 		defaultEditor,
 	)
 
-	cfg := config.GetTimer(ctx)
+	cfg := config.Timer(ctx)
 
 	cmd := exec.Command(editor, cfg.PathToConfig)
 
@@ -209,7 +209,7 @@ func ResumeAction(ctx *cli.Context) error {
 		disableStyling()
 	}
 
-	dbClient, err := store.NewClient(config.GetDBFilePath())
+	dbClient, err := store.NewClient(config.DBFilePath())
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,9 @@ func StatsAction(ctx *cli.Context) error {
 		pterm.DisableColor()
 	}
 
-	cfg := config.GetStats(ctx)
+	cfg := config.Stats(ctx)
+
+	fmt.Println(cfg.StartTime, cfg.EndTime)
 
 	dbClient, err := store.NewClient(cfg.PathToDB)
 	if err != nil {

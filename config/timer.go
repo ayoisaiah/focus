@@ -472,8 +472,8 @@ func initTimerConfig() error {
 	return nil
 }
 
-// GetTimer initializes and returns the timer configuration.
-func GetTimer(ctx *cli.Context) *TimerConfig {
+// Timer initializes and returns the timer configuration.
+func Timer(ctx *cli.Context) *TimerConfig {
 	once.Do(func() {
 		err := initTimerConfig()
 		if err != nil {
