@@ -3,6 +3,7 @@ package stats
 import (
 	"bufio"
 	"fmt"
+	"os"
 
 	"github.com/pterm/pterm"
 )
@@ -23,14 +24,15 @@ func EditTags(args []string) error {
 		sessions[i].Tags = args
 	}
 
-	printSessionsTable(opts.Stdout, sessions)
+	printSessionsTable(os.Stdout, sessions)
 
 	warning := pterm.Warning.Sprint(
 		"The sessions above will be updated. Press ENTER to proceed",
 	)
-	fmt.Fprint(opts.Stdout, warning)
 
-	reader := bufio.NewReader(opts.Stdin)
+	fmt.Fprint(os.Stdout, warning)
+
+	reader := bufio.NewReader(os.Stdin)
 
 	_, _ = reader.ReadString('\n')
 

@@ -3,6 +3,7 @@ package stats
 import (
 	"bufio"
 	"fmt"
+	"os"
 
 	"github.com/pterm/pterm"
 )
@@ -20,14 +21,15 @@ func Delete() error {
 		return nil
 	}
 
-	printSessionsTable(opts.Stdout, sessions)
+	printSessionsTable(os.Stdout, sessions)
 
 	warning := pterm.Warning.Sprint(
 		"The above sessions will be deleted permanently. Press ENTER to proceed",
 	)
-	fmt.Fprint(opts.Stdout, warning)
 
-	reader := bufio.NewReader(opts.Stdin)
+	fmt.Fprint(os.Stdout, warning)
+
+	reader := bufio.NewReader(os.Stdin)
 
 	_, _ = reader.ReadString('\n')
 

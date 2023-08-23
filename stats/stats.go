@@ -3,6 +3,7 @@ package stats
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -480,7 +481,7 @@ func Show() error {
 	)
 
 	fmt.Fprintln(
-		opts.Stdout,
+		os.Stdout,
 		strings.TrimSpace(output),
 	)
 

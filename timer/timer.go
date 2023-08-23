@@ -39,12 +39,14 @@ import (
 	"github.com/ayoisaiah/focus/store"
 )
 
-var errInvalidSoundFormat = errors.New(
-	"file must be in mp3, ogg, flac, or wav format",
-)
+var (
+	errInvalidSoundFormat = errors.New(
+		"sound file must be in mp3, ogg, flac, or wav format",
+	)
 
-var errInvalidInput = errors.New(
-	"invalid input: only comma-separated numbers are accepted",
+	errInvalidInput = errors.New(
+		"invalid input: only comma-separated numbers are accepted",
+	)
 )
 
 const sessionSettled = "settled"
@@ -118,9 +120,6 @@ func (t *Timer) runSessionCmd(sessionCmd string) error {
 	args := cmdSlice[1:]
 
 	cmd := exec.Command(name, args...)
-	cmd.Stdin = t.Opts.Stdin
-	cmd.Stdout = t.Opts.Stdout
-	cmd.Stderr = t.Opts.Stderr
 
 	return cmd.Run()
 }
@@ -441,10 +440,10 @@ func (t *Timer) wait() error {
 		return err
 	}
 
-	reader := bufio.NewReader(t.Opts.Stdin)
+	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Fprint(t.Opts.Stdout, "\033[s")
-	fmt.Fprint(t.Opts.Stdout, "Press ENTER to start the next session")
+	fmt.Fprint(os.Stdout, "\033[s")
+	fmt.Fprint(os.Stdout, "Press ENTER to start the next session")
 
 	// Block until user input before beginning next session
 	_, err = reader.ReadString('\n')
@@ -465,7 +464,7 @@ func (t *Timer) wait() error {
 // countdown prints the time remaining until the end of the current session.
 func (t *Timer) countdown(tr session.Remainder) {
 	fmt.Fprintf(
-		t.Opts.Stdout,
+		os.Stdout,
 		"🕒%s:%s",
 		pterm.Yellow(fmt.Sprintf("%02d", tr.M)),
 		pterm.Yellow(fmt.Sprintf("%02d", tr.S)),
@@ -498,7 +497,7 @@ func (t *Timer) start(sess *session.Session) {
 
 	_ = t.writeStatusFile(sess)
 
-	fmt.Fprint(t.Opts.Stdout, "\033[s")
+	fmt.Fprint(os.Stdout, "\033[s")
 
 	remainder := sess.Remaining()
 
@@ -506,7 +505,7 @@ func (t *Timer) start(sess *session.Session) {
 
 	ticker := time.NewTicker(time.Second)
 	for range ticker.C {
-		fmt.Fprint(t.Opts.Stdout, "\033[u\033[K")
+		fmt.Fprint(os.Stdout, "\033[u\033[K")
 
 		remainder = sess.Remaining()
 
@@ -726,10 +725,6 @@ func Recover(
 	}
 
 	t.db = db
-
-	t.Opts.Stdin = os.Stdin
-	t.Opts.Stdout = os.Stdout
-	t.Opts.Stderr = os.Stderr
 
 	sess, err := t.db.GetSession(t.SessionKey)
 	if err != nil {

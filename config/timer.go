@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -26,9 +25,6 @@ var once sync.Once
 var timerCfg = &TimerConfig{
 	Message:  make(session.Message),
 	Duration: make(session.Duration),
-	Stderr:   os.Stderr,
-	Stdout:   os.Stdout,
-	Stdin:    os.Stdin,
 }
 
 var (
@@ -90,9 +86,6 @@ const (
 // TimerConfig represents the program configuration derived from the config file
 // and command-line arguments.
 type TimerConfig struct {
-	Stderr              io.Writer        `json:"-"`
-	Stdout              io.Writer        `json:"-"`
-	Stdin               io.Reader        `json:"-"`
 	Duration            session.Duration `json:"duration"`
 	Message             session.Message  `json:"message"`
 	AmbientSound        string           `json:"sound"`

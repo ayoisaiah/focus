@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
 
@@ -146,9 +145,6 @@ func resetTimerConfig() {
 	timerCfg = &TimerConfig{
 		Message:  make(session.Message),
 		Duration: make(session.Duration),
-		Stderr:   os.Stderr,
-		Stdout:   os.Stdout,
-		Stdin:    os.Stdin,
 	}
 
 	once = sync.Once{}
@@ -197,12 +193,6 @@ func TestTimer(t *testing.T) {
 			if diff := cmp.Diff(
 				result,
 				&tc.Expected,
-				cmpopts.IgnoreFields(
-					TimerConfig{},
-					"Stderr",
-					"Stdout",
-					"Stdin",
-				),
 			); diff != "" {
 				t.Errorf(
 					"TestTimerConfig(): [%s] mismatch (-got +want):\n%s",

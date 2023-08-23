@@ -3,6 +3,7 @@ package stats
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -61,7 +62,7 @@ func List() error {
 		return nil
 	}
 
-	printSessionsTable(opts.Stdout, sessions)
+	printSessionsTable(os.Stdout, sessions)
 
 	return nil
 }

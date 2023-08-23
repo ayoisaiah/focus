@@ -88,6 +88,7 @@ func selectPausedTimer(
 	return &timers[index], nil
 }
 
+// getTimerSessions retrieves all paused timers and their corresponding sessions.
 func getTimerSessions(
 	db store.DB,
 ) ([]Timer, map[string]session.Session, error) {
@@ -127,6 +128,8 @@ func getTimerSessions(
 	return pausedTimers, pausedSessions, nil
 }
 
+// selectAndDeleteTimers prompts the user and deletes the selected timers or
+// all timers if 0 is specified.
 func selectAndDeleteTimers(db store.DB, timers []Timer) error {
 	reader := bufio.NewReader(os.Stdin)
 

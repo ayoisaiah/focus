@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"io"
 	"os"
 	"slices"
 	"strings"
@@ -28,9 +27,6 @@ var (
 var statsCfg *StatsConfig
 
 type StatsConfig struct {
-	Stderr    io.Writer `json:"-"`
-	Stdout    io.Writer `json:"-"`
-	Stdin     io.Reader `json:"-"`
 	StartTime time.Time
 	EndTime   time.Time
 	PathToDB  string
@@ -69,10 +65,6 @@ func getTimeRange(period timeutil.Period) (start, end time.Time) {
 
 // setStatsConfig updates the stats configuration from command-line arguments.
 func setStatsConfig(ctx *cli.Context) error {
-	statsCfg.Stderr = os.Stderr
-	statsCfg.Stdout = os.Stdout
-	statsCfg.Stdin = os.Stdin
-
 	if (ctx.String("tag")) != "" {
 		statsCfg.Tags = strings.Split(ctx.String("tag"), ",")
 	}

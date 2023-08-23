@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 	"os"
@@ -126,45 +125,27 @@ func checkForUpdates(app *cli.App) {
 	}
 }
 
-func DefaultAction(ctx *cli.Context) error {
+func statsHelper(ctx *cli.Context) error {
 	if ctx.Bool("no-color") {
-		disableStyling()
+		pterm.DisableColor()
 	}
 
-	cfg := config.Timer(ctx)
+	cfg := config.Stats(ctx)
 
 	dbClient, err := store.NewClient(cfg.PathToDB)
 	if err != nil {
 		return err
 	}
 
-	ui.DarkTheme = cfg.DarkTheme
+	stats.Init(dbClient, cfg)
 
-	t := timer.New(dbClient, cfg)
-
-	return t.Run(&session.Session{})
+	return nil
 }
 
-func ListAction(ctx *cli.Context) error {
-	err := StatsAction(ctx)
-	if err != nil {
-		return err
-	}
-
-	return stats.List()
-}
-
-func EditTagsAction(ctx *cli.Context) error {
-	err := StatsAction(ctx)
-	if err != nil {
-		return err
-	}
-
-	return stats.EditTags(ctx.Args().Slice())
-}
-
+// DeleteAction handles the delete command which is used to delete one or more
+// sessions.
 func DeleteAction(ctx *cli.Context) error {
-	err := StatsAction(ctx)
+	err := statsHelper(ctx)
 	if err != nil {
 		return err
 	}
@@ -172,6 +153,22 @@ func DeleteAction(ctx *cli.Context) error {
 	return stats.Delete()
 }
 
+// DeleteTimerAction handles the delete-timer command.
+func DeleteTimerAction(ctx *cli.Context) error {
+	if ctx.Bool("no-color") {
+		disableStyling()
+	}
+
+	dbClient, err := store.NewClient(config.DBFilePath())
+	if err != nil {
+		return err
+	}
+
+	return timer.Delete(dbClient)
+}
+
+// EditConfigAction handles the edit-config command which opens the focus config
+// file in the user's editor.
 func EditConfigAction(ctx *cli.Context) error {
 	defaultEditor := "nano"
 
@@ -189,21 +186,42 @@ func EditConfigAction(ctx *cli.Context) error {
 
 	cmd := exec.Command(editor, cfg.PathToConfig)
 
-	var stderr bytes.Buffer
-
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println(stderr.String())
 		return err
 	}
 
 	return nil
 }
 
+// EditTagsAction handles the edit-tag command which is used to edit tags for a
+// session.
+func EditTagsAction(ctx *cli.Context) error {
+	err := statsHelper(ctx)
+	if err != nil {
+		return err
+	}
+
+	return stats.EditTags(ctx.Args().Slice())
+}
+
+// ListAction handles the list command and prints a table of all the sessions
+// started within a time period.
+func ListAction(ctx *cli.Context) error {
+	err := statsHelper(ctx)
+	if err != nil {
+		return err
+	}
+
+	return stats.List()
+}
+
+// ResumeAction handles the resume command and resumes a previously paused
+// timer.
 func ResumeAction(ctx *cli.Context) error {
 	if ctx.Bool("no-color") {
 		disableStyling()
@@ -229,27 +247,10 @@ func ResumeAction(ctx *cli.Context) error {
 	return t.Run(sess)
 }
 
-func StatsAction(ctx *cli.Context) error {
-	if ctx.Bool("no-color") {
-		pterm.DisableColor()
-	}
-
-	cfg := config.Stats(ctx)
-
-	fmt.Println(cfg.StartTime, cfg.EndTime)
-
-	dbClient, err := store.NewClient(cfg.PathToDB)
-	if err != nil {
-		return err
-	}
-
-	stats.Init(dbClient, cfg)
-
-	return nil
-}
-
+// StatsAction executes the stats subcommand and outputs the stats for the
+// specified time period.
 func ShowAction(ctx *cli.Context) error {
-	err := StatsAction(ctx)
+	err := statsHelper(ctx)
 	if err != nil {
 		return err
 	}
@@ -257,21 +258,30 @@ func ShowAction(ctx *cli.Context) error {
 	return stats.Show()
 }
 
+// StatusAction handles the status command and prints the status of the currently
+// running timer.
 func StatusAction(_ *cli.Context) error {
 	t := &timer.Timer{}
 
 	return t.ReportStatus()
 }
 
-func DeleteTimerAction(ctx *cli.Context) error {
+// DefaultAction handles the default action to start a new timer.
+func DefaultAction(ctx *cli.Context) error {
 	if ctx.Bool("no-color") {
 		disableStyling()
 	}
 
-	dbClient, err := store.NewClient(config.DBFilePath())
+	cfg := config.Timer(ctx)
+
+	dbClient, err := store.NewClient(cfg.PathToDB)
 	if err != nil {
 		return err
 	}
 
-	return timer.Delete(dbClient)
+	ui.DarkTheme = cfg.DarkTheme
+
+	t := timer.New(dbClient, cfg)
+
+	return t.Run(&session.Session{})
 }
