@@ -4,19 +4,25 @@ import (
 	"errors"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/araddon/dateparse"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/exp/slices"
 
 	"github.com/ayoisaiah/focus/internal/timeutil"
 )
 
-var errInvalidDateRange = errors.New(
-	"The end date must not be earlier than the start date",
+var (
+	errInvalidDateRange = errors.New(
+		"the end date must not be earlier than the start date",
+	)
+
+	errInvalidPeriod = errors.New(
+		"please provide a valid time period",
+	)
 )
 
 var statsCfg *StatsConfig
@@ -40,7 +46,7 @@ func getTimeRange(period timeutil.Period) (start, end time.Time) {
 
 	end = timeutil.RoundToEnd(now)
 
-	//nolint:exhaustive // delibrate inexhaustive switch
+	//nolint:exhaustive // other cases covered by default
 	switch period {
 	case timeutil.PeriodToday:
 		return
@@ -53,9 +59,10 @@ func getTimeRange(period timeutil.Period) (start, end time.Time) {
 	case timeutil.PeriodAllTime:
 		start = time.Time{}
 		return
+	default:
+		start = now.AddDate(0, 0, timeutil.Range[period])
+		start = timeutil.RoundToStart(start)
 	}
-
-	start = now.AddDate(0, 0, timeutil.Range[period])
 
 	return
 }
@@ -70,13 +77,15 @@ func setStatsConfig(ctx *cli.Context) error {
 		statsCfg.Tags = strings.Split(ctx.String("tag"), ",")
 	}
 
-	period := timeutil.Period(ctx.String("period"))
+	period := timeutil.Period(strings.TrimSpace(ctx.String("period")))
 
-	if !slices.Contains(timeutil.PeriodCollection, period) {
-		period = timeutil.Period7Days
+	if period != "" && !slices.Contains(timeutil.PeriodCollection, period) {
+		return errInvalidPeriod
 	}
 
-	statsCfg.StartTime, statsCfg.EndTime = getTimeRange(period)
+	if period != "" {
+		statsCfg.StartTime, statsCfg.EndTime = getTimeRange(period)
+	}
 
 	start := ctx.String("start")
 	if start != "" {
@@ -96,6 +105,10 @@ func setStatsConfig(ctx *cli.Context) error {
 		}
 
 		statsCfg.EndTime = dateTime
+	}
+
+	if statsCfg.StartTime.IsZero() || statsCfg.EndTime.IsZero() {
+		return errInvalidPeriod
 	}
 
 	if int(statsCfg.EndTime.Sub(statsCfg.StartTime).Seconds()) < 0 {
