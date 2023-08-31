@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/pterm/pterm"
 )
@@ -13,10 +14,16 @@ import (
 // the sessions from the database.
 func Delete(
 	sessions []Session,
-	deleteFunc func(sessions []Session) error,
+	deleteFunc func(sessionKey []time.Time) error,
 ) error {
 	if len(sessions) == 0 {
 		return nil
+	}
+
+	t := make([]time.Time, len(sessions))
+
+	for i := range sessions {
+		t[i] = sessions[i].StartTime
 	}
 
 	printSessionsTable(os.Stdout, sessions)
@@ -31,5 +38,5 @@ func Delete(
 
 	_, _ = reader.ReadString('\n')
 
-	return deleteFunc(sessions)
+	return deleteFunc(t)
 }

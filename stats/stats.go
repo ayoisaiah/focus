@@ -433,7 +433,12 @@ func filterSessions(sessions []session.Session) []session.Session {
 func Show() error {
 	defer db.Close()
 
-	sessions, err := db.GetSessions(opts.StartTime, opts.EndTime, opts.Tags)
+	b, err := db.GetSessions(opts.StartTime, opts.EndTime, opts.Tags)
+	if err != nil {
+		return err
+	}
+
+	sessions, err := session.CollectionFromBytes(b)
 	if err != nil {
 		return err
 	}

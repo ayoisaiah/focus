@@ -2,6 +2,7 @@
 package session
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/ayoisaiah/focus/internal/timeutil"
@@ -140,4 +141,24 @@ func (s *Session) Normalise() {
 		s.EndTime = end
 		s.Completed = true
 	}
+}
+
+// CollectionFromBytes converts a [][]byte to a []Session.
+func CollectionFromBytes(b [][]byte) ([]Session, error) {
+	s := make([]Session, len(b))
+
+	for i := range b {
+		v := b[i]
+
+		sess := Session{}
+
+		err := json.Unmarshal(v, &sess)
+		if err != nil {
+			return nil, err
+		}
+
+		s[i] = sess
+	}
+
+	return s, nil
 }

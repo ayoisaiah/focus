@@ -2,8 +2,10 @@ package session
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/pterm/pterm"
 )
@@ -12,15 +14,24 @@ import (
 func EditTags(
 	sessions []Session,
 	args []string,
-	updateFunc func(*Session) error,
+	updateFunc func(sessions map[time.Time][]byte) error,
 ) error {
 	if len(sessions) == 0 {
 		pterm.Info.Println(noSessionsMsg)
 		return nil
 	}
 
+	m := make(map[time.Time][]byte)
+
 	for i := range sessions {
 		sessions[i].Tags = args
+
+		b, err := json.Marshal(sessions[i])
+		if err != nil {
+			return err
+		}
+
+		m[sessions[i].StartTime] = b
 	}
 
 	printSessionsTable(os.Stdout, sessions)
@@ -35,14 +46,5 @@ func EditTags(
 
 	_, _ = reader.ReadString('\n')
 
-	for i := range sessions {
-		sess := sessions[i]
-
-		err := updateFunc(&sess)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return updateFunc(m)
 }

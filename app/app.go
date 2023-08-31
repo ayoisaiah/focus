@@ -154,12 +154,17 @@ func sessionHelper(ctx *cli.Context) ([]session.Session, store.DB, error) {
 		return nil, nil, err
 	}
 
-	sessions, err := db.GetSessions(conf.StartTime, conf.EndTime, conf.Tags)
+	b, err := db.GetSessions(conf.StartTime, conf.EndTime, conf.Tags)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return sessions, db, nil
+	s, err := session.CollectionFromBytes(b)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return s, db, nil
 }
 
 // DeleteAction handles the delete command which is used to delete one or more
@@ -226,7 +231,7 @@ func EditTagsAction(ctx *cli.Context) error {
 		return err
 	}
 
-	return session.EditTags(sessions, ctx.Args().Slice(), db.UpdateSession)
+	return session.EditTags(sessions, ctx.Args().Slice(), db.UpdateSessions)
 }
 
 // ListAction handles the list command and prints a table of all the sessions

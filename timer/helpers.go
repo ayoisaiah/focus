@@ -23,7 +23,7 @@ func printPausedTimers(timers []Timer, pausedSess map[string]session.Session) {
 	for i := range timers {
 		t := timers[i]
 
-		sess := pausedSess[string(t.SessionKey)]
+		sess := pausedSess[string(timeutil.ToKey(t.SessionKey))]
 
 		sess.SetEndTime()
 
@@ -113,12 +113,19 @@ func getTimerSessions(
 	pausedSessions := make(map[string]session.Session)
 
 	for _, v := range pausedTimers {
-		s, dbErr := db.GetSession(v.SessionKey)
+		sessBytes, dbErr := db.GetSession(v.SessionKey)
 		if dbErr != nil {
 			return nil, nil, dbErr
 		}
 
-		pausedSessions[string(v.SessionKey)] = *s
+		sess := &session.Session{}
+
+		err := json.Unmarshal(sessBytes, sess)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		pausedSessions[string(timeutil.ToKey(v.SessionKey))] = *sess
 	}
 
 	slices.SortStableFunc(pausedTimers, func(a, b Timer) int {
@@ -165,7 +172,7 @@ func selectAndDeleteTimers(db store.DB, timers []Timer) error {
 			return db.DeleteAllTimers()
 		}
 
-		err = db.DeleteTimer(timeutil.ToKey(timers[num].Started))
+		err = db.DeleteTimer(timers[num].Started)
 		if err != nil {
 			return err
 		}

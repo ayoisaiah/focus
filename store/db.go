@@ -2,8 +2,6 @@ package store
 
 import (
 	"time"
-
-	"github.com/ayoisaiah/focus/session"
 )
 
 // DB is the database storage interface.
@@ -14,25 +12,26 @@ type DB interface {
 	GetSessions(
 		startTime, endTime time.Time,
 		tag []string,
-	) ([]session.Session, error)
-	// UpdateSession updates a Focus session. The session is created if it doesn't
+	) ([][]byte, error)
+	// UpdateSession updates one or more Focus sessions.
+	// Each session is created if it doesn't
 	// exist already, or overwritten if it does.
-	UpdateSession(sess *session.Session) error
+	UpdateSessions(map[time.Time][]byte) error
 	// DeleteSessions deletes one or more saved sessions
-	DeleteSessions(sessions []session.Session) error
-	// GetInterrupted returns a previously stored timer and a curresponding work session
-	// (if any)
+	DeleteSessions(startTimes []time.Time) error
+	// GetSession returns a previously created session. If the session does not
+	// exist, no error is returned.
 	GetSession(
-		sessionKey []byte,
-	) (sess *session.Session, err error)
+		startTime time.Time,
+	) (sess []byte, err error)
 	// UpdateTimer stores a timer and the key of an interrupted session
-	UpdateTimer(dateStarted, timerBytes []byte) error
+	UpdateTimer(startTime time.Time, timerBytes []byte) error
 	// DeleteTimer deletes a previously saved timer state
-	DeleteTimer(timerKey []byte) error
+	DeleteTimer(startTime time.Time) error
 	// DeleteAllTimers deletes all the saved timers in the database
 	DeleteAllTimers() error
 	// Close ends the database connection
 	Close() error
-	// Open begins a databse connection
+	// Open initiates a databse connection
 	Open() error
 }

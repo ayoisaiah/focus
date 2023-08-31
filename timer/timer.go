@@ -33,7 +33,6 @@ import (
 
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/static"
-	"github.com/ayoisaiah/focus/internal/timeutil"
 	"github.com/ayoisaiah/focus/internal/ui"
 	"github.com/ayoisaiah/focus/session"
 	"github.com/ayoisaiah/focus/store"
@@ -66,7 +65,7 @@ type Timer struct {
 	Opts       *config.TimerConfig `json:"opts"`
 	PausedTime time.Time           `json:"paused_time"`
 	Started    time.Time           `json:"date_started"`
-	SessionKey []byte              `json:"session_key"`
+	SessionKey time.Time           `json:"session_key"`
 	WorkCycle  int                 `json:"work_cycle"`
 }
 
@@ -87,7 +86,7 @@ func (t *Timer) persist(sess *session.Session) error {
 	}
 
 	if !sess.Completed {
-		t.SessionKey = []byte(sess.StartTime.Format(time.RFC3339))
+		t.SessionKey = sess.StartTime
 	}
 
 	t.PausedTime = time.Now()
@@ -97,7 +96,7 @@ func (t *Timer) persist(sess *session.Session) error {
 		return err
 	}
 
-	err = t.db.UpdateTimer(timeutil.ToKey(t.Started), timerBytes)
+	err = t.db.UpdateTimer(t.Started, timerBytes)
 	if err != nil {
 		return err
 	}
@@ -529,7 +528,16 @@ func (t *Timer) saveSession(sess *session.Session) error {
 
 	sess.Normalise()
 
-	return t.db.UpdateSession(sess)
+	b, err := json.Marshal(sess)
+	if err != nil {
+		return err
+	}
+
+	m := map[time.Time][]byte{
+		sess.StartTime: b,
+	}
+
+	return t.db.UpdateSessions(m)
 }
 
 // newSession initialises a new session and saves it to the data store.
@@ -726,19 +734,26 @@ func Recover(
 
 	t.db = db
 
-	sess, err := t.db.GetSession(t.SessionKey)
+	sessBytes, err := t.db.GetSession(t.SessionKey)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = t.db.DeleteTimer(timeutil.ToKey(t.Started))
+	var sess session.Session
+
+	err = json.Unmarshal(sessBytes, &sess)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = t.db.DeleteTimer(t.Started)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	t.overrideOptsOnResume(ctx)
 
-	return t, sess, nil
+	return t, &sess, nil
 }
 
 // New creates a new timer.

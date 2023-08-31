@@ -12,7 +12,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/ayoisaiah/focus/config"
-	"github.com/ayoisaiah/focus/session"
+	"github.com/ayoisaiah/focus/internal/timeutil"
 )
 
 var (
@@ -34,55 +34,51 @@ type Client struct {
 	*bolt.DB
 }
 
-func (c *Client) UpdateSession(sess *session.Session) error {
-	key := []byte(sess.StartTime.Format(time.RFC3339))
+func (c *Client) UpdateSessions(sessions map[time.Time][]byte) error {
+	for k, v := range sessions {
+		key := timeutil.ToKey(k)
 
-	value, err := json.Marshal(sess)
-	if err != nil {
-		return err
+		return c.Update(func(tx *bolt.Tx) error {
+			return tx.Bucket([]byte(sessionBucket)).Put(key, v)
+		})
 	}
 
-	return c.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket([]byte(sessionBucket)).Put(key, value)
-	})
+	return nil
 }
 
 func (c *Client) UpdateTimer(
-	dateStarted,
+	startTime time.Time,
 	timerBytes []byte,
 ) error {
 	return c.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(timerBucket))
 
-		return b.Put(dateStarted, timerBytes)
+		return b.Put(timeutil.ToKey(startTime), timerBytes)
 	})
 }
 
 func (c *Client) GetSession(
-	sessionKey []byte,
-) (*session.Session, error) {
-	var sess session.Session
+	startTime time.Time,
+) ([]byte, error) {
+	var sessBytes []byte
 
 	err := c.View(func(tx *bolt.Tx) error {
-		sessBytes := tx.Bucket([]byte(sessionBucket)).Get(sessionKey)
-		if len(sessBytes) == 0 {
-			// this will initialise a new session
-			return nil
-		}
+		key := timeutil.ToKey(startTime)
 
-		return json.Unmarshal(sessBytes, &sess)
+		sessBytes = tx.Bucket([]byte(sessionBucket)).Get(key)
+
+		return nil
 	})
 
-	return &sess, err
+	return sessBytes, err
 }
 
-func (c *Client) DeleteSessions(sessions []session.Session) error {
+func (c *Client) DeleteSessions(startTimes []time.Time) error {
 	return c.Update(func(tx *bolt.Tx) error {
-		for i := range sessions {
-			sess := sessions[i]
-			id := sess.StartTime.Format(time.RFC3339)
+		for i := range startTimes {
+			key := timeutil.ToKey(startTimes[i])
 
-			err := tx.Bucket([]byte(sessionBucket)).Delete([]byte(id))
+			err := tx.Bucket([]byte(sessionBucket)).Delete(key)
 			if err != nil {
 				return err
 			}
@@ -92,9 +88,9 @@ func (c *Client) DeleteSessions(sessions []session.Session) error {
 	})
 }
 
-func (c *Client) DeleteTimer(timerKey []byte) error {
+func (c *Client) DeleteTimer(startTime time.Time) error {
 	return c.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket([]byte(timerBucket)).Delete(timerKey)
+		return tx.Bucket([]byte(timerBucket)).Delete(timeutil.ToKey(startTime))
 	})
 }
 
@@ -148,10 +144,16 @@ func (c *Client) RetrievePausedTimers() ([][]byte, error) {
 	return timers, err
 }
 
+type session struct {
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
+	Tags      []string  `json:"tags"`
+}
+
 func (c *Client) GetSessions(
 	startTime, endTime time.Time,
 	tags []string,
-) ([]session.Session, error) {
+) ([][]byte, error) {
 	var b [][]byte
 
 	err := c.View(func(tx *bolt.Tx) error {
@@ -165,7 +167,7 @@ func (c *Client) GetSessions(
 		// it was ended within the specified time bounds
 		pk, pv := c.Prev()
 		if pk != nil {
-			var sess session.Session
+			var sess session
 			err := json.Unmarshal(pv, &sess)
 			if err != nil {
 				return err
@@ -185,7 +187,7 @@ func (c *Client) GetSessions(
 		for k, v := sk, sv; k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
 			// Filter out tags that don't match
 			if len(tags) != 0 {
-				var sess session.Session
+				var sess session
 				err := json.Unmarshal(v, &sess)
 				if err != nil {
 					return err
@@ -204,21 +206,7 @@ func (c *Client) GetSessions(
 		return nil
 	})
 
-	//nolint:prealloc // TODO: figure out why pre-allocating causes empty sessions
-	var s []session.Session
-
-	for _, v := range b {
-		sess := session.Session{}
-
-		err = json.Unmarshal(v, &sess)
-		if err != nil {
-			return nil, err
-		}
-
-		s = append(s, sess)
-	}
-
-	return s, err
+	return b, err
 }
 
 // openDB creates or opens a database.

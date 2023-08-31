@@ -16,7 +16,7 @@ var (
 	periodFlag = &cli.StringFlag{
 		Name:    "period",
 		Aliases: []string{"p"},
-		Usage:   "Specify a time period for (defaults to 7days). Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time",
+		Usage:   "Specify a time period. Possible values are: today, yesterday, 7days, 14days, 30days, 90days, 180days, 365days, all-time",
 	}
 
 	startTimeFlag = &cli.StringFlag{
@@ -185,7 +185,7 @@ func GetApp() *cli.App {
 				Name:   "list",
 				Usage:  "List all the sessions within the specified time period",
 				Action: app.ListAction,
-				Flags:  statsFlags,
+				Flags:  editTagsFlags,
 			},
 			{
 				Name:  "resume",
