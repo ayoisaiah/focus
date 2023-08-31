@@ -1,4 +1,4 @@
-package stats
+package session
 
 import (
 	"bufio"
@@ -11,12 +11,10 @@ import (
 // Delete attempts to delete all sessions that fall in the specified time range.
 // It requests for confirmation before proceeding with the permanent removal of
 // the sessions from the database.
-func Delete() error {
-	sessions, err := db.GetSessions(opts.StartTime, opts.EndTime, opts.Tags)
-	if err != nil {
-		return err
-	}
-
+func Delete(
+	sessions []Session,
+	deleteFunc func(sessions []Session) error,
+) error {
 	if len(sessions) == 0 {
 		return nil
 	}
@@ -33,5 +31,5 @@ func Delete() error {
 
 	_, _ = reader.ReadString('\n')
 
-	return db.DeleteSessions(sessions)
+	return deleteFunc(sessions)
 }

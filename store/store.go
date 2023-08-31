@@ -12,7 +12,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/ayoisaiah/focus/config"
-	"github.com/ayoisaiah/focus/internal/session"
+	"github.com/ayoisaiah/focus/session"
 )
 
 var (

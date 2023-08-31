@@ -1,4 +1,4 @@
-package stats
+package session
 
 import (
 	"fmt"
@@ -8,12 +8,15 @@ import (
 
 	"github.com/pterm/pterm"
 
-	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/ayoisaiah/focus/internal/ui"
 )
 
+const (
+	noSessionsMsg = "No sessions found for the specified time range"
+)
+
 // printSessionsTable prints a session table to the command-line.
-func printSessionsTable(w io.Writer, sessions []session.Session) {
+func printSessionsTable(w io.Writer, sessions []Session) {
 	tableBody := make([][]string, len(sessions))
 
 	for i := range sessions {
@@ -43,7 +46,7 @@ func printSessionsTable(w io.Writer, sessions []session.Session) {
 	}
 
 	tableBody = append([][]string{
-		{"#", "START DATE", "END DATE", "TAGGED", "STATUS"},
+		{"#", "START DATE", "END DATE", "TAGS", "STATUS"},
 	}, tableBody...)
 
 	ui.PrintTable(tableBody, w)
@@ -51,12 +54,7 @@ func printSessionsTable(w io.Writer, sessions []session.Session) {
 
 // List prints out a table of all the sessions that
 // were created within the specified time range.
-func List() error {
-	sessions, err := db.GetSessions(opts.StartTime, opts.EndTime, opts.Tags)
-	if err != nil {
-		return err
-	}
-
+func List(sessions []Session) error {
 	if len(sessions) == 0 {
 		pterm.Info.Println(noSessionsMsg)
 		return nil

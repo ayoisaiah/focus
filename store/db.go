@@ -3,7 +3,7 @@ package store
 import (
 	"time"
 
-	"github.com/ayoisaiah/focus/internal/session"
+	"github.com/ayoisaiah/focus/session"
 )
 
 // DB is the database storage interface.

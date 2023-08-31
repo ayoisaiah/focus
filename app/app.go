@@ -12,8 +12,8 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/ayoisaiah/focus/config"
-	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/ayoisaiah/focus/internal/ui"
+	"github.com/ayoisaiah/focus/session"
 	"github.com/ayoisaiah/focus/stats"
 	"github.com/ayoisaiah/focus/store"
 	"github.com/ayoisaiah/focus/timer"
@@ -142,15 +142,35 @@ func statsHelper(ctx *cli.Context) error {
 	return nil
 }
 
+func sessionHelper(ctx *cli.Context) ([]session.Session, store.DB, error) {
+	if ctx.Bool("no-color") {
+		pterm.DisableColor()
+	}
+
+	conf := config.Stats(ctx)
+
+	db, err := store.NewClient(conf.PathToDB)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sessions, err := db.GetSessions(conf.StartTime, conf.EndTime, conf.Tags)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return sessions, db, nil
+}
+
 // DeleteAction handles the delete command which is used to delete one or more
 // sessions.
 func DeleteAction(ctx *cli.Context) error {
-	err := statsHelper(ctx)
+	sessions, db, err := sessionHelper(ctx)
 	if err != nil {
 		return err
 	}
 
-	return stats.Delete()
+	return session.Delete(sessions, db.DeleteSessions)
 }
 
 // DeleteTimerAction handles the delete-timer command.
@@ -201,23 +221,23 @@ func EditConfigAction(ctx *cli.Context) error {
 // EditTagsAction handles the edit-tag command which is used to edit tags for a
 // session.
 func EditTagsAction(ctx *cli.Context) error {
-	err := statsHelper(ctx)
+	sessions, db, err := sessionHelper(ctx)
 	if err != nil {
 		return err
 	}
 
-	return stats.EditTags(ctx.Args().Slice())
+	return session.EditTags(sessions, ctx.Args().Slice(), db.UpdateSession)
 }
 
 // ListAction handles the list command and prints a table of all the sessions
 // started within a time period.
 func ListAction(ctx *cli.Context) error {
-	err := statsHelper(ctx)
+	sessions, _, err := sessionHelper(ctx)
 	if err != nil {
 		return err
 	}
 
-	return stats.List()
+	return session.List(sessions)
 }
 
 // ResumeAction handles the resume command and resumes a previously paused

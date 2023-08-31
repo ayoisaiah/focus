@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/ayoisaiah/focus/internal/timeutil"
 	"github.com/ayoisaiah/focus/internal/ui"
+	"github.com/ayoisaiah/focus/session"
 	"github.com/ayoisaiah/focus/store"
 )
 

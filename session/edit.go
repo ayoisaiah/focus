@@ -1,4 +1,4 @@
-package stats
+package session
 
 import (
 	"bufio"
@@ -9,12 +9,11 @@ import (
 )
 
 // EditTags.edits the tags of the specified sessions.
-func EditTags(args []string) error {
-	sessions, err := db.GetSessions(opts.StartTime, opts.EndTime, opts.Tags)
-	if err != nil {
-		return err
-	}
-
+func EditTags(
+	sessions []Session,
+	args []string,
+	updateFunc func(*Session) error,
+) error {
 	if len(sessions) == 0 {
 		pterm.Info.Println(noSessionsMsg)
 		return nil
@@ -39,7 +38,7 @@ func EditTags(args []string) error {
 	for i := range sessions {
 		sess := sessions[i]
 
-		err = db.UpdateSession(&sess)
+		err := updateFunc(&sess)
 		if err != nil {
 			return err
 		}

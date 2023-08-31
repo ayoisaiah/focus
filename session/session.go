@@ -1,4 +1,4 @@
-// Package session defines focus sessions
+// Package session defines operations on focus sessions
 package session
 
 import (

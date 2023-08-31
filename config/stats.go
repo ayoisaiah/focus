@@ -22,6 +22,10 @@ var (
 	errInvalidPeriod = errors.New(
 		"please provide a valid time period",
 	)
+
+	errInvalidStartDate = errors.New(
+		"please provide a valid start date",
+	)
 )
 
 var statsCfg *StatsConfig
@@ -77,6 +81,8 @@ func setStatsConfig(ctx *cli.Context) error {
 
 	if period != "" {
 		statsCfg.StartTime, statsCfg.EndTime = getTimeRange(period)
+
+		return nil
 	}
 
 	start := ctx.String("start")
@@ -89,6 +95,8 @@ func setStatsConfig(ctx *cli.Context) error {
 		statsCfg.StartTime = dateTime
 	}
 
+	statsCfg.EndTime = time.Now()
+
 	end := ctx.String("end")
 	if end != "" {
 		dateTime, err := dateparse.ParseAny(end)
@@ -99,8 +107,8 @@ func setStatsConfig(ctx *cli.Context) error {
 		statsCfg.EndTime = dateTime
 	}
 
-	if statsCfg.StartTime.IsZero() || statsCfg.EndTime.IsZero() {
-		return errInvalidPeriod
+	if statsCfg.StartTime.IsZero() {
+		return errInvalidStartDate
 	}
 
 	if int(statsCfg.EndTime.Sub(statsCfg.StartTime).Seconds()) < 0 {

@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
 
-	"github.com/ayoisaiah/focus/internal/session"
+	"github.com/ayoisaiah/focus/session"
 )
 
 var once sync.Once

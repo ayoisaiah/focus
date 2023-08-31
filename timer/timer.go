@@ -32,10 +32,10 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/ayoisaiah/focus/config"
-	"github.com/ayoisaiah/focus/internal/session"
 	"github.com/ayoisaiah/focus/internal/static"
 	"github.com/ayoisaiah/focus/internal/timeutil"
 	"github.com/ayoisaiah/focus/internal/ui"
+	"github.com/ayoisaiah/focus/session"
 	"github.com/ayoisaiah/focus/store"
 )
 
