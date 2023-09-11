@@ -7,6 +7,12 @@ import (
 )
 
 var (
+	deleteAllTimersFlag = &cli.BoolFlag{
+		Name:    "all",
+		Aliases: []string{"a"},
+		Usage:   "Delete all paused timers",
+	}
+
 	endTimeFlag = &cli.StringFlag{
 		Name:    "end",
 		Aliases: []string{"e"},
@@ -77,6 +83,26 @@ var (
 		Usage:   "Add comma-delimited tags to a session",
 	}
 
+	listJSONFlag = &cli.BoolFlag{
+		Name:  "json",
+		Usage: "List Focus sessions in JSON format",
+	}
+
+	statsJSONFlag = &cli.BoolFlag{
+		Name:  "json",
+		Usage: "Output Focus statistics as JSON",
+	}
+
+	statsHTMLFlag = &cli.BoolFlag{
+		Name:  "html",
+		Usage: "Output Focus statistics as HTML",
+	}
+
+	statsPortFlag = &cli.UintFlag{
+		Name:  "port",
+		Usage: "Specify the port for the statistics server",
+	}
+
 	selectPausedFlag = &cli.BoolFlag{
 		Name:    "select",
 		Aliases: []string{"s"},
@@ -125,9 +151,12 @@ func GetApp() *cli.App {
 		&defaultPeriod,
 		filterTagFlag,
 		noColorFlag,
+		statsJSONFlag,
+		statsHTMLFlag,
+		statsPortFlag,
 	}
 
-	editTagsFlags := []cli.Flag{
+	filterFlags := []cli.Flag{
 		startTimeFlag,
 		endTimeFlag,
 		periodFlag,
@@ -162,12 +191,13 @@ func GetApp() *cli.App {
 				Name:   "delete",
 				Usage:  "Permanently delete the specified sessions",
 				Action: app.DeleteAction,
-				Flags:  editTagsFlags,
+				Flags:  filterFlags,
 			},
 			{
 				Name:      "delete-timer",
 				Usage:     "Permanently delete the specified paused timers",
 				UsageText: "Provide one or more timer numbers to delete, separated by commas. If you enter 0, all timers will be deleted.",
+				Flags:     []cli.Flag{deleteAllTimersFlag},
 				Action:    app.DeleteTimerAction,
 			},
 			{
@@ -179,13 +209,13 @@ func GetApp() *cli.App {
 				Name:   "edit-tag",
 				Usage:  "Edit the tags for a set of focus sessions",
 				Action: app.EditTagsAction,
-				Flags:  editTagsFlags,
+				Flags:  filterFlags,
 			},
 			{
 				Name:   "list",
 				Usage:  "List all the sessions within the specified time period",
 				Action: app.ListAction,
-				Flags:  editTagsFlags,
+				Flags:  append(filterFlags, listJSONFlag),
 			},
 			{
 				Name:  "resume",
@@ -200,7 +230,7 @@ func GetApp() *cli.App {
 			{
 				Name:   "stats",
 				Usage:  "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days",
-				Action: app.ShowAction,
+				Action: app.StatsAction,
 				Flags:  statsFlags,
 			},
 			{

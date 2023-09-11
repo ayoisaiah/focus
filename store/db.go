@@ -10,8 +10,8 @@ type DB interface {
 	// GetSessions returns saved sessions according to the specified time and tag
 	// constraints
 	GetSessions(
-		startTime, endTime time.Time,
-		tag []string,
+		since, until time.Time,
+		tags []string,
 	) ([][]byte, error)
 	// UpdateSession updates one or more Focus sessions.
 	// Each session is created if it doesn't

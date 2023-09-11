@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -125,31 +126,14 @@ func checkForUpdates(app *cli.App) {
 	}
 }
 
-func statsHelper(ctx *cli.Context) error {
-	if ctx.Bool("no-color") {
-		pterm.DisableColor()
-	}
-
-	cfg := config.Stats(ctx)
-
-	dbClient, err := store.NewClient(cfg.PathToDB)
-	if err != nil {
-		return err
-	}
-
-	stats.Init(dbClient, cfg)
-
-	return nil
-}
-
 func sessionHelper(ctx *cli.Context) ([]session.Session, store.DB, error) {
 	if ctx.Bool("no-color") {
 		pterm.DisableColor()
 	}
 
-	conf := config.Stats(ctx)
+	conf := config.Filter(ctx)
 
-	db, err := store.NewClient(conf.PathToDB)
+	db, err := store.NewClient(config.DBFilePath())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -184,12 +168,16 @@ func DeleteTimerAction(ctx *cli.Context) error {
 		disableStyling()
 	}
 
-	dbClient, err := store.NewClient(config.DBFilePath())
+	db, err := store.NewClient(config.DBFilePath())
 	if err != nil {
 		return err
 	}
 
-	return timer.Delete(dbClient)
+	if ctx.Bool("all") {
+		return db.DeleteAllTimers()
+	}
+
+	return timer.Delete(db)
 }
 
 // EditConfigAction handles the edit-config command which opens the focus config
@@ -242,6 +230,17 @@ func ListAction(ctx *cli.Context) error {
 		return err
 	}
 
+	if ctx.Bool("json") {
+		b, err := json.Marshal(sessions)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(b))
+
+		return nil
+	}
+
 	return session.List(sessions)
 }
 
@@ -272,15 +271,45 @@ func ResumeAction(ctx *cli.Context) error {
 	return t.Run(sess)
 }
 
-// StatsAction executes the stats subcommand and outputs the stats for the
-// specified time period.
-func ShowAction(ctx *cli.Context) error {
-	err := statsHelper(ctx)
+// StatsAction outputs the stats for the specified time period.
+func StatsAction(ctx *cli.Context) error {
+	sessions, db, err := sessionHelper(ctx)
 	if err != nil {
 		return err
 	}
 
-	return stats.Show()
+	opts := config.Filter(ctx)
+
+	s := &stats.Stats{
+		Opts: stats.Opts{
+			*opts,
+		},
+		DB: db,
+	}
+
+	s.Compute(sessions)
+
+	if ctx.Bool("json") {
+		b, err := s.ToJSON()
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(b))
+
+		return nil
+	}
+
+	if ctx.Bool("html") {
+		return nil
+	}
+
+	var port uint = 11223
+	if ctx.Uint("port") != 0 {
+		port = ctx.Uint("port")
+	}
+
+	return s.Server(port)
 }
 
 // StatusAction handles the status command and prints the status of the currently

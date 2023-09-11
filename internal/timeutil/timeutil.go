@@ -112,7 +112,7 @@ func DayFormat(t time.Time) int {
 	return i
 }
 
-// ToKey converts a time value to a boltdb key format.
+// ToKey converts a time value to a database key for Bolt.
 func ToKey(t time.Time) []byte {
-	return []byte(t.Format(time.RFC3339))
+	return []byte(t.Format(time.RFC3339Nano))
 }

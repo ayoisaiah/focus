@@ -411,7 +411,6 @@ func createTimerConfig() error {
 
 	err := viper.WriteConfigAs(timerCfg.PathToConfig)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 

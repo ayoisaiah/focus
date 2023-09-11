@@ -64,7 +64,7 @@ type Timer struct {
 	db         store.DB            `json:"-"`
 	Opts       *config.TimerConfig `json:"opts"`
 	PausedTime time.Time           `json:"paused_time"`
-	Started    time.Time           `json:"date_started"`
+	StartTime  time.Time           `json:"start_time"`
 	SessionKey time.Time           `json:"session_key"`
 	WorkCycle  int                 `json:"work_cycle"`
 }
@@ -78,7 +78,7 @@ type Status struct {
 	LongBreakInterval int          `json:"long_break_interval"`
 }
 
-// persist updates the timer in the database so that it may be
+// persist saves the timer to the database so that it may be
 // recovered later.
 func (t *Timer) persist(sess *session.Session) error {
 	if sess.Name != session.Work {
@@ -96,7 +96,7 @@ func (t *Timer) persist(sess *session.Session) error {
 		return err
 	}
 
-	err = t.db.UpdateTimer(t.Started, timerBytes)
+	err = t.db.UpdateTimer(t.StartTime, timerBytes)
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,6 @@ func (t *Timer) ReportStatus() error {
 	fileBytes, err := os.ReadFile(statusFilePath)
 	if err != nil {
 		// missing file should not return an error
-		pterm.Error.Printfln("unable to read status file: %v", err)
 		return nil
 	}
 
@@ -741,12 +740,14 @@ func Recover(
 
 	var sess session.Session
 
-	err = json.Unmarshal(sessBytes, &sess)
-	if err != nil {
-		return nil, nil, err
+	if len(sessBytes) != 0 {
+		err = json.Unmarshal(sessBytes, &sess)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
-	err = t.db.DeleteTimer(t.Started)
+	err = t.db.DeleteTimer(t.StartTime)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -759,8 +760,8 @@ func Recover(
 // New creates a new timer.
 func New(dbClient *store.Client, cfg *config.TimerConfig) *Timer {
 	return &Timer{
-		Started: time.Now(),
-		db:      dbClient,
-		Opts:    cfg,
+		StartTime: time.Now(),
+		db:        dbClient,
+		Opts:      cfg,
 	}
 }

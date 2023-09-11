@@ -14,14 +14,14 @@ import (
 	"github.com/ayoisaiah/focus/session"
 )
 
-type ConfigTest struct {
+type TimerTest struct {
 	Name       string
 	ConfigFile string
 	PromptFile string
 	Expected   TimerConfig
 }
 
-var testCases = []ConfigTest{
+var timerTestCases = []TimerTest{
 	{
 		Name:       "Normal config",
 		ConfigFile: "config1.yml",
@@ -153,7 +153,7 @@ func resetTimerConfig() {
 }
 
 func TestTimer(t *testing.T) {
-	for _, tc := range testCases {
+	for _, tc := range timerTestCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			resetTimerConfig()
 

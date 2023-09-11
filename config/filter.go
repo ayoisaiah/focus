@@ -16,7 +16,7 @@ import (
 
 var (
 	errInvalidDateRange = errors.New(
-		"the end date must not be earlier than the start date",
+		"the start time must be earlier than the end time",
 	)
 
 	errInvalidPeriod = errors.New(
@@ -28,12 +28,11 @@ var (
 	)
 )
 
-var statsCfg *StatsConfig
-
-type StatsConfig struct {
+// FilterConfig represents a configuration to filter sessions
+// in the database by their start time, end time, and assigned tags.
+type FilterConfig struct {
 	StartTime time.Time
 	EndTime   time.Time
-	PathToDB  string
 	Tags      []string
 }
 
@@ -67,70 +66,73 @@ func getTimeRange(period timeutil.Period) (start, end time.Time) {
 	return
 }
 
-// setStatsConfig updates the stats configuration from command-line arguments.
-func setStatsConfig(ctx *cli.Context) error {
+// setFilterConfig updates the filter configuration from command-line arguments.
+func setFilterConfig(ctx *cli.Context) (*FilterConfig, error) {
+	filterCfg := &FilterConfig{}
+
 	if (ctx.String("tag")) != "" {
-		statsCfg.Tags = strings.Split(ctx.String("tag"), ",")
+		filterCfg.Tags = strings.Split(ctx.String("tag"), ",")
 	}
 
 	period := timeutil.Period(strings.TrimSpace(ctx.String("period")))
 
 	if period != "" && !slices.Contains(timeutil.PeriodCollection, period) {
-		return errInvalidPeriod
+		return nil, errInvalidPeriod
 	}
 
 	if period != "" {
-		statsCfg.StartTime, statsCfg.EndTime = getTimeRange(period)
+		filterCfg.StartTime, filterCfg.EndTime = getTimeRange(period)
 
-		return nil
+		return filterCfg, nil
 	}
 
 	start := ctx.String("start")
 	if start != "" {
 		dateTime, err := dateparse.ParseAny(start)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		statsCfg.StartTime = dateTime
+		filterCfg.StartTime = dateTime
 	}
 
-	statsCfg.EndTime = time.Now()
+	now := time.Now()
+
+	if now.After(filterCfg.StartTime) {
+		filterCfg.EndTime = now
+	} else {
+		filterCfg.EndTime = timeutil.RoundToEnd(filterCfg.StartTime)
+	}
 
 	end := ctx.String("end")
 	if end != "" {
 		dateTime, err := dateparse.ParseAny(end)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		statsCfg.EndTime = dateTime
+		filterCfg.EndTime = dateTime
 	}
 
-	if statsCfg.StartTime.IsZero() {
-		return errInvalidStartDate
+	if filterCfg.StartTime.IsZero() {
+		return nil, errInvalidStartDate
 	}
 
-	if int(statsCfg.EndTime.Sub(statsCfg.StartTime).Seconds()) < 0 {
-		return errInvalidDateRange
+	if int(filterCfg.EndTime.Sub(filterCfg.StartTime).Seconds()) < 0 {
+		return nil, errInvalidDateRange
 	}
 
-	return nil
+	return filterCfg, nil
 }
 
-// Stats initializes and returns the stats configuration from
+// Filter initializes and returns a configuration to filter sessions from
 // command-line arguments.
-func Stats(ctx *cli.Context) *StatsConfig {
-	once.Do(func() {
-		statsCfg = &StatsConfig{
-			PathToDB: dbFilePath,
-		}
+func Filter(ctx *cli.Context) *FilterConfig {
+	cfg, err := setFilterConfig(ctx)
+	if err != nil {
+		pterm.Error.Println(err)
+		os.Exit(1)
+	}
 
-		if err := setStatsConfig(ctx); err != nil {
-			pterm.Error.Println(err)
-			os.Exit(1)
-		}
-	})
-
-	return statsCfg
+	return cfg
 }

@@ -39,7 +39,7 @@ func printPausedTimers(timers []Timer, pausedSess map[string]session.Session) {
 		row := []string{
 			fmt.Sprintf("%d", i+1),
 			t.PausedTime.Format("Jan 02, 2006 03:04:05 PM"),
-			t.Started.Format("Jan 02, 2006 03:04:05 PM"),
+			t.StartTime.Format("Jan 02, 2006 03:04:05 PM"),
 			remainder,
 			strings.Join(t.Opts.Tags, ", "),
 		}
@@ -75,7 +75,13 @@ func selectPausedTimer(
 		return nil, err
 	}
 
-	num, err := strconv.Atoi(strings.TrimSpace(input))
+	input = strings.TrimSpace(input)
+
+	if input == "" {
+		os.Exit(0)
+	}
+
+	num, err := strconv.Atoi(input)
 	if err != nil {
 		return nil, err
 	}
@@ -112,17 +118,21 @@ func getTimerSessions(
 
 	pausedSessions := make(map[string]session.Session)
 
-	for _, v := range pausedTimers {
-		sessBytes, dbErr := db.GetSession(v.SessionKey)
-		if dbErr != nil {
-			return nil, nil, dbErr
+	for i := range pausedTimers {
+		v := pausedTimers[i]
+
+		sessBytes, err := db.GetSession(v.SessionKey)
+		if err != nil {
+			return nil, nil, err
 		}
 
 		sess := &session.Session{}
 
-		err := json.Unmarshal(sessBytes, sess)
-		if err != nil {
-			return nil, nil, err
+		if len(sessBytes) != 0 {
+			err := json.Unmarshal(sessBytes, sess)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 
 		pausedSessions[string(timeutil.ToKey(v.SessionKey))] = *sess
@@ -172,7 +182,7 @@ func selectAndDeleteTimers(db store.DB, timers []Timer) error {
 			return db.DeleteAllTimers()
 		}
 
-		err = db.DeleteTimer(timers[num].Started)
+		err = db.DeleteTimer(timers[num].StartTime)
 		if err != nil {
 			return err
 		}

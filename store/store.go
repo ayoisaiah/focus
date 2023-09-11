@@ -27,7 +27,10 @@ var (
 const (
 	sessionBucket = "sessions"
 	timerBucket   = "timers"
+	focusBucket   = "focus"
 )
+
+const currentVersion = "v1.4.0"
 
 // Client is a BoltDB database client.
 type Client struct {
@@ -151,15 +154,15 @@ type session struct {
 }
 
 func (c *Client) GetSessions(
-	startTime, endTime time.Time,
+	since, until time.Time,
 	tags []string,
 ) ([][]byte, error) {
 	var b [][]byte
 
 	err := c.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket([]byte(sessionBucket)).Cursor()
-		min := []byte(startTime.Format(time.RFC3339))
-		max := []byte(endTime.Format(time.RFC3339))
+		min := []byte(since.Format(time.RFC3339))
+		max := []byte(until.Format(time.RFC3339))
 
 		//nolint:ineffassign,staticcheck // due to how boltdb works
 		sk, sv := c.Seek(min)
@@ -175,7 +178,7 @@ func (c *Client) GetSessions(
 
 			// include session in results if it was ended
 			// in the bounds of the specified time period
-			if sess.EndTime.After(startTime) {
+			if sess.EndTime.After(since) {
 				sk, sv = pk, pv
 			} else {
 				sk, sv = c.Next()
@@ -244,13 +247,40 @@ func NewClient(dbFilePath string) (*Client, error) {
 		}
 
 		_, err = tx.CreateBucketIfNotExists([]byte(timerBucket))
-		return err
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.CreateBucketIfNotExists([]byte(focusBucket))
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &Client{
+	c := &Client{
 		db,
-	}, nil
+	}
+
+	err = db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(focusBucket))
+		version := string(bucket.Get([]byte("version")))
+
+		if version != currentVersion {
+			err = c.migrate(tx)
+			if err != nil {
+				return err
+			}
+
+			return bucket.Put([]byte("version"), []byte(currentVersion))
+		}
+
+		return nil
+	})
+
+	return c, err
 }
