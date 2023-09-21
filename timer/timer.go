@@ -32,9 +32,9 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/models"
 	"github.com/ayoisaiah/focus/internal/static"
 	"github.com/ayoisaiah/focus/internal/ui"
-	"github.com/ayoisaiah/focus/session"
 	"github.com/ayoisaiah/focus/store"
 )
 
@@ -61,42 +61,54 @@ func (s Settled) Signal() {}
 
 // Timer represents a running timer.
 type Timer struct {
-	db         store.DB            `json:"-"`
-	Opts       *config.TimerConfig `json:"opts"`
-	PausedTime time.Time           `json:"paused_time"`
-	StartTime  time.Time           `json:"start_time"`
-	SessionKey time.Time           `json:"session_key"`
-	WorkCycle  int                 `json:"work_cycle"`
+	db          store.DB            `json:"-"`
+	Opts        *config.TimerConfig `json:"opts"`
+	SoundStream beep.Streamer       `json:"-"`
+	PausedTime  time.Time           `json:"paused_time"`
+	StartTime   time.Time           `json:"start_time"`
+	SessionKey  time.Time           `json:"session_key"`
+	WorkCycle   int                 `json:"work_cycle"`
 }
 
 // Status represents the status of a running timer.
 type Status struct {
-	EndTime           time.Time    `json:"end_date"`
-	Name              session.Name `json:"name"`
-	Tags              []string     `json:"tags"`
-	WorkCycle         int          `json:"work_cycle"`
-	LongBreakInterval int          `json:"long_break_interval"`
+	EndTime           time.Time       `json:"end_date"`
+	Name              config.SessType `json:"name"`
+	Tags              []string        `json:"tags"`
+	WorkCycle         int             `json:"work_cycle"`
+	LongBreakInterval int             `json:"long_break_interval"`
 }
 
-// persist saves the timer to the database so that it may be
-// recovered later.
-func (t *Timer) persist(sess *session.Session) error {
-	if sess.Name != session.Work {
+// persist saves the current timer and session to the database.
+func (t *Timer) persist(sess *Session) error {
+	if sess.Name != config.Work {
 		return nil
+	}
+
+	sess.Normalise()
+
+	m := map[time.Time]*models.Session{
+		sess.StartTime: sess.ToDBModel(),
+	}
+
+	err := t.db.UpdateSessions(m)
+	if err != nil {
+		return err
 	}
 
 	if !sess.Completed {
 		t.SessionKey = sess.StartTime
 	}
 
-	t.PausedTime = time.Now()
-
-	timerBytes, err := json.Marshal(t)
-	if err != nil {
-		return err
+	timer := models.Timer{
+		Opts:       t.Opts,
+		PausedTime: time.Now(),
+		SessionKey: t.SessionKey,
+		WorkCycle:  t.WorkCycle,
+		StartTime:  t.StartTime,
 	}
 
-	err = t.db.UpdateTimer(t.StartTime, timerBytes)
+	err = t.db.UpdateTimer(&timer)
 	if err != nil {
 		return err
 	}
@@ -106,6 +118,10 @@ func (t *Timer) persist(sess *session.Session) error {
 
 // runSessionCmd executes the specified command.
 func (t *Timer) runSessionCmd(sessionCmd string) error {
+	if sessionCmd == "" {
+		return nil
+	}
+
 	cmdSlice, err := shellquote.Split(sessionCmd)
 	if err != nil {
 		return fmt.Errorf("unable to parse session_cmd option: %w", err)
@@ -156,7 +172,7 @@ func (t *Timer) ReportStatus() error {
 		return err
 	}
 
-	sess := &session.Session{
+	sess := &Session{
 		EndTime: s.EndTime,
 	}
 	tr := sess.Remaining()
@@ -168,14 +184,14 @@ func (t *Timer) ReportStatus() error {
 	var text string
 
 	switch s.Name {
-	case session.Work:
+	case config.Work:
 		text = fmt.Sprintf("[Work %d/%d]",
 			s.WorkCycle,
 			s.LongBreakInterval,
 		)
-	case session.ShortBreak:
+	case config.ShortBreak:
 		text = "[Short break]"
-	case session.LongBreak:
+	case config.LongBreak:
 		text = "[Long break]"
 	}
 
@@ -185,7 +201,7 @@ func (t *Timer) ReportStatus() error {
 }
 
 func (t *Timer) writeStatusFile(
-	sess *session.Session,
+	sess *Session,
 ) error {
 	s := Status{
 		Name:              sess.Name,
@@ -227,27 +243,27 @@ func (t *Timer) writeStatusFile(
 // printSession writes the details of the current
 // session to the standard output.
 func (t *Timer) printSession(
-	sess *session.Session,
+	sess *Session,
 ) {
 	var text string
 
 	switch sess.Name {
-	case session.Work:
+	case config.Work:
 		total := t.Opts.LongBreakInterval
 
 		text = fmt.Sprintf(
 			ui.Green("[Work %d/%d]"),
 			t.WorkCycle,
 			total,
-		) + ": " + t.Opts.Message[session.Work]
-	case session.ShortBreak:
+		) + ": " + t.Opts.Message[config.Work]
+	case config.ShortBreak:
 		text = ui.Blue(
 			"[Short break]",
-		) + ": " + t.Opts.Message[session.ShortBreak]
-	case session.LongBreak:
+		) + ": " + t.Opts.Message[config.ShortBreak]
+	case config.LongBreak:
 		text = ui.Magenta(
 			"[Long break]",
-		) + ": " + t.Opts.Message[session.LongBreak]
+		) + ": " + t.Opts.Message[config.LongBreak]
 	}
 
 	var timeFormat string
@@ -272,7 +288,21 @@ func (t *Timer) printSession(
 }
 
 // notify sends a desktop notification and plays a notification sound.
-func (t *Timer) notify(title, msg, sound string) {
+func (t *Timer) notify(sessName, nextSessName config.SessType) {
+	if !t.Opts.Notify {
+		return
+	}
+
+	title := string(sessName + " is finished")
+
+	msg := t.Opts.Message[nextSessName]
+
+	sound := t.Opts.BreakSound
+
+	if sessName != config.Work {
+		sound = t.Opts.WorkSound
+	}
+
 	configDir := filepath.Base(filepath.Dir(t.Opts.PathToConfig))
 
 	// pathToIcon will be an empty string if file is not found
@@ -308,7 +338,7 @@ func (t *Timer) notify(title, msg, sound string) {
 
 // handleInterruption saves the current state of the timer whenever it is
 // interrupted by pressing Ctrl-C.
-func (t *Timer) handleInterruption(sess *session.Session) chan os.Signal {
+func (t *Timer) handleInterruption(sess *Session) chan os.Signal {
 	c := make(chan os.Signal, 1)
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -325,20 +355,11 @@ func (t *Timer) handleInterruption(sess *session.Session) chan os.Signal {
 			os.Exit(1)
 		}
 
-		interrruptedTime := time.Now()
-		sess.EndTime = interrruptedTime
-
-		lastIndex := len(sess.Timeline) - 1
-		sess.Timeline[lastIndex].EndTime = interrruptedTime
+		sess.Interrupt()
 
 		_ = os.Remove(config.StatusFilePath())
 
-		err := t.saveSession(sess)
-		if err != nil {
-			exitFunc(err)
-		}
-
-		err = t.persist(sess)
+		err := t.persist(sess)
 		if err != nil {
 			exitFunc(err)
 		}
@@ -418,7 +439,13 @@ func (t *Timer) prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
 // wait releases the handle to the datastore and waits for user input
 // before locking the datastore once more. This allows a new instance of Focus
 // to be launched in another terminal.
-func (t *Timer) wait() error {
+func (t *Timer) wait(sessName config.SessType) error {
+	// only block if auto start options are disabled
+	if sessName != config.Work && t.Opts.AutoStartBreak ||
+		sessName == config.Work && t.Opts.AutoStartWork {
+		return nil
+	}
+
 	c := make(chan os.Signal, 1)
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -459,8 +486,8 @@ func (t *Timer) wait() error {
 	return t.db.Open()
 }
 
-// countdown prints the time remaining until the end of the current session.
-func (t *Timer) countdown(tr session.Remainder) {
+// countdown prints the time remaining until the end of the current.
+func (t *Timer) countdown(tr Remainder) {
 	fmt.Fprintf(
 		os.Stdout,
 		"🕒%s:%s",
@@ -469,26 +496,26 @@ func (t *Timer) countdown(tr session.Remainder) {
 	)
 }
 
-// nextSession retrieves the next session.
-func (t *Timer) nextSession(current session.Name) session.Name {
-	var next session.Name
+// nextSession retrieves the name of the next session.
+func (t *Timer) nextSession(current config.SessType) config.SessType {
+	var next config.SessType
 
 	switch current {
-	case session.Work:
+	case config.Work:
 		if t.WorkCycle == t.Opts.LongBreakInterval {
-			next = session.LongBreak
+			next = config.LongBreak
 		} else {
-			next = session.ShortBreak
+			next = config.ShortBreak
 		}
-	case session.ShortBreak, session.LongBreak:
-		next = session.Work
+	case config.ShortBreak, config.LongBreak:
+		next = config.Work
 	}
 
 	return next
 }
 
-// start starts or resumes a session.and blocks until its completion.
-func (t *Timer) start(sess *session.Session) {
+// start starts or resumes a and blocks until its completion.
+func (t *Timer) start(sess *Session) {
 	sess.SetEndTime()
 
 	t.printSession(sess)
@@ -519,38 +546,18 @@ func (t *Timer) start(sess *session.Session) {
 	}
 }
 
-// saveSession creates or updates a work session in the data store.
-func (t *Timer) saveSession(sess *session.Session) error {
-	if sess.Name != session.Work {
-		return nil
-	}
-
-	sess.Normalise()
-
-	b, err := json.Marshal(sess)
-	if err != nil {
-		return err
-	}
-
-	m := map[time.Time][]byte{
-		sess.StartTime: b,
-	}
-
-	return t.db.UpdateSessions(m)
-}
-
-// newSession initialises a new session and saves it to the data store.
-func (t *Timer) newSession(name session.Name) (*session.Session, error) {
+// newSession initialises a new session.
+func (t *Timer) newSession(name config.SessType) (*Session, error) {
 	now := time.Now()
 
-	sess := &session.Session{
+	sess := &Session{
 		Name:      name,
 		Duration:  t.Opts.Duration[name],
 		Tags:      t.Opts.Tags,
 		Completed: false,
 		StartTime: now,
 		EndTime:   now,
-		Timeline: []session.Timeline{
+		Timeline: []Timeline{
 			{
 				StartTime: now,
 				EndTime:   now,
@@ -558,7 +565,16 @@ func (t *Timer) newSession(name session.Name) (*session.Session, error) {
 		},
 	}
 
-	err := t.saveSession(sess)
+	// increment or reset the work cycle accordingly
+	if name == config.Work {
+		if t.WorkCycle == t.Opts.LongBreakInterval {
+			t.WorkCycle = 1
+		} else {
+			t.WorkCycle++
+		}
+	}
+
+	err := t.persist(sess)
 	if err != nil {
 		return sess, err
 	}
@@ -608,19 +624,8 @@ func (t *Timer) overrideOptsOnResume(ctx *cli.Context) {
 // Run begins the timer and loops forever, alternating between work and
 // break sessions until it is terminated with Ctrl-C or a maximum number of work
 // sessions is reached.
-func (t *Timer) Run(sess *session.Session) (err error) {
-	sessName := session.Work
-
-	var infiniteStream beep.Streamer
-
-	if t.Opts.AmbientSound != "" {
-		stream, streamErr := t.prepSoundStream(t.Opts.AmbientSound)
-		if streamErr != nil {
-			return streamErr
-		}
-
-		infiniteStream = beep.Loop(-1, stream)
-	}
+func (t *Timer) Run(sess *Session) (err error) {
+	sessName := config.Work
 
 	for {
 		if !sess.Resuming() {
@@ -630,20 +635,12 @@ func (t *Timer) Run(sess *session.Session) (err error) {
 			}
 		}
 
-		if sess.Name == session.Work && !sess.Resuming() {
-			if t.WorkCycle == t.Opts.LongBreakInterval {
-				t.WorkCycle = 1
-			} else {
-				t.WorkCycle++
-			}
-		}
-
 		c := t.handleInterruption(sess)
 
 		if t.Opts.AmbientSound != "" {
-			if sess.Name == session.Work || t.Opts.PlaySoundOnBreak {
+			if sess.Name == config.Work || t.Opts.PlaySoundOnBreak {
 				speaker.Clear()
-				speaker.Play(infiniteStream)
+				speaker.Play(t.SoundStream)
 			} else {
 				speaker.Clear()
 			}
@@ -658,40 +655,18 @@ func (t *Timer) Run(sess *session.Session) (err error) {
 			return err
 		}
 
-		err = t.saveSession(sess)
+		sessName = t.nextSession(sessName)
+
+		t.notify(sess.Name, sessName)
+
+		err = t.runSessionCmd(t.Opts.SessionCmd)
 		if err != nil {
 			return err
 		}
 
-		next := t.nextSession(sessName)
-
-		if t.Opts.Notify {
-			title := sessName + " is finished"
-
-			notifySound := t.Opts.BreakSound
-
-			if sessName != session.Work {
-				notifySound = t.Opts.WorkSound
-			}
-
-			t.notify(string(title), t.Opts.Message[next], notifySound)
-		}
-
-		sessName = next
-
-		if t.Opts.SessionCmd != "" {
-			err = t.runSessionCmd(t.Opts.SessionCmd)
-			if err != nil {
-				return err
-			}
-		}
-
-		if sessName != session.Work && !t.Opts.AutoStartBreak ||
-			sessName == session.Work && !t.Opts.AutoStartWork {
-			err = t.wait()
-			if err != nil {
-				return err
-			}
+		err = t.wait(sessName)
+		if err != nil {
+			return err
 		}
 	}
 }
@@ -708,60 +683,93 @@ func Delete(db store.DB) error {
 	return selectAndDeleteTimers(db, pausedTimers)
 }
 
-// Recover attempts to recover an interrupted session.
+func newSessionFromDB(s *models.Session) *Session {
+	sess := &Session{}
+
+	sess.StartTime = s.StartTime
+	sess.EndTime = s.EndTime
+	sess.Name = s.Name
+	sess.Tags = s.Tags
+	sess.Duration = s.Duration
+	sess.Completed = s.Completed
+
+	for _, v := range s.Timeline {
+		timeline := Timeline{
+			StartTime: v.StartTime,
+			EndTime:   v.EndTime,
+		}
+
+		sess.Timeline = append(sess.Timeline, timeline)
+	}
+
+	return sess
+}
+
+// Recover attempts to recover an interrupted.
 func Recover(
 	db store.DB,
 	ctx *cli.Context,
-) (*Timer, *session.Session, error) {
+) (*Timer, *Session, error) {
 	pausedTimers, pausedSessions, err := getTimerSessions(db)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var t *Timer
+	var selectedTimer *models.Timer
 
 	if ctx.Bool("select") {
 		printPausedTimers(pausedTimers, pausedSessions)
 
-		t, err = selectPausedTimer(pausedTimers)
+		selectedTimer, err = selectPausedTimer(pausedTimers)
 		if err != nil {
 			return nil, nil, err
 		}
 	} else {
-		t = &pausedTimers[0]
+		selectedTimer = pausedTimers[0]
 	}
 
-	t.db = db
-
-	sessBytes, err := t.db.GetSession(t.SessionKey)
+	s, err := db.GetSession(selectedTimer.SessionKey)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var sess session.Session
-
-	if len(sessBytes) != 0 {
-		err = json.Unmarshal(sessBytes, &sess)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	err = t.db.DeleteTimer(t.StartTime)
+	t, err := New(db, selectedTimer.Opts)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	t.PausedTime = selectedTimer.PausedTime
+	t.StartTime = selectedTimer.StartTime
+	t.SessionKey = selectedTimer.SessionKey
+	t.WorkCycle = selectedTimer.WorkCycle
+
+	sess := newSessionFromDB(s)
 
 	t.overrideOptsOnResume(ctx)
 
-	return t, &sess, nil
+	return t, sess, nil
 }
 
 // New creates a new timer.
-func New(dbClient *store.Client, cfg *config.TimerConfig) *Timer {
-	return &Timer{
+func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
+	t := &Timer{
 		StartTime: time.Now(),
 		db:        dbClient,
 		Opts:      cfg,
 	}
+
+	var infiniteStream beep.Streamer
+
+	if t.Opts.AmbientSound != "" {
+		stream, err := t.prepSoundStream(t.Opts.AmbientSound)
+		if err != nil {
+			return nil, err
+		}
+
+		infiniteStream = beep.Loop(-1, stream)
+	}
+
+	t.SoundStream = infiniteStream
+
+	return t, nil
 }

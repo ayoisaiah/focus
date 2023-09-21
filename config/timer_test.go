@@ -10,8 +10,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
-
-	"github.com/ayoisaiah/focus/session"
 )
 
 type TimerTest struct {
@@ -26,15 +24,15 @@ var timerTestCases = []TimerTest{
 		Name:       "Normal config",
 		ConfigFile: "config1.yml",
 		Expected: TimerConfig{
-			Duration: map[session.Name]time.Duration{
-				session.Work:       50 * time.Minute,
-				session.ShortBreak: 10 * time.Minute,
-				session.LongBreak:  30 * time.Minute,
+			Duration: map[SessType]time.Duration{
+				Work:       50 * time.Minute,
+				ShortBreak: 10 * time.Minute,
+				LongBreak:  30 * time.Minute,
 			},
-			Message: map[session.Name]string{
-				session.Work:       "Focus on your task",
-				session.ShortBreak: "Take a breather",
-				session.LongBreak:  "Take a long break",
+			Message: map[SessType]string{
+				Work:       "Focus on your task",
+				ShortBreak: "Take a breather",
+				LongBreak:  "Take a long break",
 			},
 			LongBreakInterval:   4,
 			Notify:              true,
@@ -52,15 +50,15 @@ var timerTestCases = []TimerTest{
 		ConfigFile: "",
 		PromptFile: "defaults.txt",
 		Expected: TimerConfig{
-			Duration: map[session.Name]time.Duration{
-				session.Work:       25 * time.Minute,
-				session.ShortBreak: 5 * time.Minute,
-				session.LongBreak:  15 * time.Minute,
+			Duration: map[SessType]time.Duration{
+				Work:       25 * time.Minute,
+				ShortBreak: 5 * time.Minute,
+				LongBreak:  15 * time.Minute,
 			},
-			Message: map[session.Name]string{
-				session.Work:       "Focus on your task",
-				session.ShortBreak: "Take a breather",
-				session.LongBreak:  "Take a long break",
+			Message: map[SessType]string{
+				Work:       "Focus on your task",
+				ShortBreak: "Take a breather",
+				LongBreak:  "Take a long break",
 			},
 			LongBreakInterval:   4,
 			Notify:              true,
@@ -78,15 +76,15 @@ var timerTestCases = []TimerTest{
 		ConfigFile: "",
 		PromptFile: "prompt.txt",
 		Expected: TimerConfig{
-			Duration: map[session.Name]time.Duration{
-				session.Work:       40 * time.Minute,
-				session.ShortBreak: 12 * time.Minute,
-				session.LongBreak:  22 * time.Minute,
+			Duration: map[SessType]time.Duration{
+				Work:       40 * time.Minute,
+				ShortBreak: 12 * time.Minute,
+				LongBreak:  22 * time.Minute,
 			},
-			Message: map[session.Name]string{
-				session.Work:       "Focus on your task",
-				session.ShortBreak: "Take a breather",
-				session.LongBreak:  "Take a long break",
+			Message: map[SessType]string{
+				Work:       "Focus on your task",
+				ShortBreak: "Take a breather",
+				LongBreak:  "Take a long break",
 			},
 			LongBreakInterval:   5,
 			Notify:              true,
@@ -104,15 +102,15 @@ var timerTestCases = []TimerTest{
 		ConfigFile: "config2.yml",
 		PromptFile: "",
 		Expected: TimerConfig{
-			Duration: map[session.Name]time.Duration{
-				session.Work:       25 * time.Minute,
-				session.ShortBreak: 5 * time.Minute,
-				session.LongBreak:  15 * time.Minute,
+			Duration: map[SessType]time.Duration{
+				Work:       25 * time.Minute,
+				ShortBreak: 5 * time.Minute,
+				LongBreak:  15 * time.Minute,
 			},
-			Message: map[session.Name]string{
-				session.Work:       "Focus on your task",
-				session.ShortBreak: "Take a breather",
-				session.LongBreak:  "Take a long break",
+			Message: map[SessType]string{
+				Work:       "Focus on your task",
+				ShortBreak: "Take a breather",
+				LongBreak:  "Take a long break",
 			},
 			LongBreakInterval:   4,
 			Notify:              true,
@@ -143,8 +141,8 @@ func copyFile(src, dest string) error {
 
 func resetTimerConfig() {
 	timerCfg = &TimerConfig{
-		Message:  make(session.Message),
-		Duration: make(session.Duration),
+		Message:  make(Message),
+		Duration: make(Duration),
 	}
 
 	once = sync.Once{}

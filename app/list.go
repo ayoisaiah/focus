@@ -1,4 +1,4 @@
-package session
+package app
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/pterm/pterm"
 
+	"github.com/ayoisaiah/focus/internal/models"
 	"github.com/ayoisaiah/focus/internal/ui"
 )
 
@@ -16,7 +17,7 @@ const (
 )
 
 // printSessionsTable prints a session table to the command-line.
-func printSessionsTable(w io.Writer, sessions []Session) {
+func printSessionsTable(w io.Writer, sessions []*models.Session) {
 	tableBody := make([][]string, len(sessions))
 
 	for i := range sessions {
@@ -52,9 +53,8 @@ func printSessionsTable(w io.Writer, sessions []Session) {
 	ui.PrintTable(tableBody, w)
 }
 
-// List prints out a table of all the sessions that
-// were created within the specified time range.
-func List(sessions []Session) error {
+// listSessions prints out a table of sessions.
+func listSessions(sessions []*models.Session) error {
 	if len(sessions) == 0 {
 		pterm.Info.Println(noSessionsMsg)
 		return nil

@@ -1,4 +1,4 @@
-package session
+package app
 
 import (
 	"bufio"
@@ -7,14 +7,16 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
+
+	"github.com/ayoisaiah/focus/internal/models"
+	"github.com/ayoisaiah/focus/store"
 )
 
-// Delete attempts to delete all sessions that fall in the specified time range.
-// It requests for confirmation before proceeding with the permanent removal of
-// the sessions from the database.
-func Delete(
-	sessions []Session,
-	deleteFunc func(sessionKey []time.Time) error,
+// delSessions deletes all the specified sessions. It requests for confirmation
+// before proceeding with the operation.
+func delSessions(
+	db store.DB,
+	sessions []*models.Session,
 ) error {
 	if len(sessions) == 0 {
 		return nil
@@ -38,5 +40,5 @@ func Delete(
 
 	_, _ = reader.ReadString('\n')
 
-	return deleteFunc(t)
+	return db.DeleteSessions(t)
 }

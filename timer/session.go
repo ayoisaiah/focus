@@ -1,27 +1,12 @@
-// Package session defines operations on focus sessions
-package session
+package timer
 
 import (
-	"encoding/json"
 	"time"
 
+	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/models"
 	"github.com/ayoisaiah/focus/internal/timeutil"
 )
-
-// Name represents the session name.
-type Name string
-
-const (
-	Work       Name = "Work session"
-	ShortBreak Name = "Short break"
-	LongBreak  Name = "Long break"
-)
-
-// Message maps a session to a message.
-type Message map[Name]string
-
-// Duration maps a session to time duration value.
-type Duration map[Name]time.Duration
 
 type Timeline struct {
 	// StartTime is the start of the session including
@@ -32,18 +17,18 @@ type Timeline struct {
 	EndTime time.Time `json:"end_time"`
 }
 
-// Session represents a work or break session.
+// Session represents an active work or break session.
 type Session struct {
-	StartTime time.Time     `json:"start_time"`
-	EndTime   time.Time     `json:"end_time"`
-	Name      Name          `json:"name"`
-	Tags      []string      `json:"tags"`
-	Timeline  []Timeline    `json:"timeline"`
-	Duration  time.Duration `json:"duration"`
-	Completed bool          `json:"completed"`
+	StartTime time.Time       `json:"start_time"`
+	EndTime   time.Time       `json:"end_time"`
+	Name      config.SessType `json:"name"`
+	Tags      []string        `json:"tags"`
+	Timeline  []Timeline      `json:"timeline"`
+	Duration  time.Duration   `json:"duration"`
+	Completed bool            `json:"completed"`
 }
 
-// Remainder is the time remaining in a session.
+// Remainder is the time remaining in an active session.
 type Remainder struct {
 	T int // total
 	M int // minutes
@@ -78,7 +63,7 @@ func (s *Session) SetEndTime() {
 	})
 }
 
-// Remaining calculates the time remaining for the session to end.
+// Remaining calculates the remaining time  for the session to end.
 func (s *Session) Remaining() Remainder {
 	difference := time.Until(s.EndTime)
 	total := timeutil.Round(difference.Seconds())
@@ -106,6 +91,15 @@ func (s *Session) ElapsedTimeInSeconds() float64 {
 	}
 
 	return elapsedTimeInSeconds
+}
+
+// Interrupt updates the end time for a session to the time it was interrupted.
+func (s *Session) Interrupt() {
+	interrruptedTime := time.Now()
+	s.EndTime = interrruptedTime
+
+	lastIndex := len(s.Timeline) - 1
+	s.Timeline[lastIndex].EndTime = interrruptedTime
 }
 
 // Normalise ensures that the end time for the current session does not exceed
@@ -143,22 +137,25 @@ func (s *Session) Normalise() {
 	}
 }
 
-// CollectionFromBytes converts a [][]byte to a []Session.
-func CollectionFromBytes(b [][]byte) ([]Session, error) {
-	s := make([]Session, len(b))
+// ToDBModel converts an active session to a database model.
+func (s *Session) ToDBModel() *models.Session {
+	sess := &models.Session{}
 
-	for i := range b {
-		v := b[i]
+	sess.StartTime = s.StartTime
+	sess.EndTime = s.EndTime
+	sess.Name = s.Name
+	sess.Tags = s.Tags
+	sess.Duration = s.Duration
+	sess.Completed = s.Completed
 
-		sess := Session{}
-
-		err := json.Unmarshal(v, &sess)
-		if err != nil {
-			return nil, err
+	for _, v := range s.Timeline {
+		timeline := models.SessionTimeline{
+			StartTime: v.StartTime,
+			EndTime:   v.EndTime,
 		}
 
-		s[i] = sess
+		sess.Timeline = append(sess.Timeline, timeline)
 	}
 
-	return s, nil
+	return sess
 }

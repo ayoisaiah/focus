@@ -1,37 +1,34 @@
-package session
+package app
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/pterm/pterm"
+
+	"github.com/ayoisaiah/focus/internal/models"
+	"github.com/ayoisaiah/focus/store"
 )
 
-// EditTags.edits the tags of the specified sessions.
-func EditTags(
-	sessions []Session,
+// editTags.edits the tags of the specified sessions.
+func editTags(
+	db store.DB,
+	sessions []*models.Session,
 	args []string,
-	updateFunc func(sessions map[time.Time][]byte) error,
 ) error {
 	if len(sessions) == 0 {
 		pterm.Info.Println(noSessionsMsg)
 		return nil
 	}
 
-	m := make(map[time.Time][]byte)
+	m := make(map[time.Time]*models.Session)
 
 	for i := range sessions {
 		sessions[i].Tags = args
 
-		b, err := json.Marshal(sessions[i])
-		if err != nil {
-			return err
-		}
-
-		m[sessions[i].StartTime] = b
+		m[sessions[i].StartTime] = sessions[i]
 	}
 
 	printSessionsTable(os.Stdout, sessions)
@@ -46,5 +43,5 @@ func EditTags(
 
 	_, _ = reader.ReadString('\n')
 
-	return updateFunc(m)
+	return db.UpdateSessions(m)
 }

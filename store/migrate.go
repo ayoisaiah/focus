@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"go.etcd.io/bbolt"
+
+	"github.com/ayoisaiah/focus/internal/models"
 )
 
 func migrateSessions(tx *bbolt.Tx) error {
@@ -14,7 +16,7 @@ func migrateSessions(tx *bbolt.Tx) error {
 	cur := bucket.Cursor()
 
 	for k, v := cur.First(); k != nil; k, v = cur.Next() {
-		var s session
+		var s models.Session
 
 		err := json.Unmarshal(v, &s)
 		if err != nil {

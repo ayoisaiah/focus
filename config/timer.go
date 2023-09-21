@@ -14,17 +14,30 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
+	"github.com/pterm/pterm/putils"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
-
-	"github.com/ayoisaiah/focus/session"
 )
+
+type SessType string
+
+const (
+	Work       SessType = "Work session"
+	ShortBreak SessType = "Short break"
+	LongBreak  SessType = "Long break"
+)
+
+// Message maps a session to a message.
+type Message map[SessType]string
+
+// Duration maps a session to time duration value.
+type Duration map[SessType]time.Duration
 
 var once sync.Once
 
 var timerCfg = &TimerConfig{
-	Message:  make(session.Message),
-	Duration: make(session.Duration),
+	Message:  make(Message),
+	Duration: make(Duration),
 }
 
 var (
@@ -86,22 +99,22 @@ const (
 // TimerConfig represents the program configuration derived from the config file
 // and command-line arguments.
 type TimerConfig struct {
-	Duration            session.Duration `json:"duration"`
-	Message             session.Message  `json:"message"`
-	AmbientSound        string           `json:"sound"`
-	BreakSound          string           `json:"break_sound"`
-	WorkSound           string           `json:"work_sound"`
-	PathToConfig        string           `json:"path_to_config"`
-	PathToDB            string           `json:"path_to_db"`
-	SessionCmd          string           `json:"session_cmd"`
-	Tags                []string         `json:"tags"`
-	LongBreakInterval   int              `json:"long_break_interval"`
-	Notify              bool             `json:"notify"`
-	DarkTheme           bool             `json:"dark_theme"`
-	TwentyFourHourClock bool             `json:"twenty_four_hour_clock"`
-	PlaySoundOnBreak    bool             `json:"sound_on_break"`
-	AutoStartBreak      bool             `json:"auto_start_break"`
-	AutoStartWork       bool             `json:"auto_start_work"`
+	Duration            Duration `json:"duration"`
+	Message             Message  `json:"message"`
+	AmbientSound        string   `json:"sound"`
+	BreakSound          string   `json:"break_sound"`
+	WorkSound           string   `json:"work_sound"`
+	PathToConfig        string   `json:"path_to_config"`
+	PathToDB            string   `json:"path_to_db"`
+	SessionCmd          string   `json:"session_cmd"`
+	Tags                []string `json:"tags"`
+	LongBreakInterval   int      `json:"long_break_interval"`
+	Notify              bool     `json:"notify"`
+	DarkTheme           bool     `json:"dark_theme"`
+	TwentyFourHourClock bool     `json:"twenty_four_hour_clock"`
+	PlaySoundOnBreak    bool     `json:"sound_on_break"`
+	AutoStartBreak      bool     `json:"auto_start_break"`
+	AutoStartWork       bool     `json:"auto_start_work"`
 }
 
 func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
@@ -154,7 +167,7 @@ func prompt() {
 		timerCfg.PathToConfig,
 	)
 
-	_ = pterm.NewBulletListFromString(`Follow the prompts below to configure Focus for the first time.
+	_ = putils.BulletListFromString(`Follow the prompts below to configure Focus for the first time.
 Type your preferred value, or press ENTER to accept the defaults.
 Edit the configuration file (focus edit-config) to change any settings, or use command line arguments (see the --help flag)`, " ").
 		Render()
@@ -282,7 +295,7 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 	}
 
 	if ctx.String("work") != "" {
-		timerCfg.Duration[session.Work] = parseTime(
+		timerCfg.Duration[Work] = parseTime(
 			ctx.String("work"),
 			configWorkDur,
 			defaultWorkMins,
@@ -290,7 +303,7 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 	}
 
 	if ctx.String("short-break") != "" {
-		timerCfg.Duration[session.ShortBreak] = parseTime(
+		timerCfg.Duration[ShortBreak] = parseTime(
 			ctx.String("short-break"),
 			configShortBreakDur,
 			defaultShortBreakMins,
@@ -298,7 +311,7 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 	}
 
 	if ctx.String("long-break") != "" {
-		timerCfg.Duration[session.LongBreak] = parseTime(
+		timerCfg.Duration[LongBreak] = parseTime(
 			ctx.String("short-break"),
 			configShortBreakDur,
 			defaultShortBreakMins,
@@ -360,9 +373,9 @@ func updateConfigFromFile() {
 	)
 
 	timerCfg.LongBreakInterval = longBreakInterval
-	timerCfg.Duration[session.Work] = workDur
-	timerCfg.Duration[session.ShortBreak] = shortBreakDur
-	timerCfg.Duration[session.LongBreak] = longBreakDur
+	timerCfg.Duration[Work] = workDur
+	timerCfg.Duration[ShortBreak] = shortBreakDur
+	timerCfg.Duration[LongBreak] = longBreakDur
 
 	timerCfg.AutoStartBreak = viper.GetBool(configAutoStartBreak)
 	timerCfg.AutoStartWork = viper.GetBool(configAutoStartWork)
@@ -380,11 +393,11 @@ func updateConfigFromFile() {
 		timerCfg.DarkTheme = true
 	}
 
-	timerCfg.Message[session.Work] = viper.GetString(configWorkMessage)
-	timerCfg.Message[session.ShortBreak] = viper.GetString(
+	timerCfg.Message[Work] = viper.GetString(configWorkMessage)
+	timerCfg.Message[ShortBreak] = viper.GetString(
 		configShortBreakMessage,
 	)
-	timerCfg.Message[session.LongBreak] = viper.GetString(
+	timerCfg.Message[LongBreak] = viper.GetString(
 		configLongBreakMessage,
 	)
 }

@@ -3,27 +3,31 @@ package timer
 import (
 	"bufio"
 	"cmp"
-	"encoding/json"
 	"fmt"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/ayoisaiah/focus/internal/models"
 	"github.com/ayoisaiah/focus/internal/timeutil"
 	"github.com/ayoisaiah/focus/internal/ui"
-	"github.com/ayoisaiah/focus/session"
 	"github.com/ayoisaiah/focus/store"
 )
 
 // printPausedTimers outputs a list of resumable timers.
-func printPausedTimers(timers []Timer, pausedSess map[string]session.Session) {
+func printPausedTimers(
+	timers []*models.Timer,
+	pausedSess map[string]*models.Session,
+) {
 	tableBody := make([][]string, len(timers))
 
 	for i := range timers {
 		t := timers[i]
 
-		sess := pausedSess[string(timeutil.ToKey(t.SessionKey))]
+		s := pausedSess[string(timeutil.ToKey(t.SessionKey))]
+
+		sess := newSessionFromDB(s)
 
 		sess.SetEndTime()
 
@@ -63,8 +67,8 @@ func printPausedTimers(timers []Timer, pausedSess map[string]session.Session) {
 // selectPausedTimer prompts the user to select from a list of resumable
 // timers.
 func selectPausedTimer(
-	timers []Timer,
-) (*Timer, error) {
+	timers []*models.Timer,
+) (*models.Timer, error) {
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Fprint(os.Stdout, "\033[s")
@@ -91,54 +95,32 @@ func selectPausedTimer(
 		return nil, fmt.Errorf("%d is not associated with a session", num)
 	}
 
-	return &timers[index], nil
+	return timers[index], nil
 }
 
 // getTimerSessions retrieves all paused timers and their corresponding sessions.
 func getTimerSessions(
 	db store.DB,
-) ([]Timer, map[string]session.Session, error) {
-	timers, err := db.RetrievePausedTimers()
+) ([]*models.Timer, map[string]*models.Session, error) {
+	pausedTimers, err := db.RetrievePausedTimers()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	pausedTimers := make([]Timer, len(timers))
-
-	for i := range timers {
-		var t Timer
-
-		err := json.Unmarshal(timers[i], &t)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		pausedTimers[i] = t
-	}
-
-	pausedSessions := make(map[string]session.Session)
+	pausedSessions := make(map[string]*models.Session)
 
 	for i := range pausedTimers {
 		v := pausedTimers[i]
 
-		sessBytes, err := db.GetSession(v.SessionKey)
+		s, err := db.GetSession(v.SessionKey)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		sess := &session.Session{}
-
-		if len(sessBytes) != 0 {
-			err := json.Unmarshal(sessBytes, sess)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-
-		pausedSessions[string(timeutil.ToKey(v.SessionKey))] = *sess
+		pausedSessions[string(timeutil.ToKey(v.SessionKey))] = s
 	}
 
-	slices.SortStableFunc(pausedTimers, func(a, b Timer) int {
+	slices.SortStableFunc(pausedTimers, func(a, b *models.Timer) int {
 		return cmp.Compare(b.PausedTime.UnixNano(), a.PausedTime.UnixNano())
 	})
 
@@ -147,7 +129,7 @@ func getTimerSessions(
 
 // selectAndDeleteTimers prompts the user and deletes the selected timers or
 // all timers if 0 is specified.
-func selectAndDeleteTimers(db store.DB, timers []Timer) error {
+func selectAndDeleteTimers(db store.DB, timers []*models.Timer) error {
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Fprint(os.Stdout, "\033[s")

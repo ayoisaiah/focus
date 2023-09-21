@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/models"
 	"github.com/ayoisaiah/focus/internal/timeutil"
-	"github.com/ayoisaiah/focus/session"
 	"github.com/ayoisaiah/focus/store"
 )
 
@@ -26,7 +26,7 @@ type Stats struct {
 	EndTime         time.Time         `json:"end_time"`
 	DB              store.DB          `json:"-"`
 	Opts            Opts              `json:"-"`
-	Sessions        []session.Session `json:"-"`
+	Sessions        []*models.Session `json:"-"`
 	LastDayTimeline []Timeline        `json:"timeline"`
 	Summary         Summary           `json:"summary"`
 }
@@ -138,7 +138,7 @@ func (a *Aggregates) init(start, end time.Time) {
 // getSessionDuration returns the elapsed time for a session within the
 // bounds of the reporting period.
 func (s *Stats) getSessionDuration(
-	sess *session.Session,
+	sess *models.Session,
 ) time.Duration {
 	var duration time.Duration
 
@@ -168,7 +168,7 @@ outer:
 }
 
 func (s *Stats) updateAggr(
-	event session.Timeline,
+	event models.SessionTimeline,
 	totals *Aggregates,
 	period aggregatePeriod,
 ) {
@@ -204,21 +204,21 @@ func (s *Stats) updateAggr(
 
 // filterSessions ensures that sessions with an invalid end date are ignored.
 // TODO: Filtering sessions should not be done here.
-func filterSessions(sessions []session.Session) []session.Session {
-	filtered := sessions[:0]
-
-	for i := range sessions {
-		sess := sessions[i]
-
-		if sess.EndTime.IsZero() || sess.EndTime.Before(sess.StartTime) {
-			continue
-		}
-
-		filtered = append(filtered, sess)
-	}
-
-	return filtered
-}
+// func filterSessions(sessions []session.Session) []session.Session {
+// 	filtered := sessions[:0]
+//
+// 	for i := range sessions {
+// 		sess := sessions[i]
+//
+// 		if sess.EndTime.IsZero() || sess.EndTime.Before(sess.StartTime) {
+// 			continue
+// 		}
+//
+// 		filtered = append(filtered, sess)
+// 	}
+//
+// 	return filtered
+// }
 
 func (s *Stats) computeAggregates() {
 	var totals Aggregates
@@ -308,7 +308,7 @@ func (s *Stats) computeSummary() {
 	for i := range s.Sessions {
 		sess := s.Sessions[i]
 
-		duration := s.getSessionDuration(&sess)
+		duration := s.getSessionDuration(sess)
 
 		totals.TotalTime += duration
 
@@ -421,7 +421,7 @@ func (s *Stats) ToJSON() ([]byte, error) {
 }
 
 // Compute calculates Focus statistics for a specific time period.
-func (s *Stats) Compute(sessions []session.Session) {
+func (s *Stats) Compute(sessions []*models.Session) {
 	s.Sessions = sessions
 
 	// TODO: Filter invalid sessions?

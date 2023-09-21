@@ -5,12 +5,12 @@ import (
 
 	"github.com/pterm/pterm"
 
-	"github.com/ayoisaiah/focus"
+	"github.com/ayoisaiah/focus/app"
 	"github.com/ayoisaiah/focus/config"
 )
 
 func run(args []string) error {
-	return focus.GetApp().Run(args)
+	return app.Get().Run(args)
 }
 
 func main() {
