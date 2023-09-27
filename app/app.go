@@ -3,6 +3,8 @@ package app
 import (
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
+
+	"github.com/ayoisaiah/focus/config"
 )
 
 var (
@@ -195,7 +197,7 @@ func Get() *cli.App {
 		},
 		Usage:                "Focus is a cross-platform productivity timer for the command-line. It is based on the Pomodoro Technique,\n\t\ta time management method developed by Francesco Cirillo in the late 1980s.",
 		UsageText:            "[COMMAND] [OPTIONS]",
-		Version:              "v1.3.0",
+		Version:              config.Version,
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{

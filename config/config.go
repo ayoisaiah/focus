@@ -20,6 +20,8 @@ var (
 	statusFilePath string
 )
 
+const Version = "v1.4.0"
+
 func Dir() string {
 	return configDir
 }

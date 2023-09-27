@@ -31,8 +31,6 @@ const (
 	focusBucket   = "focus"
 )
 
-const currentVersion = "v1.4.0"
-
 // Client is a BoltDB database client.
 type Client struct {
 	*bolt.DB
@@ -294,13 +292,13 @@ func NewClient(dbFilePath string) (*Client, error) {
 		bucket := tx.Bucket([]byte(focusBucket))
 		version := string(bucket.Get([]byte("version")))
 
-		if version != currentVersion {
+		if version != config.Version {
 			err = c.migrate(tx)
 			if err != nil {
 				return err
 			}
 
-			return bucket.Put([]byte("version"), []byte(currentVersion))
+			return bucket.Put([]byte("version"), []byte(config.Version))
 		}
 
 		return nil
