@@ -21,6 +21,9 @@ archives:
       - LICENCE
       - README.md
       - CHANGELOG.md
+    format_overrides:
+    - goos: windows
+      format: zip
 checksum:
   name_template: 'checksums.txt'
 snapshot:
