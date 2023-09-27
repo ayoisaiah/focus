@@ -1,6 +1,9 @@
+project_name: focus
+
 before:
   hooks:
     - go mod download
+
 builds:
   - env:
       - CGO_ENABLED=1
@@ -16,16 +19,16 @@ builds:
       - goos: linux
         goarch: arm64
     main: ./cmd/focus
+
 archives:
   - files:
       - LICENCE
       - README.md
       - CHANGELOG.md
     format_overrides:
-    - goos: windows
-      format: zip
-checksum:
-  name_template: 'checksums.txt'
+      - goos: windows
+        format: zip
+
 snapshot:
   name_template: '{{ .Tag }}-next'
 changelog:
@@ -34,11 +37,9 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+
 nfpms:
-  - id: focus
-    package_name: focus
-    file_name_template:
-      '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+  - id: main_packages
     vendor: Freshman
     homepage: https://freshman.tech
     maintainer: Ayooluwa Isaiah <ayo@freshman.tech>
@@ -48,22 +49,65 @@ nfpms:
     formats:
       - deb
       - rpm
-scoop:
-  url_template:
-    'https://github.com/ayoisaiah/focus/releases/download/{{ .Tag }}/{{
-    .ArtifactName }}'
-  bucket:
-    owner: ayoisaiah
-    name: scoop-bucket
-    token: '{{ .Env.SCOOP_BUCKET_GITHUB_TOKEN }}'
-  commit_author:
-    name: goreleaserbot
-    email: goreleaser@carlosbecker.com
-  commit_msg_template: 'Scoop update for {{ .ProjectName }} version {{ .Tag }}'
-  homepage: 'https://github.com/ayoisaiah/focus'
-  description:
-    'Focus is a command-line productivity timer based on the Pomodoro Technique'
-  license: MIT
+
+    overrides:
+      deb:
+        dependencies:
+          - libasound2-dev
+
+      rpm:
+        dependencies:
+          - alsa-lib-devel
+
+  - id: other_packages
+    vendor: Freshman
+    homepage: https://freshman.tech
+    maintainer: Ayooluwa Isaiah <ayo@freshman.tech>
+    description:
+      Focus is a command-line productivity timer based on the Pomodoro Technique
+    license: MIT
+    formats:
+      - apk
+      - termux.deb
+      - archlinux
+
+    dependencies:
+      - libasound2-dev
+
+    overrides:
+      archlinux:
+        dependencies:
+          - alsa-lib
+
+publishers:
+  - name: fury.io
+    ids:
+      - main_packages
+    dir: '{{ dir .ArtifactPath }}'
+    cmd:
+      curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_PUSH_TOKEN
+      }}@push.fury.io/{{ .Env.FURY_USERNAME }}/
+
+#TODO: Support chocolatey
+#TODO: Support Winget
+
+scoops:
+  - url_template:
+      'https://github.com/ayoisaiah/focus/releases/download/{{ .Tag }}/{{
+      .ArtifactName }}'
+    repository:
+      owner: ayoisaiah
+      name: scoop-bucket
+      token: '{{ .Env.SCOOP_BUCKET_GITHUB_TOKEN }}'
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@carlosbecker.com
+    commit_msg_template: 'Scoop update for {{ .ProjectName }} {{ .Tag }}'
+    homepage: 'https://github.com/ayoisaiah/focus'
+    description:
+      'Focus is a command-line productivity timer based on the Pomodoro
+      Technique'
+    license: MIT
 
 brews:
   - install: |-
