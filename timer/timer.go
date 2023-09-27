@@ -240,8 +240,7 @@ func (t *Timer) writeStatusFile(
 	return writer.Flush()
 }
 
-// printSession writes the details of the current
-// session to the standard output.
+// printSession writes the details of the current session to stdout.
 func (t *Timer) printSession(
 	sess *Session,
 ) {
@@ -355,7 +354,7 @@ func (t *Timer) handleInterruption(sess *Session) chan os.Signal {
 			os.Exit(1)
 		}
 
-		sess.Interrupt()
+		sess.UpdateEndTime()
 
 		_ = os.Remove(config.StatusFilePath())
 
@@ -486,7 +485,7 @@ func (t *Timer) wait(sessName config.SessType) error {
 	return t.db.Open()
 }
 
-// countdown prints the time remaining until the end of the current.
+// countdown prints the time remaining until the end of the current session.
 func (t *Timer) countdown(tr Remainder) {
 	fmt.Fprintf(
 		os.Stdout,
@@ -514,13 +513,13 @@ func (t *Timer) nextSession(current config.SessType) config.SessType {
 	return next
 }
 
-// start starts or resumes a and blocks until its completion.
+// start launches or resumes a session and blocks until its completion.
 func (t *Timer) start(sess *Session) {
-	sess.SetEndTime()
-
 	t.printSession(sess)
 
-	_ = t.writeStatusFile(sess)
+	go func() {
+		_ = t.writeStatusFile(sess)
+	}()
 
 	fmt.Fprint(os.Stdout, "\033[s")
 
@@ -528,11 +527,25 @@ func (t *Timer) start(sess *Session) {
 
 	t.countdown(remainder)
 
+	var counter int
+
 	ticker := time.NewTicker(time.Second)
 	for range ticker.C {
 		fmt.Fprint(os.Stdout, "\033[u\033[K")
 
 		remainder = sess.Remaining()
+
+		// save the timer once every minute to facilitate recovery on sudden
+		// shutdowns (e.g. process killed, system crashes etc)
+		if counter%60 == 0 {
+			s := *sess
+
+			s.UpdateEndTime()
+
+			_ = t.persist(&s)
+		}
+
+		counter++
 
 		if remainder.T <= 0 {
 			fmt.Printf("Session completed!\n\n")
@@ -544,10 +557,12 @@ func (t *Timer) start(sess *Session) {
 
 		t.countdown(remainder)
 	}
+
+	ticker.Stop()
 }
 
 // newSession initialises a new session.
-func (t *Timer) newSession(name config.SessType) (*Session, error) {
+func (t *Timer) newSession(name config.SessType) *Session {
 	now := time.Now()
 
 	sess := &Session{
@@ -556,14 +571,14 @@ func (t *Timer) newSession(name config.SessType) (*Session, error) {
 		Tags:      t.Opts.Tags,
 		Completed: false,
 		StartTime: now,
-		EndTime:   now,
 		Timeline: []Timeline{
 			{
 				StartTime: now,
-				EndTime:   now,
 			},
 		},
 	}
+
+	sess.SetEndTime()
 
 	// increment or reset the work cycle accordingly
 	if name == config.Work {
@@ -574,12 +589,7 @@ func (t *Timer) newSession(name config.SessType) (*Session, error) {
 		}
 	}
 
-	err := t.persist(sess)
-	if err != nil {
-		return sess, err
-	}
-
-	return sess, nil
+	return sess
 }
 
 // overrideOptsOnResume overrides timer options if specified through
@@ -624,15 +634,12 @@ func (t *Timer) overrideOptsOnResume(ctx *cli.Context) {
 // Run begins the timer and loops forever, alternating between work and
 // break sessions until it is terminated with Ctrl-C or a maximum number of work
 // sessions is reached.
-func (t *Timer) Run(sess *Session) (err error) {
+func (t *Timer) Run(sess *Session) error {
 	sessName := config.Work
 
 	for {
-		if !sess.Resuming() {
-			sess, err = t.newSession(sessName)
-			if err != nil {
-				return err
-			}
+		if !sess.IsResuming() {
+			sess = t.newSession(sessName)
 		}
 
 		c := t.handleInterruption(sess)
@@ -650,7 +657,7 @@ func (t *Timer) Run(sess *Session) (err error) {
 
 		c <- Settled{}
 
-		err = t.persist(sess)
+		err := t.persist(sess)
 		if err != nil {
 			return err
 		}
@@ -744,6 +751,8 @@ func Recover(
 	t.WorkCycle = selectedTimer.WorkCycle
 
 	sess := newSessionFromDB(s)
+
+	sess.SetEndTime()
 
 	t.overrideOptsOnResume(ctx)
 
