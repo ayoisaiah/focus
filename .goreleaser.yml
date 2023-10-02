@@ -5,19 +5,16 @@ before:
     - go mod download
 
 builds:
-  - env:
+  - id: binary_archives
+    env:
       - CGO_ENABLED=1
     goos:
       - linux
       - windows
+      # darwin omitted due to Cgo cross-compilation failure
+      # Binary to be uploaded separately. See .github/workflows/darwin.yml
     goarch:
       - amd64
-      - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
-      - goos: linux
-        goarch: arm64
     main: ./cmd/focus
 
 archives:
@@ -40,11 +37,10 @@ changelog:
 
 nfpms:
   - id: main_packages
-    vendor: Freshman
-    homepage: https://freshman.tech
-    maintainer: Ayooluwa Isaiah <ayo@freshman.tech>
-    description:
-      Focus is a command-line productivity timer based on the Pomodoro Technique
+    vendor: '{{ .Env.REPO_OWNER }}'
+    homepage: '{{ .Env.REPO_WEBSITE }}'
+    maintainer: '{{ .Env.REPO_MAINTAINER }}'
+    description: '{{ .Env.REPO_DESCRIPTION }}'
     license: MIT
     formats:
       - deb
@@ -60,11 +56,10 @@ nfpms:
           - alsa-lib-devel
 
   - id: other_packages
-    vendor: Freshman
-    homepage: https://freshman.tech
-    maintainer: Ayooluwa Isaiah <ayo@freshman.tech>
-    description:
-      Focus is a command-line productivity timer based on the Pomodoro Technique
+    vendor: '{{ .Env.REPO_OWNER }}'
+    homepage: '{{ .Env.REPO_WEBSITE }}'
+    maintainer: '{{ .Env.REPO_MAINTAINER }}'
+    description: '{{ .Env.REPO_DESCRIPTION }}'
     license: MIT
     formats:
       - apk
@@ -88,31 +83,49 @@ publishers:
       curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_PUSH_TOKEN
       }}@push.fury.io/{{ .Env.FURY_USERNAME }}/
 
-#TODO: Support chocolatey
-#TODO: Support Winget
+winget:
+  - publisher: '{{ .Env.REPO_OWNER }}'
+    license: MIT
+    copyright: '{{ .Env.REPO_AUTHOR_NAME }}'
+    homepage: '{{ .Env.REPO_WEBSITE }}'
+    short_description: '{{ .Env.REPO_DESCRIPTION }}'
+    repository:
+      owner: '{{ .Env.REPO_OWNER }}'
+      token: '{{ .Env.GORELEASER_GITHUB_TOKEN }}'
+      name: winget-pkgs
+      branch: '{{.ProjectName}}-{{.Version}}'
+      pull_request:
+        enabled: true
+        draft: false
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
 
 scoops:
   - url_template:
       'https://github.com/ayoisaiah/focus/releases/download/{{ .Tag }}/{{
       .ArtifactName }}'
     repository:
-      owner: ayoisaiah
+      owner: '{{ .Env.REPO_OWNER }}'
       name: scoop-bucket
-      token: '{{ .Env.SCOOP_BUCKET_GITHUB_TOKEN }}'
+      token: '{{ .Env.GORELEASER_GITHUB_TOKEN }}'
     commit_author:
       name: goreleaserbot
       email: goreleaser@carlosbecker.com
-    commit_msg_template: 'Scoop update for {{ .ProjectName }} {{ .Tag }}'
-    homepage: 'https://github.com/ayoisaiah/focus'
-    description:
-      'Focus is a command-line productivity timer based on the Pomodoro
-      Technique'
+    homepage: '{{ .Env.REPO_WEBSITE }}'
+    description: '{{ .Env.REPO_DESCRIPTION }}'
     license: MIT
 
 brews:
-  - install: |-
-      bin.install "focus"
-
-    homepage: 'https://github.com/ayoisaiah/focus'
-
-    license: 'MIT'
+  - repository:
+      owner: '{{ .Env.REPO_OWNER }}'
+      name: homebrew-tap
+      token: '{{ .Env.GORELEASER_GITHUB_TOKEN }}'
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@carlosbecker.com
+    homepage: '{{ .Env.REPO_WEBSITE }}'
+    description: '{{ .Env.REPO_DESCRIPTION }}'
+    install: |-
+      bin.install "{{ with .Env.REPO_BINARY_NAME }}{{ . }}{{ else }}{{ .ProjectName }}{{ end }}"
