@@ -32,7 +32,6 @@ jobs:
 
       - name: Install libasound2-dev
         run: sudo apt install libasound2-dev
-        if: matrix.os == 'ubuntu-latest'
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v4
