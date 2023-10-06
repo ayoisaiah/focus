@@ -332,7 +332,10 @@ func (t *Timer) notify(sessName, nextSessName config.SessType) {
 
 	<-done
 
+	stream.Close()
+
 	speaker.Clear()
+	speaker.Close()
 }
 
 // handleInterruption saves the current state of the timer whenever it is
@@ -397,6 +400,10 @@ func (t *Timer) prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
 			return nil, err
 		}
 	}
+
+	defer func() {
+		_ = f.Close()
+	}()
 
 	ext = filepath.Ext(sound)
 
