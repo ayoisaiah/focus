@@ -198,6 +198,11 @@ func resumeAction(ctx *cli.Context) error {
 		return err
 	}
 
+	if ctx.Bool("reset") {
+		sess = &timer.Session{}
+		t.WorkCycle = t.Opts.LongBreakInterval
+	}
+
 	if sess == nil {
 		// Set to zero value so that a new session is initialised
 		sess = &timer.Session{}

@@ -110,10 +110,10 @@ var (
 		Usage:   "Select a paused timer from a list",
 	}
 
-	resetPausedFlag = &cli.BoolFlag{
+	resetTimerFlag = &cli.BoolFlag{
 		Name:    "reset",
 		Aliases: []string{"r"},
-		Usage:   "Resume a paused timer, but reset to the beginning of the session",
+		Usage:   "Reset the timer to the beginning of the set",
 	}
 
 	shortBreakFlag = &cli.StringFlag{
@@ -129,6 +129,7 @@ var (
 	}
 
 	longBreakIntervalFlag = &cli.UintFlag{
+		// TODO: Rename to set?
 		Name:    "long-break-interval",
 		Aliases: []string{"int"},
 		Usage:   "The number of work sessions before a long break (default: 4)",
@@ -236,7 +237,7 @@ func Get() *cli.App {
 				Flags: append(
 					timerFlags,
 					selectPausedFlag,
-					resetPausedFlag,
+					resetTimerFlag,
 				),
 				Action: resumeAction,
 			},
