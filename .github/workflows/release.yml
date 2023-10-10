@@ -1,7 +1,8 @@
 name: Release Focus
 
 env:
-  dev_tag: devel
+  dev_tag: nightly
+  go_version: 1.21
   REPO_OWNER: ${{ vars.REPO_OWNER }}
   REPO_WEBSITE: ${{ vars.REPO_WEBSITE }}
   REPO_DESCRIPTION: ${{ vars.REPO_DESCRIPTION }}
@@ -12,31 +13,32 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
   push:
-    branches:
-      - master
     tags:
       - 'v*'
 
 jobs:
   create_tag_master:
-    name: Create devel tag for master branch
+    name: Create nightly tag for master branch
     runs-on: ubuntu-latest
     if: github.ref_type == 'branch'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Update devel tag
+      - name: Update nightly tag
         run: |
           git tag -d ${{ env.dev_tag }} || true
           git push origin :refs/tags/${{ env.dev_tag }} || true
           git tag ${{ env.dev_tag }}
           git push origin ${{ env.dev_tag }}
 
-  publish_devel:
+  publish_nightly:
     needs: create_tag_master
-    name: Release devel version
+    name: Release nightly version
     runs-on: ubuntu-latest
     env:
       GH_REPO: ${{ github.repository }}
@@ -45,19 +47,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Go 1.21
+      - name: Set up Go ${{ env.go_version }}
         uses: actions/setup-go@v3
         with:
-          go-version: 1.21
+          go-version: ${{ env.go_version }}
 
       - name: Install libasound2-dev
         run: sudo apt install libasound2-dev
 
-      - name: Delete existing devel release
+      - name: Delete existing nightly release
         run: |
-          gh release delete devel --yes || true
+          gh release delete nightly --yes || true
 
-      - name: Create devel release
+      - name: Create nightly release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: refs/tags/${{ env.dev_tag }}
@@ -73,7 +75,7 @@ jobs:
           version: latest
           args: release --clean --snapshot
 
-      - name: Upload assets to devel release
+      - name: Upload assets to nightly release
         run: gh release upload ${{ env.dev_tag }} dist/{*.tar.gz,*.zip,*.tar.zst,*.deb,*.rpm,checksums.txt} --clobber
 
   run_tests:
@@ -89,7 +91,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.21
+          go-version: ${{ env.go_version }}
 
       - name: Run tests
         run: go test ./... -race
@@ -103,10 +105,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Go 1.21
+      - name: Set up Go ${{ env.go_version }}
         uses: actions/setup-go@v3
         with:
-          go-version: 1.21
+          go-version: ${{ env.go_version }}
 
       - name: Install libasound2-dev
         run: sudo apt install libasound2-dev
