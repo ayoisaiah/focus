@@ -16,10 +16,9 @@ require (
 
 require (
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
-	github.com/davecgh/go-spew v1.1.1
 	github.com/google/go-cmp v0.5.9
-	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
+	github.com/maruel/natural v1.1.0
 	github.com/spf13/viper v1.16.0
 )
 

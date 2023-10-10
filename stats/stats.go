@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"sort"
 	"strconv"
 	"time"
+
+	"github.com/maruel/natural"
 
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/models"
@@ -37,7 +40,7 @@ type Timeline struct {
 	Duration  time.Duration `json:"duration"`
 }
 
-type KV struct {
+type Record struct {
 	Name     string        `json:"name"`
 	Duration time.Duration `json:"duration"`
 }
@@ -45,13 +48,14 @@ type KV struct {
 type statsJSON struct {
 	StartTime       time.Time  `json:"start_time"`
 	EndTime         time.Time  `json:"end_time"`
-	Tags            []KV       `json:"tags"`
-	Hourly          []KV       `json:"hourly"`
+	Tags            []Record   `json:"tags"`
+	Hourly          []Record   `json:"hourly"`
 	LastDayTimeline []Timeline `json:"timeline"`
-	Daily           []KV       `json:"daily"`
-	Weekly          []KV       `json:"weekly"`
-	Yearly          []KV       `json:"yearly"`
-	Monthly         []KV       `json:"monthly"`
+	Daily           []Record   `json:"daily"`
+	Weekday         []Record   `json:"weekday"`
+	Weekly          []Record   `json:"weekly"`
+	Yearly          []Record   `json:"yearly"`
+	Monthly         []Record   `json:"monthly"`
 	Totals          struct {
 		Completed int           `json:"completed"`
 		Abandoned int           `json:"abandoned"`
@@ -68,9 +72,10 @@ type aggregatePeriod string
 
 const (
 	monthly aggregatePeriod = "Monthly"
+	weekly  aggregatePeriod = "Weekly"
 	daily   aggregatePeriod = "Daily"
 	yearly  aggregatePeriod = "Yearly"
-	weekly  aggregatePeriod = "Weekly"
+	weekday aggregatePeriod = "Weekday"
 	hourly  aggregatePeriod = "Hourly"
 	all     aggregatePeriod = "All"
 )
@@ -89,6 +94,7 @@ type Aggregates struct {
 	startTime time.Time
 	endTime   time.Time
 	Weekly    map[string]time.Duration `json:"weekly"`
+	Weekday   map[string]time.Duration `json:"weekday"`
 	Daily     map[string]time.Duration `json:"daily"`
 	Yearly    map[string]time.Duration `json:"yearly"`
 	Monthly   map[string]time.Duration `json:"monthly"`
@@ -125,9 +131,18 @@ func (a *Aggregates) init(start, end time.Time) {
 
 	a.Yearly = a.populateMap(0)
 	a.Monthly = a.populateMap(0)
-	//nolint:gomnd // 0-6 days
-	a.Weekly = a.populateMap(6)
+	a.Weekly = a.populateMap(0)
 	a.Daily = a.populateMap(-1)
+
+	a.Weekday = map[string]time.Duration{
+		"Sunday":    time.Duration(0),
+		"Monday":    time.Duration(0),
+		"Tuesday":   time.Duration(0),
+		"Wednesday": time.Duration(0),
+		"Thursday":  time.Duration(0),
+		"Friday":    time.Duration(0),
+		"Saturday":  time.Duration(0),
+	}
 
 	a.Hourly = make(map[string]time.Duration)
 	for i := 0; i <= 23; i++ {
@@ -185,16 +200,21 @@ func (s *Stats) updateAggr(
 		case yearly:
 			totals.Yearly[strconv.Itoa(date.Year())] += time.Minute * 1
 		case monthly:
-			totals.Monthly[strconv.Itoa(int(date.Month()))] += time.Minute * 1
+			totals.Monthly[date.Month().String()] += time.Minute * 1
+		case weekday:
+			totals.Weekday[date.Weekday().String()] += time.Minute * 1
 		case weekly:
-			totals.Weekly[strconv.Itoa(int(date.Weekday()))] += time.Minute * 1
+			y, w := date.ISOWeek()
+			totals.Weekly[fmt.Sprintf("%d-W%d", y, w)] += time.Minute * 1
 		case daily:
 			totals.Daily[date.Format("2006-01-02")] += time.Minute * 1
 		case hourly:
 			totals.Hourly[date.Format("15:00")] += time.Minute * 1
 		case all:
-			totals.Monthly[strconv.Itoa(int(date.Month()))] += time.Minute * 1
-			totals.Weekly[strconv.Itoa(int(date.Weekday()))] += time.Minute * 1
+			y, w := date.ISOWeek()
+			totals.Monthly[date.Month().String()] += time.Minute * 1
+			totals.Weekday[date.Weekday().String()] += time.Minute * 1
+			totals.Weekly[fmt.Sprintf("%d-W%d", y, w)] += time.Minute * 1
 			totals.Daily[date.Format("2006-01-02")] += time.Minute * 1
 			totals.Hourly[date.Format("15:00")] += time.Minute * 1
 			totals.Yearly[strconv.Itoa(date.Year())] += time.Minute * 1
@@ -261,19 +281,30 @@ func (s *Stats) computeAggregates() {
 				}
 
 				if start.Month() == end.Month() {
-					totals.Monthly[strconv.Itoa(int(start.Month()))] += end.Sub(
+					totals.Monthly[start.Month().String()] += end.Sub(
 						start,
 					)
 				} else {
 					s.updateAggr(event, &totals, monthly)
 				}
 
-				if start.Weekday() == end.Weekday() {
-					totals.Weekly[strconv.Itoa(int(start.Weekday()))] += end.Sub(
+				startY, startW := start.ISOWeek()
+				_, endW := end.ISOWeek()
+
+				if startW == endW {
+					totals.Weekly[fmt.Sprintf("%d-W%d", startY, startW)] += end.Sub(
 						start,
 					)
 				} else {
 					s.updateAggr(event, &totals, weekly)
+				}
+
+				if start.Weekday() == end.Weekday() {
+					totals.Weekday[start.Weekday().String()] += end.Sub(
+						start,
+					)
+				} else {
+					s.updateAggr(event, &totals, weekday)
 				}
 
 				if start.Day() == end.Day() {
@@ -344,9 +375,52 @@ func (s *Stats) computeSummary() {
 	s.Summary = totals
 }
 
-func sortByName(s []KV) {
-	slices.SortStableFunc(s, func(a, b KV) int {
+func sortByName(recs []Record) {
+	slices.SortStableFunc(recs, func(a, b Record) int {
 		return cmp.Compare(a.Name, b.Name)
+	})
+}
+
+func sortNatural(recs []Record) {
+	sort.Slice(recs, func(i, j int) bool {
+		return natural.Less(recs[i].Name, recs[j].Name)
+	})
+}
+
+func sortMonths(recs []Record) {
+	calendarOrder := map[string]int{
+		"January":   1,
+		"February":  2,
+		"March":     3,
+		"April":     4,
+		"May":       5,
+		"June":      6,
+		"July":      7,
+		"August":    8,
+		"September": 9,
+		"October":   10,
+		"November":  11,
+		"December":  12,
+	}
+
+	sort.Slice(recs, func(i, j int) bool {
+		return calendarOrder[recs[i].Name] < calendarOrder[recs[j].Name]
+	})
+}
+
+func sortWeekdays(recs []Record) {
+	calendarOrder := map[string]int{
+		"Sunday":    1,
+		"Monday":    2,
+		"Tuesday":   3,
+		"Wednesday": 4,
+		"Thursday":  5,
+		"Friday":    6,
+		"Saturday":  7,
+	}
+
+	sort.Slice(recs, func(i, j int) bool {
+		return calendarOrder[recs[i].Name] < calendarOrder[recs[j].Name]
 	})
 }
 
@@ -366,55 +440,63 @@ func (s *Stats) ToJSON() ([]byte, error) {
 	r.LastDayTimeline = s.LastDayTimeline
 
 	for k, v := range s.Summary.Tags {
-		r.Tags = append(r.Tags, KV{
+		r.Tags = append(r.Tags, Record{
 			Name:     k,
 			Duration: v,
 		})
 	}
 
 	for k, v := range s.Aggregates.Hourly {
-		r.Hourly = append(r.Hourly, KV{
+		r.Hourly = append(r.Hourly, Record{
 			Name:     k,
 			Duration: v,
 		})
 	}
 
 	for k, v := range s.Aggregates.Daily {
-		r.Daily = append(r.Daily, KV{
+		r.Daily = append(r.Daily, Record{
+			Name:     k,
+			Duration: v,
+		})
+	}
+
+	for k, v := range s.Aggregates.Weekday {
+		r.Weekday = append(r.Weekday, Record{
 			Name:     k,
 			Duration: v,
 		})
 	}
 
 	for k, v := range s.Aggregates.Weekly {
-		r.Weekly = append(r.Weekly, KV{
+		r.Weekly = append(r.Weekly, Record{
 			Name:     k,
 			Duration: v,
 		})
 	}
 
 	for k, v := range s.Aggregates.Monthly {
-		r.Monthly = append(r.Monthly, KV{
+		r.Monthly = append(r.Monthly, Record{
 			Name:     k,
 			Duration: v,
 		})
 	}
 
 	for k, v := range s.Aggregates.Yearly {
-		r.Yearly = append(r.Yearly, KV{
+		r.Yearly = append(r.Yearly, Record{
 			Name:     k,
 			Duration: v,
 		})
 	}
 
-	slices.SortStableFunc(r.Tags, func(a, b KV) int {
+	slices.SortStableFunc(r.Tags, func(a, b Record) int {
 		return cmp.Compare(b.Duration, a.Duration)
 	})
 
 	sortByName(r.Hourly)
 	sortByName(r.Daily)
-	sortByName(r.Weekly)
-	sortByName(r.Monthly)
+	sortWeekdays(r.Weekday)
+	sortNatural(r.Weekly)
+	sortMonths(r.Monthly)
 	sortByName(r.Yearly)
 
 	return json.Marshal(r)

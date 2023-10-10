@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="/web/fonts/Inter-Bold.woff" as="font" type="font/woff" />
+  <link href="/web/fonts/Inter-Regular.woff" as="font" type="font/woff" />
+  <link rel="stylesheet" href="/web/styles.css" />
+  <title>Focus statistics</title>
+</head>
+
+<body>
+  <div class="main" id="main" data-stats="{{ .Stats }}">
+    <nav>
+      <div class="logo">Focus</div>
+      <div style="
+            display: flex;
+            gap: 20px;
+            justify-content: space-between;
+            align-items: center;
+          ">
+        <input value="{{ .StartTime }}" type="date" name="start-date" id="start-date" />
+        -
+        <input value="{{ .EndTime }}" type="date" name="end-date" id="end-date" />
+      </div>
+    </nav>
+
+    <div class="stats">
+      <div class="summary">
+        <div class="summary-item">
+          <div class="summary-title">Focused for</div>
+          <div class="summary-num" id="js-total-time"></div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-title">Top tag</div>
+          <div class="summary-num" id="js-top-tag"></div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-title">Completed sessions</div>
+          <div class="summary-num" id="js-completed"></div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-title">Abandoned sessions</div>
+          <div class="summary-num" id="js-abandoned"></div>
+        </div>
+      </div>
+
+      <div class="columns">
+        <div class="column">
+          <div id="js-main-chart"></div>
+        </div>
+      </div>
+
+      <div class="columns">
+        <div class="column">
+          <div id="js-hourly-chart"></div>
+        </div>
+      </div>
+
+      <div class="columns">
+        <div class="column">
+          <div id="js-weekday-chart"></div>
+        </div>
+        <div class="column">
+          <div id="js-tags-chart"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/web/dist/script.js"></script>
+</body>
+
+</html>
