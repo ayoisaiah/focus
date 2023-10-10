@@ -1,46 +1,131 @@
-name: Release focus
+name: Release Focus
+
+env:
+  dev_tag: devel
+  REPO_OWNER: ${{ vars.REPO_OWNER }}
+  REPO_WEBSITE: ${{ vars.REPO_WEBSITE }}
+  REPO_DESCRIPTION: ${{ vars.REPO_DESCRIPTION }}
+  REPO_MAINTAINER: ${{ vars.REPO_MAINTAINER }}
+  REPO_AUTHOR_NAME: ${{ vars.REPO_AUTHOR_NAME }}
+  REPO_AUTHOR_EMAIL: ${{ vars.REPO_AUTHOR_EMAIL }}
+  REPO_BINARY_NAME: ${{ vars.REPO_BINARY_NAME }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
-  workflow_dispatch:
   push:
+    branches:
+      - master
     tags:
       - 'v*'
 
 jobs:
-  build:
-    name: Release new version
+  create_tag_master:
+    name: Create devel tag for master branch
     runs-on: ubuntu-latest
-
+    if: github.ref_type == 'branch'
     steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update devel tag
+        run: |
+          git tag -d ${{ env.dev_tag }} || true
+          git push origin :refs/tags/${{ env.dev_tag }} || true
+          git tag ${{ env.dev_tag }}
+          git push origin ${{ env.dev_tag }}
+
+  publish_devel:
+    needs: create_tag_master
+    name: Release devel version
+    runs-on: ubuntu-latest
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Go 1.21
         uses: actions/setup-go@v3
         with:
           go-version: 1.21
-        id: go
-
-      - name: Create GitHub Release
-        uses: elgohr/Github-Release-Action@v4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          title: ${{ github.ref }}
 
       - name: Install libasound2-dev
         run: sudo apt install libasound2-dev
 
-      - name: Run GoReleaser
+      - name: Delete existing devel release
+        run: |
+          gh release delete devel --yes || true
+
+      - name: Create devel release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: refs/tags/${{ env.dev_tag }}
+          name: Development build (master)
+          body: |
+            This build is directly sourced from the master branch in active development. As such, it may include experimental features and potential bugs.
+          draft: false
+          prerelease: true
+
+      - name: Build assets with Goreleaser
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          version: latest
+          args: release --clean --snapshot
+
+      - name: Upload assets to devel release
+        run: gh release upload ${{ env.dev_tag }} dist/{*.tar.gz,*.zip,*.tar.zst,*.deb,*.rpm,checksums.txt} --clobber
+
+  run_tests:
+    runs-on: ${{ matrix.os }}
+    if: github.ref_type == 'tag'
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.21
+
+      - name: Run tests
+        run: go test ./... -race
+
+  publish_stable:
+    name: Release stable version
+    runs-on: ubuntu-latest
+    needs: run_tests
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.21
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.21
+
+      - name: Install libasound2-dev
+        run: sudo apt install libasound2-dev
+
+      - name: Create stable release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          name: ${{ github.ref }}
+          body: ${{ env.CHANGELOG }}
+          draft: false
+          prerelease: false
+
+      - name: Run Goreleaser
         uses: goreleaser/goreleaser-action@v4
         with:
           version: latest
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_GITHUB_TOKEN: ${{ secrets.SCOOP_BUCKET_GITHUB_TOKEN }}
           FURY_TOKEN: ${{ secrets.FURY_PUSH_TOKEN }}
           FURY_USERNAME: ${{ secrets.FURY_USERNAME }}
-          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
