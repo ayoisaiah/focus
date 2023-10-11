@@ -601,7 +601,7 @@ func (t *Timer) newSession(name config.SessType) *Session {
 
 // overrideOptsOnResume overrides timer options if specified through
 // command-line arguments.
-func (t *Timer) overrideOptsOnResume(ctx *cli.Context) {
+func (t *Timer) overrideOptsOnResume(ctx *cli.Context) error {
 	if ctx.Bool("disable-notification") {
 		t.Opts.Notify = false
 	}
@@ -612,6 +612,11 @@ func (t *Timer) overrideOptsOnResume(ctx *cli.Context) {
 			t.Opts.AmbientSound = ""
 		} else {
 			t.Opts.AmbientSound = ambientSound
+
+			err := t.setAmbientSound()
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -636,6 +641,8 @@ func (t *Timer) overrideOptsOnResume(ctx *cli.Context) {
 	if ctx.String("session-cmd") != "" {
 		t.Opts.SessionCmd = ctx.String("session-cmd")
 	}
+
+	return nil
 }
 
 // Run begins the timer and loops forever, alternating between work and
@@ -761,9 +768,26 @@ func Recover(
 
 	sess.SetEndTime()
 
-	t.overrideOptsOnResume(ctx)
+	err = t.overrideOptsOnResume(ctx)
 
-	return t, sess, nil
+	return t, sess, err
+}
+
+func (t *Timer) setAmbientSound() error {
+	var infiniteStream beep.Streamer
+
+	if t.Opts.AmbientSound != "" {
+		stream, err := t.prepSoundStream(t.Opts.AmbientSound)
+		if err != nil {
+			return err
+		}
+
+		infiniteStream = beep.Loop(-1, stream)
+	}
+
+	t.SoundStream = infiniteStream
+
+	return nil
 }
 
 // New creates a new timer.
@@ -774,18 +798,7 @@ func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
 		Opts:      cfg,
 	}
 
-	var infiniteStream beep.Streamer
+	err := t.setAmbientSound()
 
-	if t.Opts.AmbientSound != "" {
-		stream, err := t.prepSoundStream(t.Opts.AmbientSound)
-		if err != nil {
-			return nil, err
-		}
-
-		infiniteStream = beep.Loop(-1, stream)
-	}
-
-	t.SoundStream = infiniteStream
-
-	return t, nil
+	return t, err
 }
