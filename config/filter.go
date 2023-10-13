@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/araddon/dateparse"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 
@@ -88,7 +87,7 @@ func setFilterConfig(ctx *cli.Context) (*FilterConfig, error) {
 
 	start := ctx.String("start")
 	if start != "" {
-		dateTime, err := dateparse.ParseAny(start)
+		dateTime, err := timeutil.FromStr(start)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +105,7 @@ func setFilterConfig(ctx *cli.Context) (*FilterConfig, error) {
 
 	end := ctx.String("end")
 	if end != "" {
-		dateTime, err := dateparse.ParseAny(end)
+		dateTime, err := timeutil.FromStr(end)
 		if err != nil {
 			return nil, err
 		}

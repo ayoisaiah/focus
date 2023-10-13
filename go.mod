@@ -15,10 +15,9 @@ require (
 )
 
 require (
-	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
-	github.com/davecgh/go-spew v1.1.1
 	github.com/google/go-cmp v0.5.9
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
+	github.com/markusmobius/go-dateparser v1.2.1
 	github.com/maruel/natural v1.1.0
 	github.com/spf13/viper v1.16.0
 )
@@ -45,7 +44,6 @@ require (
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/magefile/mage v1.14.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
-	github.com/markusmobius/go-dateparser v1.2.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mewkiz/flac v1.0.8 // indirect
 	github.com/mewkiz/pkg v0.0.0-20230226050401-4010bf0fec14 // indirect
