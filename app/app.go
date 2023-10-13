@@ -32,6 +32,11 @@ var (
 		Usage:   "Specify a start date in the following format: YYYY-MM-DD [HH:MM:SS PM]",
 	}
 
+	sinceFlag = &cli.StringFlag{
+		Name:  "since",
+		Usage: "Show logs since timestamp (e.g. 'YYYY-MM-DD HH:MM:SS PM') or relative (e.g. '20 mins ago')",
+	}
+
 	filterTagFlag = &cli.StringFlag{
 		Name:    "tag",
 		Aliases: []string{"t"},
@@ -258,6 +263,7 @@ func Get() *cli.App {
 			longBreakFlag,
 			longBreakIntervalFlag,
 			workFlag,
+			sinceFlag,
 		},
 		Action: defaultAction,
 		Before: beforeAction,

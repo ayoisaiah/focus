@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/models"
+	"github.com/ayoisaiah/focus/internal/timeutil"
 	"github.com/ayoisaiah/focus/internal/ui"
 	"github.com/ayoisaiah/focus/stats"
 	"github.com/ayoisaiah/focus/store"
@@ -24,6 +26,10 @@ const (
 	envUpdateNotifier = "FOCUS_UPDATE_NOTIFIER"
 	envNoColor        = "NO_COLOR"
 	envFocusNoColor   = "FOCUS_NO_COLOR"
+)
+
+var errNoSessionOverlap = errors.New(
+	"new sessions cannot overlap with existing ones",
 )
 
 // firstNonEmptyString returns its first non-empty argument, or "" if all
@@ -199,13 +205,12 @@ func resumeAction(ctx *cli.Context) error {
 	}
 
 	if ctx.Bool("reset") {
-		sess = &timer.Session{}
-		t.WorkCycle = t.Opts.LongBreakInterval
+		sess = t.NewSession(config.Work, time.Now())
+		t.WorkCycle = 1
 	}
 
-	if sess == nil {
-		// Set to zero value so that a new session is initialised
-		sess = &timer.Session{}
+	if sess == nil || sess.Completed {
+		sess = t.NewSession(config.Work, time.Now())
 	}
 
 	ui.DarkTheme = t.Opts.DarkTheme
@@ -262,7 +267,8 @@ func statusAction(_ *cli.Context) error {
 	return t.ReportStatus()
 }
 
-// defaultAction starts brand new timer.
+// defaultAction starts a timer or adds a completed session depending on the
+// value of --start.
 func defaultAction(ctx *cli.Context) error {
 	cfg := config.Timer(ctx)
 
@@ -278,7 +284,46 @@ func defaultAction(ctx *cli.Context) error {
 		return err
 	}
 
-	return t.Run(&timer.Session{})
+	sinceFlag := ctx.String("since")
+
+	startTime := time.Now()
+
+	if sinceFlag != "" {
+		var err error
+
+		startTime, err = timeutil.FromStr(sinceFlag)
+		if err != nil {
+			return err
+		}
+	}
+
+	sess := t.NewSession(config.Work, startTime)
+
+	if sinceFlag != "" {
+		sessions, err := dbClient.GetSessions(startTime, time.Now(), []string{})
+		if err != nil {
+			return err
+		}
+
+		if len(sessions) > 0 {
+			return errNoSessionOverlap
+		}
+	}
+
+	if time.Now().After(sess.EndTime) {
+		sess.Completed = true
+
+		err := t.Persist(sess)
+		if err != nil {
+			return err
+		}
+
+		pterm.Info.Println("session added successfully")
+
+		return nil
+	}
+
+	return t.Run(sess)
 }
 
 func beforeAction(ctx *cli.Context) error {

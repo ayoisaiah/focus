@@ -7,6 +7,8 @@ import (
 	"math"
 	"strconv"
 	"time"
+
+	"github.com/markusmobius/go-dateparser"
 )
 
 const minutesInAnHour = 60
@@ -115,4 +117,15 @@ func DayFormat(t time.Time) int {
 // ToKey converts a time value to a database key for Bolt.
 func ToKey(t time.Time) []byte {
 	return []byte(t.Format(time.RFC3339Nano))
+}
+
+func FromStr(timeStr string) (time.Time, error) {
+	dt, err := dateparser.Parse(&dateparser.Configuration{
+		CurrentTime: time.Now(),
+	}, timeStr)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return dt.Time.Local(), nil
 }

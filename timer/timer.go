@@ -79,8 +79,8 @@ type Status struct {
 	LongBreakInterval int             `json:"long_break_interval"`
 }
 
-// persist saves the current timer and session to the database.
-func (t *Timer) persist(sess *Session) error {
+// Persist saves the current timer and session to the database.
+func (t *Timer) Persist(sess *Session) error {
 	if sess.Name != config.Work {
 		return nil
 	}
@@ -96,9 +96,7 @@ func (t *Timer) persist(sess *Session) error {
 		return err
 	}
 
-	if !sess.Completed {
-		t.SessionKey = sess.StartTime
-	}
+	t.SessionKey = sess.StartTime
 
 	timer := models.Timer{
 		Opts:       t.Opts,
@@ -361,7 +359,7 @@ func (t *Timer) handleInterruption(sess *Session) chan os.Signal {
 
 		_ = os.Remove(config.StatusFilePath())
 
-		err := t.persist(sess)
+		err := t.Persist(sess)
 		if err != nil {
 			exitFunc(err)
 		}
@@ -549,7 +547,7 @@ func (t *Timer) start(sess *Session) {
 
 			s.UpdateEndTime()
 
-			_ = t.persist(&s)
+			_ = t.Persist(&s)
 		}
 
 		counter++
@@ -568,19 +566,17 @@ func (t *Timer) start(sess *Session) {
 	ticker.Stop()
 }
 
-// newSession initialises a new session.
-func (t *Timer) newSession(name config.SessType) *Session {
-	now := time.Now()
-
+// NewSession initialises a new session.
+func (t *Timer) NewSession(name config.SessType, startTime time.Time) *Session {
 	sess := &Session{
 		Name:      name,
 		Duration:  t.Opts.Duration[name],
 		Tags:      t.Opts.Tags,
 		Completed: false,
-		StartTime: now,
+		StartTime: startTime,
 		Timeline: []Timeline{
 			{
-				StartTime: now,
+				StartTime: startTime,
 			},
 		},
 	}
@@ -652,10 +648,6 @@ func (t *Timer) Run(sess *Session) error {
 	sessName := config.Work
 
 	for {
-		if !sess.IsResuming() {
-			sess = t.newSession(sessName)
-		}
-
 		c := t.handleInterruption(sess)
 
 		if t.Opts.AmbientSound != "" {
@@ -671,7 +663,7 @@ func (t *Timer) Run(sess *Session) error {
 
 		c <- Settled{}
 
-		err := t.persist(sess)
+		err := t.Persist(sess)
 		if err != nil {
 			return err
 		}
@@ -689,6 +681,8 @@ func (t *Timer) Run(sess *Session) error {
 		if err != nil {
 			return err
 		}
+
+		sess = t.NewSession(sessName, time.Now())
 	}
 }
 
@@ -726,7 +720,7 @@ func newSessionFromDB(s *models.Session) *Session {
 	return sess
 }
 
-// Recover attempts to recover an interrupted.
+// Recover attempts to recover an interrupted timer.
 func Recover(
 	db store.DB,
 	ctx *cli.Context,

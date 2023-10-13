@@ -44,7 +44,7 @@ func (s *Session) IsResuming() bool {
 	return true
 }
 
-// SetEndTime calculates the end time for the session.
+// SetEndTime calculates the end time for the current session.
 func (s *Session) SetEndTime() {
 	endTime := s.StartTime.Add(s.Duration)
 
@@ -56,15 +56,17 @@ func (s *Session) SetEndTime() {
 		return
 	}
 
+	now := time.Now()
+
 	elapsedTimeInSeconds := s.ElapsedTimeInSeconds()
-	endTime = time.Now().
+	endTime = now.
 		Add(s.Duration).
 		Add(-time.Second * time.Duration(elapsedTimeInSeconds))
 
 	s.EndTime = endTime
 
 	s.Timeline = append(s.Timeline, Timeline{
-		StartTime: time.Now(),
+		StartTime: now,
 		EndTime:   endTime,
 	})
 }
