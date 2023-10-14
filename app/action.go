@@ -28,8 +28,14 @@ const (
 	envFocusNoColor   = "FOCUS_NO_COLOR"
 )
 
-var errNoSessionOverlap = errors.New(
-	"new sessions cannot overlap with existing ones",
+var (
+	errNoSessionOverlap = errors.New(
+		"new sessions cannot overlap with existing ones",
+	)
+
+	errStrictMode = errors.New(
+		"session resumption failed: strict mode is enabled",
+	)
 )
 
 // firstNonEmptyString returns its first non-empty argument, or "" if all
@@ -194,6 +200,12 @@ func listAction(ctx *cli.Context) error {
 // resumeAction handles the resume command and resumes a previously paused
 // timer.
 func resumeAction(ctx *cli.Context) error {
+	cfg := config.Timer(ctx)
+
+	if cfg.Strict {
+		return errStrictMode
+	}
+
 	dbClient, err := store.NewClient(config.DBFilePath())
 	if err != nil {
 		return err
@@ -202,6 +214,10 @@ func resumeAction(ctx *cli.Context) error {
 	t, sess, err := timer.Recover(dbClient, ctx)
 	if err != nil {
 		return err
+	}
+
+	if t.Opts.Strict {
+		return errStrictMode
 	}
 
 	if ctx.Bool("reset") {

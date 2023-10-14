@@ -48,6 +48,11 @@ var (
 		Usage: "Disable coloured output",
 	}
 
+	strictFlag = &cli.BoolFlag{
+		Name:  "strict",
+		Usage: "When strict mode is enabled, you can't resume a paused session",
+	}
+
 	disableNotificationFlag = &cli.BoolFlag{
 		Name:    "disable-notification",
 		Aliases: []string{"d"},
@@ -186,6 +191,7 @@ func Get() *cli.App {
 		breakSoundFlag,
 		sessionCmdFlag,
 		addTagFlag,
+		strictFlag,
 	}
 
 	focusApp := &cli.App{

@@ -94,6 +94,7 @@ const (
 	configDarkTheme           = "dark_theme"
 	configBreakSound          = "break_sound"
 	configWorkSound           = "work_sound"
+	configStrict              = "strict"
 )
 
 // TimerConfig represents the program configuration derived from the config file
@@ -115,6 +116,7 @@ type TimerConfig struct {
 	PlaySoundOnBreak    bool     `json:"sound_on_break"`
 	AutoStartBreak      bool     `json:"auto_start_break"`
 	AutoStartWork       bool     `json:"auto_start_work"`
+	Strict              bool     `json:"strict"`
 }
 
 func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
@@ -261,6 +263,10 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 		timerCfg.Notify = false
 	}
 
+	if ctx.Bool("strict") {
+		timerCfg.Strict = true
+	}
+
 	timerCfg.PlaySoundOnBreak = ctx.Bool("sound-on-break")
 
 	ambientSound := ctx.String("sound")
@@ -379,6 +385,7 @@ func updateConfigFromFile() {
 
 	timerCfg.AutoStartBreak = viper.GetBool(configAutoStartBreak)
 	timerCfg.AutoStartWork = viper.GetBool(configAutoStartWork)
+	timerCfg.Strict = viper.GetBool(configStrict)
 	timerCfg.Notify = viper.GetBool(configNotify)
 	timerCfg.TwentyFourHourClock = viper.GetBool(configTwentyFourHourClock)
 	timerCfg.PlaySoundOnBreak = viper.GetBool(configSoundOnBreak)
@@ -453,6 +460,7 @@ func timerDefaults() {
 	viper.SetDefault(configDarkTheme, true)
 	viper.SetDefault(configBreakSound, "bell")
 	viper.SetDefault(configWorkSound, "loud_bell")
+	viper.SetDefault(configStrict, false)
 }
 
 // initTimerConfig initialises the application configuration.
