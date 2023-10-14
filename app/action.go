@@ -247,10 +247,6 @@ func statsAction(ctx *cli.Context) error {
 		return nil
 	}
 
-	if ctx.Bool("html") {
-		return nil
-	}
-
 	return s.Server(ctx.Uint("port"))
 }
 

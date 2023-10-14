@@ -99,11 +99,6 @@ var (
 		Usage: "Output Focus statistics as JSON",
 	}
 
-	statsHTMLFlag = &cli.BoolFlag{
-		Name:  "html",
-		Usage: "Output Focus statistics as HTML",
-	}
-
 	statsPortFlag = &cli.UintFlag{
 		Name:  "port",
 		Usage: "Specify the port for the statistics server",
@@ -172,7 +167,6 @@ func Get() *cli.App {
 		filterTagFlag,
 		noColorFlag,
 		statsJSONFlag,
-		statsHTMLFlag,
 		statsPortFlag,
 	}
 
