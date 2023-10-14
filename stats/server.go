@@ -5,7 +5,6 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
-	"log"
 	"math"
 	"net/http"
 	"strings"
@@ -117,7 +116,7 @@ func (s *Stats) Server(port uint) error {
 	mux.Handle("/web/", fs)
 	mux.Handle("/", errorHandler(s.index))
 
-	log.Printf("starting server on port: %d\n", port)
+	pterm.Info.Printfln("starting server on port: %d", port)
 
 	//nolint:gosec // no timeout is ok
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
