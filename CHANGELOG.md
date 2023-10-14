@@ -1,3 +1,20 @@
+## 1.4.0 (2023-10-14)
+
+Features and enhancements:
+
+- Add new strict mode to prevent session resumption.
+- Use zip format for Windows release archives.
+- Add status reporting feature (`focus status`).
+- Statistics are now displayed using a web server (`focus stats`)
+- Running timers are persisted to the data store every minute.
+- Improve notification sounds for work and break sessions (`--work-sound` and
+  `--break-sound`).
+- Add ability to start timers in the past (`focus --since`).
+- Specifying session duration is more flexible.
+- Timers can be reset on resumption (`focus resume --reset`).
+- Ambient sound can be changed on session resumption (`focus resume --sound`).
+- Improve session resumption table presentation.
+
 ## 1.3.0 (2022-02-21)
 
 Features and enhancements:
