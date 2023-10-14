@@ -9,18 +9,6 @@ html {
   box-sizing: inherit;
 }
 
-
-@font-face {
-  font-family: "Inter";
-  src: url("fonts/Inter-Bold.woff") format('woff');
-  font-weight: bold;
-}
-
-@font-face {
-  font-family: "Inter";
-  src: url("fonts/Inter-Regular.woff") format('woff');
-}
-
 body,
 h1,
 h2,
@@ -45,34 +33,54 @@ img {
   max-width: 100%;
   height: auto;
 }
-/* End of reset */
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../fonts/Inter-Bold.woff') format('woff');
+  font-weight: bold;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../fonts/Inter-Regular.woff') format('woff');
+}
 
 body {
   background-color: rgb(250, 250, 250);
-  font-family: "Inter", sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
-.main {
+main {
   margin: 0 auto;
   padding: 0 50px;
   max-width: 1450px;
 }
 
 nav {
-  padding: 30px 0;
+  width: 100%;
   display: flex;
   align-items: center;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 30px;
+}
+
+.main-nav {
+  display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid #858585;
+  align-items: center;
+  padding: 10px;
+  width: 100%;
 }
 
 .logo {
-  font-size: 2.5rem;
-  font-weight: bolder;
-  text-transform: uppercase;
+  min-width: 52px;
+  min-height: 52px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-input[type="date"] {
+input[type='date'] {
   padding: 10px;
   border-radius: 10px;
   outline: none;
@@ -89,7 +97,7 @@ input[type="date"] {
   gap: 20px;
   display: flex;
   justify-content: space-between;
-  margin: 50px 0;
+  margin-bottom: 30px;
 }
 
 .summary-item {
@@ -106,6 +114,12 @@ input[type="date"] {
   margin-bottom: 8px;
 }
 
+.tag-hours {
+  font-weight: 400;
+  opacity: 0.5;
+  font-size: 1rem;
+}
+
 .summary-num {
   font-size: 1.5rem;
   font-weight: bold;
@@ -115,7 +129,7 @@ input[type="date"] {
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
 }
 .column {
   flex: 40%;

@@ -6,26 +6,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="/web/fonts/Inter-Bold.woff" as="font" type="font/woff" />
   <link href="/web/fonts/Inter-Regular.woff" as="font" type="font/woff" />
-  <link rel="stylesheet" href="/web/styles.css" />
-  <title>Focus statistics</title>
+  <link rel="icon" type="image/x-icon" href="/web/images/favicon.ico">
+  <link rel="stylesheet" href="/web/css/styles.css" />
+  <title>Focus Statistics</title>
 </head>
 
-<body>
-  <div class="main" id="main" data-stats="{{ .Stats }}">
-    <nav>
-      <div class="logo">Focus</div>
-      <div style="
-            display: flex;
-            gap: 20px;
-            justify-content: space-between;
-            align-items: center;
-          ">
-        <input value="{{ .StartTime }}" type="date" name="start-date" id="start-date" />
-        -
-        <input value="{{ .EndTime }}" type="date" name="end-date" id="end-date" />
-      </div>
-    </nav>
+<body id="body" data-stats="{{ .Stats }}">
+  <nav>
+    <div class="logo"><img src="/web/images/logo.png" alt="Focus logo" width="40px"></div>
+    <div class="main-nav">
+      <div>Focus statistics</div>
+      <input id="datepicker" data-start="{{ .StartTime }}" data-end="{{
+          .EndTime }}">
+    </div>
+    </div>
+  </nav>
 
+  <main class="main">
     <div class="stats">
       <div class="summary">
         <div class="summary-item">
@@ -34,7 +31,10 @@
         </div>
         <div class="summary-item">
           <div class="summary-title">Top tag</div>
-          <div class="summary-num" id="js-top-tag"></div>
+          <div class="summary-num" id="js-top-tag">
+            <span id="js-top-tag-text"></span>
+            <small class="tag-hours" id="js-top-tag-hours"></small>
+          </div>
         </div>
         <div class="summary-item">
           <div class="summary-title">Completed sessions</div>
@@ -68,7 +68,7 @@
       </div>
 
     </div>
-  </div>
+  </main>
 
   <script src="/web/dist/script.js"></script>
 </body>

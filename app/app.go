@@ -107,6 +107,7 @@ var (
 	statsPortFlag = &cli.UintFlag{
 		Name:  "port",
 		Usage: "Specify the port for the statistics server",
+		Value: 1111,
 	}
 
 	selectPausedFlag = &cli.BoolFlag{

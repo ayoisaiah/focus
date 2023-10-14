@@ -251,12 +251,7 @@ func statsAction(ctx *cli.Context) error {
 		return nil
 	}
 
-	var port uint = 11223
-	if ctx.Uint("port") != 0 {
-		port = ctx.Uint("port")
-	}
-
-	return s.Server(port)
+	return s.Server(ctx.Uint("port"))
 }
 
 // statusAction handles the status command and prints the status of the currently

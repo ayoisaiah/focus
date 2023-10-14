@@ -8,13 +8,14 @@
   "license": "MIT",
   "dependencies": {
     "@ayoisaiah/go-npm": "^0.1.13",
+    "@easepick/bundle": "^1.2.1",
     "apexcharts": "^3.43.0",
     "esbuild": "^0.19.4"
   },
   "scripts": {
     "postinstall": "go-npm install",
     "preuninstall": "go-npm uninstall",
-    "build:dev": "esbuild --bundle --minify --outfile=stats/web/dist/script.js --sourcemap --watch stats/web/script.js"
+    "build:dev": "esbuild --bundle --minify --outfile=stats/web/dist/script.js --sourcemap --watch stats/web/js/script.js"
   },
   "goBinary": {
     "name": "focus",

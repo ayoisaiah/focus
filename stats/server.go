@@ -11,15 +11,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pterm/pterm"
+
 	"github.com/ayoisaiah/focus/internal/timeutil"
 )
 
 type TemplateData struct {
 	StartTime string
 	EndTime   string
-	Days      int
 	Stats     string
 	MainChart string
+	Days      int
 }
 
 //go:embed web/*
@@ -32,8 +34,7 @@ type errorHandler func(w http.ResponseWriter, r *http.Request) error
 func (h errorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := h(w, r)
 	if err != nil {
-		// TODO: Handle error
-		log.Fatal(err)
+		pterm.Fatal.Println(err)
 	}
 }
 
@@ -63,12 +64,14 @@ func (s *Stats) index(w http.ResponseWriter, r *http.Request) error {
 	end := query.Get("end_time")
 	tags := query.Get("tags")
 
-	startTime, err := time.ParseInLocation("2006-01-02", start, time.Now().Location())
+	now := time.Now()
+
+	startTime, err := time.ParseInLocation("2006-01-02", start, now.Location())
 	if err != nil {
 		startTime = timeutil.RoundToStart(time.Now().AddDate(0, 0, -6))
 	}
 
-	endTime, err := time.ParseInLocation("2006-01-02", end, time.Now().Location())
+	endTime, err := time.ParseInLocation("2006-01-02", end, now.Location())
 	if err != nil {
 		endTime = time.Now()
 	}
@@ -88,8 +91,8 @@ func (s *Stats) index(w http.ResponseWriter, r *http.Request) error {
 	var buf bytes.Buffer
 
 	err = tpl.Execute(&buf, &TemplateData{
-		StartTime: startTime.Format("2006-01-02"),
-		EndTime:   endTime.Format("2006-01-02"),
+		StartTime: startTime.Format(time.RFC3339Nano),
+		EndTime:   endTime.Format(time.RFC3339Nano),
 		Days:      int(math.Round(endTime.Sub(startTime).Seconds() / (24 * 60 * 60))),
 		Stats:     string(b),
 	})
@@ -116,5 +119,6 @@ func (s *Stats) Server(port uint) error {
 
 	log.Printf("starting server on port: %d\n", port)
 
+	//nolint:gosec // no timeout is ok
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
 }
