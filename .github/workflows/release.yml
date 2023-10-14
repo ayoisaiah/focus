@@ -93,6 +93,9 @@ jobs:
         with:
           go-version: ${{ env.go_version }}
 
+      - name: Install libasound2-dev
+        run: sudo apt install libasound2-dev
+
       - name: Run tests
         run: go test ./... -race
 

@@ -23,15 +23,6 @@ jobs:
           registry-url: https://registry.npmjs.org/
           node-version: '20'
 
-      - name: Create publish directory
-        run: mkdir npm-publish
-
-      - name: Copy relevant files
-        run: cp README.md CHANGELOG.md package.json npm-publish
-
-      - name: Change directory
-        run: cd npm-publish
-
       - name: Publish
         run: npm publish
         env:
