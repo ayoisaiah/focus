@@ -95,6 +95,7 @@ jobs:
 
       - name: Install libasound2-dev
         run: sudo apt install libasound2-dev
+        if: matrix.os == 'ubuntu-latest'
 
       - name: Run tests
         run: go test ./... -race
