@@ -5,26 +5,43 @@ before:
     - go mod download
 
 builds:
-  - id: binary_archives
+  - id: windows
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/focus
+
+  - id: linux
     env:
       - CGO_ENABLED=1
     goos:
       - linux
-      - windows
-      # darwin omitted due to Cgo cross-compilation failure
-      # Binary to be uploaded separately. See .github/workflows/darwin.yml
     goarch:
       - amd64
     main: ./cmd/focus
 
 archives:
-  - files:
+  - id: windows-only
+    builds:
+      - windows
+    files:
       - LICENCE
       - README.md
       - CHANGELOG.md
-    format_overrides:
-      - goos: windows
-        format: zip
+    format: zip
+
+  - id: default
+    builds:
+      - windows
+      - linux
+    files:
+      - LICENCE
+      - README.md
+      - CHANGELOG.md
 
 checksum:
   name_template: 'checksums.txt'
@@ -103,7 +120,9 @@ winget:
           branch: master
 
 scoops:
-  - url_template: 'https://github.com/ayoisaiah/focus/releases/download/{{ .Tag }}/{{ .ArtifactName }}'
+  - ids:
+      - windows-only
+    url_template: 'https://github.com/ayoisaiah/focus/releases/download/{{ .Tag }}/{{ .ArtifactName }}'
     repository:
       owner: '{{ .Env.REPO_OWNER }}'
       name: scoop-bucket
