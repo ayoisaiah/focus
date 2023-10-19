@@ -1,34 +1,35 @@
-name: Build darwin
+name: Upload macOS binaries
 
-on: workflow_dispatch
+env:
+  dev_tag: nightly
+
+on:
+  workflow_run:
+    workflows: [Release Focus]
+    types:
+      - completed
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest]
-
+  build_and_upload:
+    runs-on: macos-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # Setup Go
-      - name: Setup Go 1.21
+      - name: Setup Go v1.21
         uses: actions/setup-go@v3
         with:
           go-version: 1.21
 
-      # Tests
-      - name: Build binary
-        run: go build -o focus-darwin ./cmd/...
-
-      - name: Archive darwin binary
-        uses: actions/upload-artifact@v3
+      - name: Build assets with Goreleaser
+        uses: goreleaser/goreleaser-action@v4
         with:
-          name: focus-darwin
-          path: focus-darwin
+          version: latest
+          args: release --clean --snapshot --config=.goreleaser_darwin.yml
 
-      - name: Download darwin binary
-        uses: actions/download-artifact@v3
-        with:
-          name: focus-darwin
+      - name: Upload archives to nightly release
+        run: gh release upload ${{ env.dev_tag }} dist/*.tar.gz dist/darwin-checksums.txt --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

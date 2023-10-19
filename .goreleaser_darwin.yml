@@ -1,0 +1,30 @@
+project_name: focus
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: darwin
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/focus
+
+archives:
+  - id: darwin
+    builds:
+      - darwin
+    files:
+      - LICENCE
+      - README.md
+      - CHANGELOG.md
+
+checksum:
+  name_template: darwin-checksums.txt
+snapshot:
+  name_template: 'master'
