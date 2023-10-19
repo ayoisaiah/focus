@@ -494,7 +494,7 @@ func (t *Timer) wait(sessName config.SessType) error {
 func (t *Timer) countdown(tr Remainder) {
 	fmt.Fprintf(
 		os.Stdout,
-		"🕒%s:%s",
+		"\r🕒%s:%s",
 		pterm.Yellow(fmt.Sprintf("%02d", tr.M)),
 		pterm.Yellow(fmt.Sprintf("%02d", tr.S)),
 	)
