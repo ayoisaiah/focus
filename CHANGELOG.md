@@ -1,3 +1,17 @@
+## 1.4.1 (2023-11-23)
+
+Internal:
+
+- Add logging with slog.
+
+Bug fixes:
+
+- Fix countdown timer rendering in macOS default terminal (#21).
+- Fix description of `--since` flag.
+- Fix bug where the recorded session end time exceeds the actual elapsed time
+  due to real and monotonic time differences. This made resuming an interrupted
+  session behave weirdly (#22).
+
 ## 1.4.0 (2023-10-14)
 
 Features and enhancements:
