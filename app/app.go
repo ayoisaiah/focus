@@ -34,7 +34,7 @@ var (
 
 	sinceFlag = &cli.StringFlag{
 		Name:  "since",
-		Usage: "Show logs since timestamp (e.g. 'YYYY-MM-DD HH:MM:SS PM') or relative (e.g. '20 mins ago')",
+		Usage: "Start or add a new session in the past (e.g. '20 mins ago'). Must not overlap with any existing sessions",
 	}
 
 	filterTagFlag = &cli.StringFlag{
