@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
 	"time"
 
+	slogcontext "github.com/PumpkinSeed/slog-context"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 
@@ -29,7 +31,7 @@ const (
 )
 
 var (
-	errNoSessionOverlap = errors.New(
+	errSessionOverlap = errors.New(
 		"new sessions cannot overlap with existing ones",
 	)
 
@@ -197,7 +199,7 @@ func listAction(ctx *cli.Context) error {
 	return listSessions(sessions)
 }
 
-// resumeAction handles the resume command and resumes a previously paused
+// resumeAction handles the resume command and recovers a previously interrupted
 // timer.
 func resumeAction(ctx *cli.Context) error {
 	cfg := config.Timer(ctx)
@@ -216,22 +218,40 @@ func resumeAction(ctx *cli.Context) error {
 		return err
 	}
 
+	slog.InfoContext(
+		ctx.Context,
+		"paused timer and session recovered successfully",
+		slog.Any("timer", t),
+		slog.Any("session", sess),
+	)
+
+	c := slogcontext.WithValue(ctx.Context, "timer_key", t.StartTime)
+
 	if t.Opts.Strict {
 		return errStrictMode
 	}
 
 	if ctx.Bool("reset") {
-		sess = t.NewSession(config.Work, time.Now())
+		sess = t.NewSession(c, config.Work, time.Now())
 		t.WorkCycle = 1
+
+		slog.InfoContext(
+			c,
+			"--reset flag provided: starting new pomodoro cycle",
+			slog.Any("session", sess),
+			slog.Any("timer", t),
+		)
 	}
 
 	if sess == nil || sess.Completed {
-		sess = t.NewSession(config.Work, time.Now())
+		sess = t.NewSession(c, config.Work, time.Now())
 	}
+
+	c = slogcontext.WithValue(c, "session_key", sess.StartTime)
 
 	ui.DarkTheme = t.Opts.DarkTheme
 
-	return t.Run(sess)
+	return t.Run(c, sess)
 }
 
 // statsAction computes the stats for the specified time period.
@@ -275,7 +295,7 @@ func statusAction(_ *cli.Context) error {
 }
 
 // defaultAction starts a timer or adds a completed session depending on the
-// value of --start.
+// value of --since.
 func defaultAction(ctx *cli.Context) error {
 	cfg := config.Timer(ctx)
 
@@ -291,6 +311,10 @@ func defaultAction(ctx *cli.Context) error {
 		return err
 	}
 
+	slog.Info("created new timer", slog.Any("timer", t))
+
+	c := slogcontext.WithValue(ctx.Context, "timer_key", t.StartTime)
+
 	sinceFlag := ctx.String("since")
 
 	startTime := time.Now()
@@ -304,23 +328,42 @@ func defaultAction(ctx *cli.Context) error {
 		}
 	}
 
-	sess := t.NewSession(config.Work, startTime)
+	sess := t.NewSession(c, config.Work, startTime)
+
+	c = slogcontext.WithValue(c, "session_key", sess.StartTime)
 
 	if sinceFlag != "" {
-		sessions, err := dbClient.GetSessions(startTime, time.Now(), []string{})
+		slog.InfoContext(
+			c,
+			"--since flag provided, checking for session overlap",
+		)
+
+		sessions, err := dbClient.GetSessions(
+			sess.StartTime,
+			time.Now(),
+			[]string{},
+		)
 		if err != nil {
 			return err
 		}
 
 		if len(sessions) > 0 {
-			return errNoSessionOverlap
+			slog.InfoContext(
+				c,
+				"unable to start timer, found overlapping sessions",
+				slog.Any("sessions", sessions),
+			)
+
+			return errSessionOverlap
 		}
 	}
 
 	if time.Now().After(sess.EndTime) {
 		sess.Completed = true
 
-		err := t.Persist(sess)
+		slog.InfoContext(c, "session completed in the past: syncing to db")
+
+		err := t.Persist(c, sess)
 		if err != nil {
 			return err
 		}
@@ -330,7 +373,7 @@ func defaultAction(ctx *cli.Context) error {
 		return nil
 	}
 
-	return t.Run(sess)
+	return t.Run(c, sess)
 }
 
 func beforeAction(ctx *cli.Context) error {
@@ -370,6 +413,12 @@ func beforeAction(ctx *cli.Context) error {
 	if ctx.Bool("no-color") {
 		disableStyling()
 	}
+
+	return nil
+}
+
+func afterAction(ctx *cli.Context) error {
+	slog.InfoContext(ctx.Context, "exiting focus")
 
 	return nil
 }

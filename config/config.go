@@ -15,9 +15,11 @@ var (
 	configFileName = "config.yml"
 	dbFileName     = "focus.db"
 	statusFileName = "status.json"
+	logFileName    = "focus.log"
 	dbFilePath     string
 	configFilePath string
 	statusFilePath string
+	logFilePath    string
 )
 
 const Version = "v1.4.0"
@@ -34,12 +36,17 @@ func StatusFilePath() string {
 	return statusFilePath
 }
 
+func LogFilePath() string {
+	return logFilePath
+}
+
 func InitializePaths() {
 	focusEnv := strings.TrimSpace(os.Getenv("FOCUS_ENV"))
 	if focusEnv != "" {
 		configFileName = fmt.Sprintf("config_%s.yml", focusEnv)
 		dbFileName = fmt.Sprintf("focus_%s.db", focusEnv)
 		statusFileName = fmt.Sprintf("status_%s.json", focusEnv)
+		logFileName = fmt.Sprintf("focus_%s.log", focusEnv)
 	}
 
 	var err error
@@ -61,4 +68,6 @@ func InitializePaths() {
 	dbFilePath = filepath.Join(dataDir, dbFileName)
 
 	statusFilePath = filepath.Join(dataDir, statusFileName)
+
+	logFilePath = filepath.Join(dataDir, "log", logFileName)
 }

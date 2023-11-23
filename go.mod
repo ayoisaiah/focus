@@ -20,12 +20,14 @@ require (
 	github.com/markusmobius/go-dateparser v1.2.1
 	github.com/maruel/natural v1.1.0
 	github.com/spf13/viper v1.16.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
 	atomicgo.dev/schedule v0.1.0 // indirect
+	github.com/PumpkinSeed/slog-context v0.1.1 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/elliotchance/pie/v2 v2.7.0 // indirect

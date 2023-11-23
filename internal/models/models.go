@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/ayoisaiah/focus/config"
+	"golang.org/x/exp/slog"
 )
 
 type SessionTimeline struct {
@@ -31,4 +32,13 @@ type Timer struct {
 	StartTime  time.Time           `json:"start_time"`
 	SessionKey time.Time           `json:"session_key"`
 	WorkCycle  int                 `json:"work_cycle"`
+}
+
+func (t *Timer) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Time("paused_time", t.PausedTime),
+		slog.Time("start_time", t.StartTime),
+		slog.Time("session_key", t.SessionKey),
+		slog.Int("work_cycle", t.WorkCycle),
+	)
 }

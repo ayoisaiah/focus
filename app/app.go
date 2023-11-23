@@ -268,6 +268,7 @@ func Get() *cli.App {
 		},
 		Action: defaultAction,
 		Before: beforeAction,
+		After:  afterAction,
 	}
 
 	focusApp.Flags = append(focusApp.Flags, timerFlags...)

@@ -4,11 +4,13 @@ package timer
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -17,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	slogcontext "github.com/PumpkinSeed/slog-context"
 	"github.com/adrg/xdg"
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/flac"
@@ -70,6 +73,16 @@ type Timer struct {
 	WorkCycle   int                 `json:"work_cycle"`
 }
 
+func (t *Timer) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Time("paused_time", t.PausedTime),
+		slog.Time("start_time", t.StartTime),
+		slog.Time("session_key", t.SessionKey),
+		slog.Int("work_cycle", t.WorkCycle),
+		slog.Any("config", t.Opts),
+	)
+}
+
 // Status represents the status of a running timer.
 type Status struct {
 	EndTime           time.Time       `json:"end_date"`
@@ -80,16 +93,25 @@ type Status struct {
 }
 
 // Persist saves the current timer and session to the database.
-func (t *Timer) Persist(sess *Session) error {
+func (t *Timer) Persist(c context.Context, sess *Session) error {
 	if sess.Name != config.Work {
 		return nil
 	}
 
 	sess.Normalise()
 
+	sessModel := sess.ToDBModel()
+
 	m := map[time.Time]*models.Session{
-		sess.StartTime: sess.ToDBModel(),
+		sess.StartTime: sessModel,
 	}
+
+	logMsg := "syncing in-progress session to db"
+	if sess.Completed {
+		logMsg = "syncing completed session to db"
+	}
+
+	slog.InfoContext(c, logMsg, slog.Any("session", sessModel))
 
 	err := t.db.UpdateSessions(m)
 	if err != nil {
@@ -106,6 +128,8 @@ func (t *Timer) Persist(sess *Session) error {
 		StartTime:  t.StartTime,
 	}
 
+	slog.InfoContext(c, "syncing timer to db", slog.Any("timer", timer))
+
 	err = t.db.UpdateTimer(&timer)
 	if err != nil {
 		return err
@@ -115,7 +139,7 @@ func (t *Timer) Persist(sess *Session) error {
 }
 
 // runSessionCmd executes the specified command.
-func (t *Timer) runSessionCmd(sessionCmd string) error {
+func (t *Timer) runSessionCmd(c context.Context, sessionCmd string) error {
 	if sessionCmd == "" {
 		return nil
 	}
@@ -131,6 +155,13 @@ func (t *Timer) runSessionCmd(sessionCmd string) error {
 
 	name := cmdSlice[0]
 	args := cmdSlice[1:]
+
+	slog.InfoContext(
+		c,
+		"executing session command",
+		slog.Any("name", name),
+		slog.Any("args", args),
+	)
 
 	cmd := exec.Command(name, args...)
 
@@ -285,7 +316,10 @@ func (t *Timer) printSession(
 }
 
 // notify sends a desktop notification and plays a notification sound.
-func (t *Timer) notify(sessName, nextSessName config.SessType) {
+func (t *Timer) notify(
+	c context.Context,
+	sessName, nextSessName config.SessType,
+) {
 	if !t.Opts.Notify {
 		return
 	}
@@ -338,19 +372,30 @@ func (t *Timer) notify(sessName, nextSessName config.SessType) {
 
 // handleInterruption saves the current state of the timer whenever it is
 // interrupted by pressing Ctrl-C.
-func (t *Timer) handleInterruption(sess *Session) chan os.Signal {
-	c := make(chan os.Signal, 1)
+func (t *Timer) handleInterruption(
+	c context.Context,
+	sess *Session,
+) chan os.Signal {
+	ch := make(chan os.Signal, 1)
 
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		s := <-c
+		s := <-ch
 		// a settled signal indicates that the session was completed normally
 		if s.String() == sessionSettled {
 			return
 		}
 
+		slog.InfoContext(c, "session interrupted, persisting timer state to db")
+
 		exitFunc := func(err error) {
+			slog.ErrorContext(
+				c,
+				"unable to persist interrupted timer",
+				slog.Any("error", err),
+			)
+
 			pterm.Error.Printfln("unable to save interrupted timer: %v", err)
 			os.Exit(1)
 		}
@@ -359,17 +404,19 @@ func (t *Timer) handleInterruption(sess *Session) chan os.Signal {
 
 		_ = os.Remove(config.StatusFilePath())
 
-		err := t.Persist(sess)
+		err := t.Persist(c, sess)
 		if err != nil {
 			exitFunc(err)
 		}
+
+		slog.InfoContext(c, "releasing database handle")
 
 		_ = t.db.Close()
 
 		os.Exit(0)
 	}()
 
-	return c
+	return ch
 }
 
 // prepSoundStream returns an audio stream for the specified sound.
@@ -443,19 +490,19 @@ func (t *Timer) prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
 // wait releases the handle to the datastore and waits for user input
 // before locking the datastore once more. This allows a new instance of Focus
 // to be launched in another terminal.
-func (t *Timer) wait(sessName config.SessType) error {
+func (t *Timer) wait(c context.Context, sessName config.SessType) error {
 	// only block if auto start options are disabled
 	if sessName != config.Work && t.Opts.AutoStartBreak ||
 		sessName == config.Work && t.Opts.AutoStartWork {
 		return nil
 	}
 
-	c := make(chan os.Signal, 1)
+	ch := make(chan os.Signal, 1)
 
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		s := <-c
+		s := <-ch
 
 		if s.String() == sessionSettled {
 			return
@@ -464,6 +511,8 @@ func (t *Timer) wait(sessName config.SessType) error {
 		os.Exit(0)
 	}()
 
+	slog.InfoContext(c, "releasing database handle")
+
 	err := t.db.Close()
 	if err != nil {
 		return err
@@ -471,13 +520,15 @@ func (t *Timer) wait(sessName config.SessType) error {
 
 	reader := bufio.NewReader(os.Stdin)
 
+	slog.InfoContext(c, "waiting for user input to begin next session")
+
 	fmt.Fprint(os.Stdout, "\033[s")
 	fmt.Fprint(os.Stdout, "Press ENTER to start the next session")
 
 	// Block until user input before beginning next session
 	_, err = reader.ReadString('\n')
 
-	c <- Settled{}
+	ch <- Settled{}
 
 	if errors.Is(err, io.EOF) {
 		return nil
@@ -486,6 +537,11 @@ func (t *Timer) wait(sessName config.SessType) error {
 	}
 
 	fmt.Print("\033[u\033[K")
+
+	slog.InfoContext(
+		c,
+		"received input to continue next session, acquiring database handle",
+	)
 
 	return t.db.Open()
 }
@@ -519,7 +575,7 @@ func (t *Timer) nextSession(current config.SessType) config.SessType {
 }
 
 // start launches or resumes a session and blocks until its completion.
-func (t *Timer) start(sess *Session) {
+func (t *Timer) start(c context.Context, sess *Session) {
 	t.printSession(sess)
 
 	go func() {
@@ -529,6 +585,8 @@ func (t *Timer) start(sess *Session) {
 	fmt.Fprint(os.Stdout, "\033[s")
 
 	remainder := sess.Remaining()
+
+	slog.InfoContext(c, "starting session", slog.Any("remainder", remainder))
 
 	t.countdown(remainder)
 
@@ -543,16 +601,20 @@ func (t *Timer) start(sess *Session) {
 		// save the timer once every minute to facilitate recovery on sudden
 		// shutdowns (e.g. process killed, system crashes etc)
 		if counter%60 == 0 {
-			s := *sess
+			go func(sess *Session) {
+				s := *sess
 
-			s.UpdateEndTime()
+				s.UpdateEndTime()
 
-			_ = t.Persist(&s)
+				_ = t.Persist(c, &s)
+			}(sess)
 		}
 
 		counter++
 
 		if remainder.T <= 0 {
+			slog.InfoContext(c, "session completed")
+
 			fmt.Printf("Session completed!\n\n")
 
 			sess.Completed = true
@@ -567,7 +629,11 @@ func (t *Timer) start(sess *Session) {
 }
 
 // NewSession initialises a new session.
-func (t *Timer) NewSession(name config.SessType, startTime time.Time) *Session {
+func (t *Timer) NewSession(
+	c context.Context,
+	name config.SessType,
+	startTime time.Time,
+) *Session {
 	sess := &Session{
 		Name:      name,
 		Duration:  t.Opts.Duration[name],
@@ -591,6 +657,15 @@ func (t *Timer) NewSession(name config.SessType, startTime time.Time) *Session {
 			t.WorkCycle++
 		}
 	}
+
+	c = slogcontext.WithValue(c, "session_key", sess.StartTime)
+
+	slog.InfoContext(
+		c,
+		"created new session",
+		slog.Any("session", sess),
+		slog.Int("work_cycle", t.WorkCycle),
+	)
 
 	return sess
 }
@@ -644,11 +719,11 @@ func (t *Timer) overrideOptsOnResume(ctx *cli.Context) error {
 // Run begins the timer and loops forever, alternating between work and
 // break sessions until it is terminated with Ctrl-C or a maximum number of work
 // sessions is reached.
-func (t *Timer) Run(sess *Session) error {
+func (t *Timer) Run(c context.Context, sess *Session) error {
 	sessName := config.Work
 
 	for {
-		c := t.handleInterruption(sess)
+		ch := t.handleInterruption(c, sess)
 
 		if t.Opts.AmbientSound != "" {
 			if sess.Name == config.Work || t.Opts.PlaySoundOnBreak {
@@ -659,30 +734,38 @@ func (t *Timer) Run(sess *Session) error {
 			}
 		}
 
-		t.start(sess)
+		t.start(c, sess)
 
-		c <- Settled{}
+		ch <- Settled{}
 
-		err := t.Persist(sess)
+		err := t.Persist(c, sess)
 		if err != nil {
 			return err
 		}
 
 		sessName = t.nextSession(sessName)
 
-		t.notify(sess.Name, sessName)
+		slog.InfoContext(
+			c,
+			"retrieved next session",
+			slog.Any("session_name", sessName),
+		)
 
-		err = t.runSessionCmd(t.Opts.SessionCmd)
+		t.notify(c, sess.Name, sessName)
+
+		err = t.runSessionCmd(c, t.Opts.SessionCmd)
 		if err != nil {
 			return err
 		}
 
-		err = t.wait(sessName)
+		err = t.wait(c, sessName)
 		if err != nil {
 			return err
 		}
 
-		sess = t.NewSession(sessName, time.Now())
+		sess = t.NewSession(c, sessName, time.Now())
+
+		c = slogcontext.WithValue(c, "session_key", t.StartTime)
 	}
 }
 
