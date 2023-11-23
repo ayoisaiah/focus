@@ -1,6 +1,8 @@
 package timer
 
 import (
+	"context"
+	"log/slog"
 	"time"
 
 	"github.com/ayoisaiah/focus/config"
@@ -19,13 +21,13 @@ type Timeline struct {
 
 // Session represents an active work or break session.
 type Session struct {
-	StartTime time.Time
-	EndTime   time.Time
-	Name      config.SessType
-	Tags      []string
-	Timeline  []Timeline
-	Duration  time.Duration
-	Completed bool
+	StartTime time.Time       `json:"start_time"`
+	EndTime   time.Time       `json:"end_time"`
+	Name      config.SessType `json:"name"`
+	Tags      []string        `json:"tags"`
+	Timeline  []Timeline      `json:"timeline"`
+	Duration  time.Duration   `json:"duration"`
+	Completed bool            `json:"completed"`
 }
 
 // Remainder is the time remaining in an active session.
@@ -73,8 +75,9 @@ func (s *Session) SetEndTime() {
 
 // Remaining calculates the time remaining for the session to end.
 func (s *Session) Remaining() Remainder {
-	difference := time.Until(s.EndTime)
-	total := timeutil.Round(difference.Seconds())
+	monotonicDiff := time.Until(s.EndTime)
+
+	total := timeutil.Round(monotonicDiff.Seconds())
 
 	if total < 0 {
 		total = 0
@@ -90,8 +93,8 @@ func (s *Session) Remaining() Remainder {
 	}
 }
 
-// getElapsedTimeInSeconds returns the time elapsed for the current session
-// in seconds.
+// ElapsedTimeInSeconds returns the time elapsed for the current session
+// in seconds using monotonic timings
 func (s *Session) ElapsedTimeInSeconds() float64 {
 	var elapsedTimeInSeconds float64
 	for _, v := range s.Timeline {
@@ -101,30 +104,53 @@ func (s *Session) ElapsedTimeInSeconds() float64 {
 	return elapsedTimeInSeconds
 }
 
-// UpdateEndTime sets the session end time to the current time.
-func (s *Session) UpdateEndTime() {
-	interruptedTime := time.Now()
-	s.EndTime = interruptedTime
+// RealElapsedTimeInSeconds returns the time elapsed for the current session
+// in seconds using real timings
+func (s *Session) RealElapsedTimeInSeconds() float64 {
+	var elapsedTimeInSeconds float64
+	for _, v := range s.Timeline {
+		start := v.StartTime.Round(0)
+		end := v.EndTime.Round(0)
 
-	lastIndex := len(s.Timeline) - 1
-	s.Timeline[lastIndex].EndTime = interruptedTime
+		elapsedTimeInSeconds += end.Sub(start).Seconds()
+	}
+
+	return elapsedTimeInSeconds
 }
 
-// Normalise ensures that the end time for the current session does not exceed
-// what is required to complete the session. It mostly helps with normalising
-// the end time when the system is hibernated with a session in progress, and
-// resumed at a later time in the future that surpasses the normal end time.
-func (s *Session) Normalise() {
-	elapsed := s.ElapsedTimeInSeconds()
+// UpdateEndTime sets the session end time to the current time.
+func (s *Session) UpdateEndTime() {
+	endTime := time.Now()
+	s.EndTime = endTime
 
-	// If the elapsed time is greater than the duration
-	// of the session, the end time must be normalised
-	// to a time that will fulfill the exact duration
-	// of the session
-	if elapsed > s.Duration.Seconds() {
-		// secondsBeforeLastPart represents the number of seconds
-		// elapsed without including the concluding part of the
-		// session timeline
+	lastIndex := len(s.Timeline) - 1
+	s.Timeline[lastIndex].EndTime = endTime
+}
+
+// Normalise ensures that the end time for the current session perfectly
+// correlates with what is required to complete the session.
+// It mostly helps with normalising the end time when the system is suspended
+// with a session in progress, and resumed at a later time in the future
+// that surpasses the normal end time.
+func (s *Session) Normalise(c context.Context) {
+	elapsed := s.ElapsedTimeInSeconds()
+	realElapsed := s.RealElapsedTimeInSeconds()
+	durationSecs := s.Duration.Seconds()
+	diffSecs := realElapsed - elapsed
+
+	slog.InfoContext(c, "session duration timings",
+		slog.Float64("monotonic_elapsed", elapsed),
+		slog.Float64("real_elapsed", realElapsed),
+		slog.Float64("session_duration_secs", durationSecs),
+		slog.Float64("seconds_left", durationSecs-elapsed),
+		slog.Bool("session_completed", s.Completed),
+		slog.Any("session_timeline", s.Timeline),
+	)
+
+	// Normalize end time to precisely fulfill the session duration
+	if s.Completed {
+		// secondsBeforeLastPart is the number of seconds elapsed without including
+		// the concluding part of the session timeline
 		var secondsBeforeLastPart float64
 
 		for i := 0; i < len(s.Timeline)-1; i++ {
@@ -135,13 +161,32 @@ func (s *Session) Normalise() {
 		lastIndex := len(s.Timeline) - 1
 		lastPart := s.Timeline[lastIndex]
 
-		secondsLeft := s.Duration.Seconds() - secondsBeforeLastPart
+		secondsLeft := durationSecs - secondsBeforeLastPart
 		end := lastPart.StartTime.Add(
 			time.Duration(secondsLeft * float64(time.Second)),
 		)
+
+		slog.InfoContext(c, "normalizing completed session end time", slog.Time("end_time", end))
+
 		s.Timeline[lastIndex].EndTime = end
 		s.EndTime = end
 		s.Completed = true
+	} else if diffSecs > 1 {
+		// For interrupted timers, normalize the end time when the
+		// monotonic and real timings are significantly different, likely due to
+		// suspending the computer while the timer was running.
+		lastIndex := len(s.Timeline) - 1
+		end := s.EndTime.Add(-time.Duration(diffSecs * float64(time.Second)))
+
+		slog.InfoContext(
+			c,
+			"normalizing interrupted session end time due to difference in monotonic and real timings",
+			slog.Time("end_time", end),
+			slog.Float64("timing_diff_secs", diffSecs),
+		)
+
+		s.EndTime = end
+		s.Timeline[lastIndex].EndTime = end
 	}
 }
 

@@ -98,7 +98,7 @@ func (t *Timer) Persist(c context.Context, sess *Session) error {
 		return nil
 	}
 
-	sess.Normalise()
+	sess.Normalise(c)
 
 	sessModel := sess.ToDBModel()
 
@@ -617,6 +617,7 @@ func (t *Timer) start(c context.Context, sess *Session) {
 
 			fmt.Printf("Session completed!\n\n")
 
+			sess.UpdateEndTime()
 			sess.Completed = true
 
 			return
