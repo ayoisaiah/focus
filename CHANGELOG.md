@@ -1,3 +1,13 @@
+## 1.4.2 (2023-11-25)
+
+Internal:
+
+- Make stable releases for macOS more seamless (#25)
+
+Bug fixes:
+
+- Fix risk of data loss due to db migrations (#24)
+
 ## 1.4.1 (2023-11-23)
 
 Internal:
