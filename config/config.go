@@ -22,7 +22,7 @@ var (
 	logFilePath    string
 )
 
-const Version = "v1.4.1"
+const Version = "v1.4.2"
 
 func Dir() string {
 	return configDir
