@@ -3,6 +3,7 @@ package store
 import (
 	"bytes"
 	"encoding/json"
+	"log/slog"
 	"time"
 
 	"go.etcd.io/bbolt"
@@ -10,7 +11,7 @@ import (
 	"github.com/ayoisaiah/focus/internal/models"
 )
 
-func migrateSessions(tx *bbolt.Tx) error {
+func migrateSessions_v1_4_0(tx *bbolt.Tx) error {
 	bucket := tx.Bucket([]byte(sessionBucket))
 
 	cur := bucket.Cursor()
@@ -25,12 +26,12 @@ func migrateSessions(tx *bbolt.Tx) error {
 
 		newKey := []byte(s.StartTime.Format(time.RFC3339Nano))
 
-		err = bucket.Put(newKey, v)
+		err = cur.Delete()
 		if err != nil {
 			return err
 		}
 
-		err = cur.Delete()
+		err = bucket.Put(newKey, v)
 		if err != nil {
 			return err
 		}
@@ -39,7 +40,7 @@ func migrateSessions(tx *bbolt.Tx) error {
 	return nil
 }
 
-func migrateTimers(tx *bbolt.Tx) error {
+func migrateTimers_v1_4_0(tx *bbolt.Tx) error {
 	bucket := tx.Bucket([]byte(timerBucket))
 
 	cur := bucket.Cursor()
@@ -60,12 +61,12 @@ func migrateTimers(tx *bbolt.Tx) error {
 
 		v = bytes.Replace(v, []byte("date_started"), []byte("start_time"), 1)
 
-		err = bucket.Put(newKey, v)
+		err = cur.Delete()
 		if err != nil {
 			return err
 		}
 
-		err = cur.Delete()
+		err = bucket.Put(newKey, v)
 		if err != nil {
 			return err
 		}
@@ -74,11 +75,15 @@ func migrateTimers(tx *bbolt.Tx) error {
 	return nil
 }
 
-func (c *Client) migrate(tx *bbolt.Tx) error {
-	err := migrateSessions(tx)
+func (c *Client) migrate_v1_4_0(tx *bbolt.Tx) error {
+	slog.Info(
+		"running db migrations to v1.4.0 format",
+	)
+
+	err := migrateSessions_v1_4_0(tx)
 	if err != nil {
 		return err
 	}
 
-	return migrateTimers(tx)
+	return migrateTimers_v1_4_0(tx)
 }

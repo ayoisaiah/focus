@@ -10,6 +10,7 @@ import (
 	"time"
 
 	bolt "go.etcd.io/bbolt"
+	"golang.org/x/exp/slog"
 
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/models"
@@ -292,11 +293,23 @@ func NewClient(dbFilePath string) (*Client, error) {
 		bucket := tx.Bucket([]byte(focusBucket))
 		version := string(bucket.Get([]byte("version")))
 
-		if version != config.Version {
-			err = c.migrate(tx)
+		// prior to v1.4.0, no version info was stored in the database
+		// if upgrading from earlier version, run migrations to meet
+		// current database format
+		// Does nothing for new users
+		if version == "" {
+			err = c.migrate_v1_4_0(tx)
 			if err != nil {
 				return err
 			}
+		}
+
+		if version != config.Version {
+			slog.Info(
+				"updating db version",
+				slog.Any("previous_version", version),
+				slog.Any("new_version", config.Version),
+			)
 
 			return bucket.Put([]byte("version"), []byte(config.Version))
 		}
