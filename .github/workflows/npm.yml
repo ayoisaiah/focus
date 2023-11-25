@@ -1,29 +1,27 @@
 name: Publish to NPM
 
 on:
-  workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
+  repository_dispatch:
+    types: [release-focus-npm]
 
 jobs:
-  build:
+  publish_npm:
     name: Publish new Focus version
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out the code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           registry-url: https://registry.npmjs.org/
           node-version: '20'
 
-      - name: Publish
+      - name: Publish to NPM
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
