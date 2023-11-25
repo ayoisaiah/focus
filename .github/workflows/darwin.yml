@@ -6,7 +6,7 @@ env:
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [darwin-build]
+    types: [release-focus]
 
 jobs:
   build:

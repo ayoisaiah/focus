@@ -143,5 +143,5 @@ jobs:
       - name: Trigger Darwin build
         uses: peter-evans/repository-dispatch@v2
         with:
-          event-type: darwin-build
+          event-type: release-focus
           client-payload: '{"ref": "${{ github.ref_name }}" }'
