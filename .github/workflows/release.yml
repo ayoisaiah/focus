@@ -144,4 +144,4 @@ jobs:
         uses: peter-evans/repository-dispatch@v2
         with:
           event-type: release-focus
-          client-payload: '{"ref": "${{ github.ref_name }}" }'
+          client-payload: '{"ref": "${{ github.ref_name }}", "ref_type": "${{ github.ref_type }}" }'
