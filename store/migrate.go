@@ -1,7 +1,6 @@
 package store
 
 import (
-	"bytes"
 	"encoding/json"
 	"log/slog"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/ayoisaiah/focus/internal/models"
 )
 
+// Change session key to RFC3339Nano and update duration to nanoseconds
 func migrateSessions_v1_4_0(tx *bbolt.Tx) error {
 	bucket := tx.Bucket([]byte(sessionBucket))
 
@@ -24,6 +24,9 @@ func migrateSessions_v1_4_0(tx *bbolt.Tx) error {
 			return err
 		}
 
+		// s.Duration was in minutes, but must now be changed to nanoseconds
+		s.Duration = time.Duration(s.Duration) * time.Minute
+
 		newKey := []byte(s.StartTime.Format(time.RFC3339Nano))
 
 		err = cur.Delete()
@@ -31,7 +34,12 @@ func migrateSessions_v1_4_0(tx *bbolt.Tx) error {
 			return err
 		}
 
-		err = bucket.Put(newKey, v)
+		b, err := json.Marshal(s)
+		if err != nil {
+			return err
+		}
+
+		err = bucket.Put(newKey, b)
 		if err != nil {
 			return err
 		}
@@ -40,33 +48,15 @@ func migrateSessions_v1_4_0(tx *bbolt.Tx) error {
 	return nil
 }
 
+// Delete all exisiting timers as it won't be possible to resume paused sessions
+// after migrating the sessions
 func migrateTimers_v1_4_0(tx *bbolt.Tx) error {
 	bucket := tx.Bucket([]byte(timerBucket))
 
 	cur := bucket.Cursor()
 
-	type timer struct {
-		DateStarted time.Time `json:"date_started"`
-	}
-
-	for k, v := cur.First(); k != nil; k, v = cur.Next() {
-		var t timer
-
-		err := json.Unmarshal(v, &t)
-		if err != nil {
-			return err
-		}
-
-		newKey := []byte(t.DateStarted.Format(time.RFC3339Nano))
-
-		v = bytes.Replace(v, []byte("date_started"), []byte("start_time"), 1)
-
-		err = cur.Delete()
-		if err != nil {
-			return err
-		}
-
-		err = bucket.Put(newKey, v)
+	for k, _ := cur.First(); k != nil; k, _ = cur.Next() {
+		err := cur.Delete()
 		if err != nil {
 			return err
 		}
