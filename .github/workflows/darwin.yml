@@ -4,15 +4,13 @@ env:
   dev_tag: nightly
 
 on:
-  workflow_run:
-    workflows: [Release Focus]
-    types:
-      - completed
+  workflow_dispatch:
+  repository_dispatch:
+    types: [darwin-build]
 
 jobs:
-  build_and_upload:
+  build:
     runs-on: macos-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,8 +26,44 @@ jobs:
           version: latest
           args: release --clean --snapshot --config=.goreleaser_darwin.yml
 
-      - name: Upload archives to nightly release
-        run: gh release upload ${{ env.dev_tag }} dist/*.tar.gz dist/darwin-checksums.txt --clobber
+      - name: Temporarily save build assets
+        uses: actions/upload-artifact@v3
+        with:
+          name: darwin-artifacts
+          path: dist
+          retention-days: 1
+
+  upload:
+    runs-on: macos-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Retrieve saved build assets
+        uses: actions/download-artifact@v3
+        with:
+          name: darwin-artifacts
+          path: dist
+
+      - name: Upload assets to nightly release
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          gh release upload ${{ env.dev_tag }} dist/*.tar.gz dist/darwin-checksums.txt --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload assets to latest release
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          if [ ${{ github.event.client_payload.ref }} == 'master' ]; then
+            gh release upload ${{ env.dev_tag }} dist/*.tar.gz dist/darwin-checksums.txt --clobber
+          else
+            gh release upload ${{ github.event.client_payload.ref }} dist/*.tar.gz dist/darwin-checksums.txt --clobber
+          fi
+
+          echo "${{ github.event.client_payload.ref }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
