@@ -27,4 +27,4 @@ archives:
 checksum:
   name_template: darwin-checksums.txt
 snapshot:
-  name_template: 'master'
+  name_template: '{{ .Env.VERSION }}'
