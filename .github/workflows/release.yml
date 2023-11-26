@@ -150,8 +150,8 @@ jobs:
   trigger_darwin_stable:
     name: Trigger stable macOS build
     runs-on: ubuntu-latest
-    steps:
     needs: publish_stable
+    steps:
       - name: Trigger Darwin build
         uses: peter-evans/repository-dispatch@v2
         with:
