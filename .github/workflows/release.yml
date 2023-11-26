@@ -136,10 +136,22 @@ jobs:
           FURY_PUSH_TOKEN: ${{ secrets.FURY_PUSH_TOKEN }}
           FURY_USERNAME: ${{ secrets.FURY_USERNAME }}
 
-  dispatch_darwin:
-    name: Trigger action to build and upload macOS binaries
+  trigger_darwin_nightly:
+    name: Trigger nightly macOS build
+    runs-on: ubuntu-latest
+    needs: publish_nightly
+    steps:
+      - name: Trigger Darwin build
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          event-type: release-focus
+          client-payload: '{"ref": "${{ github.ref_name }}", "ref_type": "${{ github.ref_type }}" }'
+
+  trigger_darwin_stable:
+    name: Trigger stable macOS build
     runs-on: ubuntu-latest
     steps:
+    needs: publish_stable
       - name: Trigger Darwin build
         uses: peter-evans/repository-dispatch@v2
         with:
