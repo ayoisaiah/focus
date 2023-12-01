@@ -10,6 +10,8 @@ import (
 	"github.com/pterm/pterm"
 )
 
+const Version = "v1.4.2"
+
 var (
 	configDir      = "focus"
 	configFileName = "config.yml"
@@ -21,8 +23,6 @@ var (
 	statusFilePath string
 	logFilePath    string
 )
-
-const Version = "v1.4.2"
 
 func Dir() string {
 	return configDir

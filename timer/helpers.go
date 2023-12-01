@@ -41,7 +41,7 @@ func printPausedTimers(
 		}
 
 		row := []string{
-			fmt.Sprintf("%d", i+1),
+			strconv.Itoa(i + 1),
 			t.PausedTime.Format("Jan 02, 2006 03:04:05 PM"),
 			t.StartTime.Format("Jan 02, 2006 03:04:05 PM"),
 			remainder,

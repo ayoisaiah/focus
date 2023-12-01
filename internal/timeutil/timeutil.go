@@ -11,6 +11,8 @@ import (
 	"github.com/markusmobius/go-dateparser"
 )
 
+type Period string
+
 const minutesInAnHour = 60
 
 const (
@@ -18,8 +20,6 @@ const (
 	MaxHoursInAMonth = 744  // 31 day months
 	MaxHoursInAYear  = 8784 // Leap years
 )
-
-type Period string
 
 const (
 	PeriodAllTime   Period = "all-time"

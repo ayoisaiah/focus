@@ -15,20 +15,22 @@ import (
 	"github.com/ayoisaiah/focus/internal/timeutil"
 )
 
-type TemplateData struct {
-	StartTime string
-	EndTime   string
-	Stats     string
-	MainChart string
-	Days      int
-}
+type (
+	TemplateData struct {
+		StartTime string
+		EndTime   string
+		Stats     string
+		MainChart string
+		Days      int
+	}
+
+	errorHandler func(w http.ResponseWriter, r *http.Request) error
+)
 
 //go:embed web/*
 var web embed.FS
 
 var tpl = template.Must(template.New("index.html").ParseFS(web, "web/index.html"))
-
-type errorHandler func(w http.ResponseWriter, r *http.Request) error
 
 func (h errorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := h(w, r)

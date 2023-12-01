@@ -3,8 +3,9 @@ package models
 import (
 	"time"
 
-	"github.com/ayoisaiah/focus/config"
 	"golang.org/x/exp/slog"
+
+	"github.com/ayoisaiah/focus/config"
 )
 
 type SessionTimeline struct {

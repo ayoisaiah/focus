@@ -263,6 +263,7 @@ func statsAction(ctx *cli.Context) error {
 
 	opts := config.Filter(ctx)
 
+	//nolint:govet // unkeyed fields are fine here
 	s := &stats.Stats{
 		Opts: stats.Opts{
 			*opts,

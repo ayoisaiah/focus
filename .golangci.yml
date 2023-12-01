@@ -1,5 +1,7 @@
----
 linters-settings:
+  decorder:
+    disable-dec-num-check: true
+    disable-dec-order-check: false
   errcheck:
     check-type-assertions: true
   goconst:
@@ -8,24 +10,27 @@ linters-settings:
   gocritic:
     enabled-tags:
       - diagnostic
-      - experimental
-      - opinionated
       - performance
       - style
   goimports:
     local-prefixes: github.com/ayoisaiah/focus
   gomnd:
-    settings:
-      mnd:
-        # don't include the "operation" and "assign" checks
-        checks: argument,case,condition,return
+    checks:
+      - argument
+      - case
+      - condition
+      - return
   govet:
     check-shadowing: true
-    enable:
-      - fieldalignment
+    enable-all: true
   nolintlint:
     require-explanation: true
     require-specific: true
+  revive:
+    rules:
+      - name: error-naming
+        severity: warning
+        disabled: true # handled by errname
 
 linters:
   disable-all: true
@@ -33,10 +38,15 @@ linters:
     - bodyclose
     - dogsled
     - dupl
+    - durationcheck
+    - decorder
     - errcheck
     - errorlint
+    - errname
     - exportloopref
     - exhaustive
+    - gocheckcompilerdirectives
+    - gochecksumtype
     - goconst
     - godot
     - gocritic
@@ -49,14 +59,18 @@ linters:
     - gosimple
     - govet
     - ineffassign
+    - mirror
     - misspell
     - nakedret
+    - nilnil
     - nolintlint
     - prealloc
     - predeclared
+    - perfsprint
     - revive
     - staticcheck
     - stylecheck
+    - sloglint
     - thelper
     - tparallel
     - unconvert
