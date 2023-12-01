@@ -101,6 +101,23 @@ func (c *Client) DeleteSessions(startTimes []time.Time) error {
 			if err != nil {
 				return err
 			}
+
+			// Delete any associated timers
+			cur := tx.Bucket([]byte(timerBucket)).Cursor()
+			for k, v := cur.First(); k != nil; k, v = cur.Next() {
+				var t models.Timer
+				err := json.Unmarshal(v, &t)
+				if err != nil {
+					return err
+				}
+
+				if t.SessionKey.Equal(startTimes[i]) {
+					err = cur.Delete()
+					if err != nil {
+						return err
+					}
+				}
+			}
 		}
 
 		return nil
