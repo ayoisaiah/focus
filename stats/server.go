@@ -30,7 +30,9 @@ type (
 //go:embed web/*
 var web embed.FS
 
-var tpl = template.Must(template.New("index.html").ParseFS(web, "web/index.html"))
+var tpl = template.Must(
+	template.New("index.html").ParseFS(web, "web/index.html"),
+)
 
 func (h errorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := h(w, r)
@@ -39,7 +41,10 @@ func (h errorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Stats) getStats(startTime, endTime time.Time, tagList []string) ([]byte, error) {
+func (s *Stats) getStats(
+	startTime, endTime time.Time,
+	tagList []string,
+) ([]byte, error) {
 	s.Opts.StartTime = startTime
 	s.Opts.EndTime = endTime
 	s.Opts.Tags = tagList
@@ -94,8 +99,10 @@ func (s *Stats) index(w http.ResponseWriter, r *http.Request) error {
 	err = tpl.Execute(&buf, &TemplateData{
 		StartTime: startTime.Format(time.RFC3339Nano),
 		EndTime:   endTime.Format(time.RFC3339Nano),
-		Days:      int(math.Round(endTime.Sub(startTime).Seconds() / (24 * 60 * 60))),
-		Stats:     string(b),
+		Days: int(
+			math.Round(endTime.Sub(startTime).Seconds() / (24 * 60 * 60)),
+		),
+		Stats: string(b),
 	})
 	if err != nil {
 		return err

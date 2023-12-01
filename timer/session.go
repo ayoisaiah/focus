@@ -169,7 +169,11 @@ func (s *Session) Normalise(c context.Context) {
 			time.Duration(secondsLeft * float64(time.Second)),
 		)
 
-		slog.InfoContext(c, "normalizing completed session end time", slog.Time("end_time", end))
+		slog.InfoContext(
+			c,
+			"normalizing completed session end time",
+			slog.Time("end_time", end),
+		)
 
 		s.Timeline[lastIndex].EndTime = end
 		s.EndTime = end
