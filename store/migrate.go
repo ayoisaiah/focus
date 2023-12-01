@@ -10,8 +10,8 @@ import (
 	"github.com/ayoisaiah/focus/internal/models"
 )
 
-// Change session key to RFC3339Nano and update duration to nanoseconds
-func migrateSessions_v1_4_0(tx *bbolt.Tx) error {
+// Change session key to RFC3339Nano and update duration to nanoseconds.
+func migrateSessionsV1_4_0(tx *bbolt.Tx) error {
 	bucket := tx.Bucket([]byte(sessionBucket))
 
 	cur := bucket.Cursor()
@@ -25,7 +25,7 @@ func migrateSessions_v1_4_0(tx *bbolt.Tx) error {
 		}
 
 		// s.Duration was in minutes, but must now be changed to nanoseconds
-		s.Duration = time.Duration(s.Duration) * time.Minute
+		s.Duration *= time.Minute
 
 		newKey := []byte(s.StartTime.Format(time.RFC3339Nano))
 
@@ -49,8 +49,8 @@ func migrateSessions_v1_4_0(tx *bbolt.Tx) error {
 }
 
 // Delete all exisiting timers as it won't be possible to resume paused sessions
-// after migrating the sessions
-func migrateTimers_v1_4_0(tx *bbolt.Tx) error {
+// after migrating the sessions.
+func migrateTimersV1_4_0(tx *bbolt.Tx) error {
 	bucket := tx.Bucket([]byte(timerBucket))
 
 	cur := bucket.Cursor()
@@ -65,15 +65,15 @@ func migrateTimers_v1_4_0(tx *bbolt.Tx) error {
 	return nil
 }
 
-func (c *Client) migrate_v1_4_0(tx *bbolt.Tx) error {
+func (c *Client) migrateV1_4_0(tx *bbolt.Tx) error {
 	slog.Info(
 		"running db migrations to v1.4.0 format",
 	)
 
-	err := migrateSessions_v1_4_0(tx)
+	err := migrateSessionsV1_4_0(tx)
 	if err != nil {
 		return err
 	}
 
-	return migrateTimers_v1_4_0(tx)
+	return migrateTimersV1_4_0(tx)
 }

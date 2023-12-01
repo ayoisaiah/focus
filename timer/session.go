@@ -10,32 +10,34 @@ import (
 	"github.com/ayoisaiah/focus/internal/timeutil"
 )
 
-type Timeline struct {
-	// StartTime is the start of the session including
-	// the start of a paused session
-	StartTime time.Time `json:"start_time"`
-	// EndTime is the end of a session including
-	// when a session is paused or stopped prematurely
-	EndTime time.Time `json:"end_time"`
-}
+type (
+	Timeline struct {
+		// StartTime is the start of the session including
+		// the start of a paused session
+		StartTime time.Time `json:"start_time"`
+		// EndTime is the end of a session including
+		// when a session is paused or stopped prematurely
+		EndTime time.Time `json:"end_time"`
+	}
 
-// Session represents an active work or break session.
-type Session struct {
-	StartTime time.Time       `json:"start_time"`
-	EndTime   time.Time       `json:"end_time"`
-	Name      config.SessType `json:"name"`
-	Tags      []string        `json:"tags"`
-	Timeline  []Timeline      `json:"timeline"`
-	Duration  time.Duration   `json:"duration"`
-	Completed bool            `json:"completed"`
-}
+	// Session represents an active work or break session.
+	Session struct {
+		StartTime time.Time       `json:"start_time"`
+		EndTime   time.Time       `json:"end_time"`
+		Name      config.SessType `json:"name"`
+		Tags      []string        `json:"tags"`
+		Timeline  []Timeline      `json:"timeline"`
+		Duration  time.Duration   `json:"duration"`
+		Completed bool            `json:"completed"`
+	}
 
-// Remainder is the time remaining in an active session.
-type Remainder struct {
-	T int // total
-	M int // minutes
-	S int // seconds
-}
+	// Remainder is the time remaining in an active session.
+	Remainder struct {
+		T int // total
+		M int // minutes
+		S int // seconds
+	}
+)
 
 // IsResuming determines if a session is being resumed or not.
 func (s *Session) IsResuming() bool {
@@ -94,7 +96,7 @@ func (s *Session) Remaining() Remainder {
 }
 
 // ElapsedTimeInSeconds returns the time elapsed for the current session
-// in seconds using monotonic timings
+// in seconds using monotonic timings.
 func (s *Session) ElapsedTimeInSeconds() float64 {
 	var elapsedTimeInSeconds float64
 	for _, v := range s.Timeline {
@@ -105,9 +107,10 @@ func (s *Session) ElapsedTimeInSeconds() float64 {
 }
 
 // RealElapsedTimeInSeconds returns the time elapsed for the current session
-// in seconds using real timings
+// in seconds using real timings.
 func (s *Session) RealElapsedTimeInSeconds() float64 {
 	var elapsedTimeInSeconds float64
+
 	for _, v := range s.Timeline {
 		start := v.StartTime.Round(0)
 		end := v.EndTime.Round(0)

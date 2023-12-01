@@ -19,37 +19,42 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-type SessType string
+type (
+	SessType string
+
+	// Message maps a session to a message.
+	Message map[SessType]string
+
+	// Duration maps a session to time duration value.
+	Duration map[SessType]time.Duration
+
+	// TimerConfig represents the program configuration derived from the config file
+	// and command-line arguments.
+	TimerConfig struct {
+		Duration            Duration `json:"duration"`
+		Message             Message  `json:"message"`
+		AmbientSound        string   `json:"sound"`
+		BreakSound          string   `json:"break_sound"`
+		WorkSound           string   `json:"work_sound"`
+		PathToConfig        string   `json:"path_to_config"`
+		PathToDB            string   `json:"path_to_db"`
+		SessionCmd          string   `json:"session_cmd"`
+		Tags                []string `json:"tags"`
+		LongBreakInterval   int      `json:"long_break_interval"`
+		Notify              bool     `json:"notify"`
+		DarkTheme           bool     `json:"dark_theme"`
+		TwentyFourHourClock bool     `json:"twenty_four_hour_clock"`
+		PlaySoundOnBreak    bool     `json:"sound_on_break"`
+		AutoStartBreak      bool     `json:"auto_start_break"`
+		AutoStartWork       bool     `json:"auto_start_work"`
+		Strict              bool     `json:"strict"`
+	}
+)
 
 const (
 	Work       SessType = "Work session"
 	ShortBreak SessType = "Short break"
 	LongBreak  SessType = "Long break"
-)
-
-// Message maps a session to a message.
-type Message map[SessType]string
-
-// Duration maps a session to time duration value.
-type Duration map[SessType]time.Duration
-
-var once sync.Once
-
-var timerCfg = &TimerConfig{
-	Message:  make(Message),
-	Duration: make(Duration),
-}
-
-var (
-	errReadingInput = errors.New(
-		"An error occurred while reading input. Please try again",
-	)
-	errExpectedInteger = errors.New(
-		"Expected an integer that must be greater than zero",
-	)
-	errInitFailed = errors.New(
-		"Unable to initialise Focus settings from the configuration file",
-	)
 )
 
 const ascii = `
@@ -97,27 +102,24 @@ const (
 	configStrict              = "strict"
 )
 
-// TimerConfig represents the program configuration derived from the config file
-// and command-line arguments.
-type TimerConfig struct {
-	Duration            Duration `json:"duration"`
-	Message             Message  `json:"message"`
-	AmbientSound        string   `json:"sound"`
-	BreakSound          string   `json:"break_sound"`
-	WorkSound           string   `json:"work_sound"`
-	PathToConfig        string   `json:"path_to_config"`
-	PathToDB            string   `json:"path_to_db"`
-	SessionCmd          string   `json:"session_cmd"`
-	Tags                []string `json:"tags"`
-	LongBreakInterval   int      `json:"long_break_interval"`
-	Notify              bool     `json:"notify"`
-	DarkTheme           bool     `json:"dark_theme"`
-	TwentyFourHourClock bool     `json:"twenty_four_hour_clock"`
-	PlaySoundOnBreak    bool     `json:"sound_on_break"`
-	AutoStartBreak      bool     `json:"auto_start_break"`
-	AutoStartWork       bool     `json:"auto_start_work"`
-	Strict              bool     `json:"strict"`
+var once sync.Once
+
+var timerCfg = &TimerConfig{
+	Message:  make(Message),
+	Duration: make(Duration),
 }
+
+var (
+	errReadingInput = errors.New(
+		"An error occurred while reading input. Please try again",
+	)
+	errExpectedInteger = errors.New(
+		"Expected an integer that must be greater than zero",
+	)
+	errInitFailed = errors.New(
+		"Unable to initialise Focus settings from the configuration file",
+	)
+)
 
 func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
 	input, err := reader.ReadString('\n')

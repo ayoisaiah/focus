@@ -13,6 +13,14 @@ import (
 	"github.com/ayoisaiah/focus/internal/timeutil"
 )
 
+// FilterConfig represents a configuration to filter sessions
+// in the database by their start time, end time, and assigned tags.
+type FilterConfig struct {
+	StartTime time.Time
+	EndTime   time.Time
+	Tags      []string
+}
+
 var (
 	errInvalidDateRange = errors.New(
 		"the start time must be earlier than the end time",
@@ -26,14 +34,6 @@ var (
 		"please provide a valid start date",
 	)
 )
-
-// FilterConfig represents a configuration to filter sessions
-// in the database by their start time, end time, and assigned tags.
-type FilterConfig struct {
-	StartTime time.Time
-	EndTime   time.Time
-	Tags      []string
-}
 
 // getTimeRange returns the start and end time according to the
 // specified time period.

@@ -14,12 +14,12 @@ import (
 	"github.com/ayoisaiah/focus/config"
 )
 
-//go:embed files/*
-var Files embed.FS
-
 const (
 	dir = "files"
 )
+
+//go:embed files/*
+var Files embed.FS
 
 // FilePath returns the path to the specified file.
 func FilePath(fileName string) string {

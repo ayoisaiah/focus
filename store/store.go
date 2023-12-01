@@ -17,6 +17,17 @@ import (
 	"github.com/ayoisaiah/focus/internal/timeutil"
 )
 
+// Client is a BoltDB database client.
+type Client struct {
+	*bolt.DB
+}
+
+const (
+	sessionBucket = "sessions"
+	timerBucket   = "timers"
+	focusBucket   = "focus"
+)
+
 var (
 	errFocusRunning = errors.New(
 		"is Focus already running? Only one instance can be active at a time",
@@ -25,17 +36,6 @@ var (
 		"no paused timers were found",
 	)
 )
-
-const (
-	sessionBucket = "sessions"
-	timerBucket   = "timers"
-	focusBucket   = "focus"
-)
-
-// Client is a BoltDB database client.
-type Client struct {
-	*bolt.DB
-}
 
 func (c *Client) UpdateSessions(sessions map[time.Time]*models.Session) error {
 	for k, v := range sessions {
@@ -315,7 +315,7 @@ func NewClient(dbFilePath string) (*Client, error) {
 		// current database format
 		// Does nothing for new users
 		if version == "" {
-			err = c.migrate_v1_4_0(tx)
+			err = c.migrateV1_4_0(tx)
 			if err != nil {
 				return err
 			}

@@ -41,6 +41,33 @@ import (
 	"github.com/ayoisaiah/focus/store"
 )
 
+type (
+	// Timer represents a running timer.
+	Timer struct {
+		db          store.DB            `json:"-"`
+		Opts        *config.TimerConfig `json:"opts"`
+		SoundStream beep.Streamer       `json:"-"`
+		PausedTime  time.Time           `json:"paused_time"`
+		StartTime   time.Time           `json:"start_time"`
+		SessionKey  time.Time           `json:"session_key"`
+		WorkCycle   int                 `json:"work_cycle"`
+	}
+
+	// Status represents the status of a running timer.
+	Status struct {
+		EndTime           time.Time       `json:"end_date"`
+		Name              config.SessType `json:"name"`
+		Tags              []string        `json:"tags"`
+		WorkCycle         int             `json:"work_cycle"`
+		LongBreakInterval int             `json:"long_break_interval"`
+	}
+
+	// Settled fulfills the os.Signal interface.
+	Settled struct{}
+)
+
+const sessionSettled = "settled"
+
 var (
 	errInvalidSoundFormat = errors.New(
 		"sound file must be in mp3, ogg, flac, or wav format",
@@ -51,27 +78,11 @@ var (
 	)
 )
 
-const sessionSettled = "settled"
-
-// Settled fulfills the os.Signal interface.
-type Settled struct{}
-
 func (s Settled) String() string {
 	return sessionSettled
 }
 
 func (s Settled) Signal() {}
-
-// Timer represents a running timer.
-type Timer struct {
-	db          store.DB            `json:"-"`
-	Opts        *config.TimerConfig `json:"opts"`
-	SoundStream beep.Streamer       `json:"-"`
-	PausedTime  time.Time           `json:"paused_time"`
-	StartTime   time.Time           `json:"start_time"`
-	SessionKey  time.Time           `json:"session_key"`
-	WorkCycle   int                 `json:"work_cycle"`
-}
 
 func (t *Timer) LogValue() slog.Value {
 	return slog.GroupValue(
@@ -81,15 +92,6 @@ func (t *Timer) LogValue() slog.Value {
 		slog.Int("work_cycle", t.WorkCycle),
 		slog.Any("config", t.Opts),
 	)
-}
-
-// Status represents the status of a running timer.
-type Status struct {
-	EndTime           time.Time       `json:"end_date"`
-	Name              config.SessType `json:"name"`
-	Tags              []string        `json:"tags"`
-	WorkCycle         int             `json:"work_cycle"`
-	LongBreakInterval int             `json:"long_break_interval"`
 }
 
 // Persist saves the current timer and session to the database.
@@ -275,6 +277,8 @@ func (t *Timer) printSession(
 ) {
 	var text string
 
+	separator := ": "
+
 	switch sess.Name {
 	case config.Work:
 		total := t.Opts.LongBreakInterval
@@ -283,15 +287,15 @@ func (t *Timer) printSession(
 			ui.Green("[Work %d/%d]"),
 			t.WorkCycle,
 			total,
-		) + ": " + t.Opts.Message[config.Work]
+		) + separator + t.Opts.Message[config.Work]
 	case config.ShortBreak:
 		text = ui.Blue(
 			"[Short break]",
-		) + ": " + t.Opts.Message[config.ShortBreak]
+		) + separator + t.Opts.Message[config.ShortBreak]
 	case config.LongBreak:
 		text = ui.Magenta(
 			"[Long break]",
-		) + ": " + t.Opts.Message[config.LongBreak]
+		) + separator + t.Opts.Message[config.LongBreak]
 	}
 
 	var timeFormat string
@@ -317,7 +321,7 @@ func (t *Timer) printSession(
 
 // notify sends a desktop notification and plays a notification sound.
 func (t *Timer) notify(
-	c context.Context,
+	_ context.Context,
 	sessName, nextSessName config.SessType,
 ) {
 	if !t.Opts.Notify {

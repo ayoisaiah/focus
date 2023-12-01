@@ -18,57 +18,80 @@ import (
 	"github.com/ayoisaiah/focus/store"
 )
 
-type Opts struct {
-	config.FilterConfig
-}
+type (
+	Opts struct {
+		config.FilterConfig
+	}
 
-// Stats represents the computed focus statistics for a period of time.
-type Stats struct {
-	Aggregates      Aggregates        `json:"aggregates"`
-	StartTime       time.Time         `json:"start_time"`
-	EndTime         time.Time         `json:"end_time"`
-	DB              store.DB          `json:"-"`
-	Opts            Opts              `json:"-"`
-	Sessions        []*models.Session `json:"-"`
-	LastDayTimeline []Timeline        `json:"timeline"`
-	Summary         Summary           `json:"summary"`
-}
+	// Stats represents the computed focus statistics for a period of time.
+	Stats struct {
+		Aggregates      Aggregates        `json:"aggregates"`
+		StartTime       time.Time         `json:"start_time"`
+		EndTime         time.Time         `json:"end_time"`
+		DB              store.DB          `json:"-"`
+		Opts            Opts              `json:"-"`
+		Sessions        []*models.Session `json:"-"`
+		LastDayTimeline []Timeline        `json:"timeline"`
+		Summary         Summary           `json:"summary"`
+	}
 
-type Timeline struct {
-	StartTime time.Time     `json:"start_time"`
-	Tags      []string      `json:"tags"`
-	Duration  time.Duration `json:"duration"`
-}
-
-type Record struct {
-	Name     string        `json:"name"`
-	Duration time.Duration `json:"duration"`
-}
-
-type statsJSON struct {
-	StartTime       time.Time  `json:"start_time"`
-	EndTime         time.Time  `json:"end_time"`
-	Tags            []Record   `json:"tags"`
-	Hourly          []Record   `json:"hourly"`
-	LastDayTimeline []Timeline `json:"timeline"`
-	Daily           []Record   `json:"daily"`
-	Weekday         []Record   `json:"weekday"`
-	Weekly          []Record   `json:"weekly"`
-	Yearly          []Record   `json:"yearly"`
-	Monthly         []Record   `json:"monthly"`
-	Totals          struct {
-		Completed int           `json:"completed"`
-		Abandoned int           `json:"abandoned"`
+	Timeline struct {
+		StartTime time.Time     `json:"start_time"`
+		Tags      []string      `json:"tags"`
 		Duration  time.Duration `json:"duration"`
-	} `json:"totals"`
-	Averages struct {
-		Completed int           `json:"completed"`
-		Abandoned int           `json:"abandoned"`
-		Duration  time.Duration `json:"duration"`
-	} `json:"averages"`
-}
+	}
 
-type aggregatePeriod string
+	Record struct {
+		Name     string        `json:"name"`
+		Duration time.Duration `json:"duration"`
+	}
+
+	statsJSON struct {
+		StartTime       time.Time  `json:"start_time"`
+		EndTime         time.Time  `json:"end_time"`
+		Tags            []Record   `json:"tags"`
+		Hourly          []Record   `json:"hourly"`
+		LastDayTimeline []Timeline `json:"timeline"`
+		Daily           []Record   `json:"daily"`
+		Weekday         []Record   `json:"weekday"`
+		Weekly          []Record   `json:"weekly"`
+		Yearly          []Record   `json:"yearly"`
+		Monthly         []Record   `json:"monthly"`
+		Totals          struct {
+			Completed int           `json:"completed"`
+			Abandoned int           `json:"abandoned"`
+			Duration  time.Duration `json:"duration"`
+		} `json:"totals"`
+		Averages struct {
+			Completed int           `json:"completed"`
+			Abandoned int           `json:"abandoned"`
+			Duration  time.Duration `json:"duration"`
+		} `json:"averages"`
+	}
+
+	aggregatePeriod string
+
+	Summary struct {
+		Tags         map[string]time.Duration `json:"-"`
+		TotalTime    time.Duration            `json:"total_time"`
+		Completed    int                      `json:"completed"`
+		Abandoned    int                      `json:"abandoned"`
+		AvgCompleted int                      `json:"avg_completed"`
+		AvgAbandoned int                      `json:"avg_abandoned"`
+		AvgTime      time.Duration            `json:"avg_time"`
+	}
+
+	Aggregates struct {
+		startTime time.Time
+		endTime   time.Time
+		Weekly    map[string]time.Duration `json:"weekly"`
+		Weekday   map[string]time.Duration `json:"weekday"`
+		Daily     map[string]time.Duration `json:"daily"`
+		Yearly    map[string]time.Duration `json:"yearly"`
+		Monthly   map[string]time.Duration `json:"monthly"`
+		Hourly    map[string]time.Duration `json:"hourly"`
+	}
+)
 
 const (
 	monthly aggregatePeriod = "Monthly"
@@ -79,27 +102,6 @@ const (
 	hourly  aggregatePeriod = "Hourly"
 	all     aggregatePeriod = "All"
 )
-
-type Summary struct {
-	Tags         map[string]time.Duration `json:"-"`
-	TotalTime    time.Duration            `json:"total_time"`
-	Completed    int                      `json:"completed"`
-	Abandoned    int                      `json:"abandoned"`
-	AvgCompleted int                      `json:"avg_completed"`
-	AvgAbandoned int                      `json:"avg_abandoned"`
-	AvgTime      time.Duration            `json:"avg_time"`
-}
-
-type Aggregates struct {
-	startTime time.Time
-	endTime   time.Time
-	Weekly    map[string]time.Duration `json:"weekly"`
-	Weekday   map[string]time.Duration `json:"weekday"`
-	Daily     map[string]time.Duration `json:"daily"`
-	Yearly    map[string]time.Duration `json:"yearly"`
-	Monthly   map[string]time.Duration `json:"monthly"`
-	Hourly    map[string]time.Duration `json:"hourly"`
-}
 
 func (a *Aggregates) populateMap(max int) map[string]time.Duration {
 	m := make(map[string]time.Duration)

@@ -1,9 +1,9 @@
 package app
 
 import (
-	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -36,7 +36,7 @@ func printSessionsTable(w io.Writer, sessions []*models.Session) {
 		tags := strings.Join(sess.Tags, " · ")
 
 		row := []string{
-			fmt.Sprintf("%d", i+1),
+			strconv.Itoa(i + 1),
 			sess.StartTime.Format("Jan 02, 2006 03:04 PM"),
 			endDate,
 			tags,
