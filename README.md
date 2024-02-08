@@ -53,14 +53,14 @@ Focus is written in Go, so you can install it through `go install` (requires Go
 1.16 or later):
 
 ```bash
-$ go install github.com/ayoisaiah/focus/cmd/focus@latest
+go install github.com/ayoisaiah/focus/cmd/focus@latest
 ```
 
 On Linux, the `libasound2-dev` package is required to compile Focus. Ubuntu or
 Debian users can install it through the command below:
 
 ```bash
-$ sudo apt install libasound2-dev
+sudo apt install libasound2-dev
 ```
 
 ### 📦 NPM Package
@@ -71,13 +71,13 @@ You can also install Focus through its
 With `npm`:
 
 ```bash
-$ npm i @ayoisaiah/focus -g
+npm i @ayoisaiah/focus -g
 ```
 
 With `yarn`:
 
 ```bash
-$ yarn global add @ayoisaiah/focus
+yarn global add @ayoisaiah/focus
 ```
 
 Other installation methods are
@@ -88,7 +88,7 @@ Other installation methods are
 Once Focus is installed, run it using the command below:
 
 ```
-$ focus
+focus
 ```
 
 **Note:** Only one instance of `focus` can be active at a time.
