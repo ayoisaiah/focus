@@ -5,8 +5,11 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"log"
 	"math"
 	"net/http"
+	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -116,6 +119,25 @@ func (s *Stats) index(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func openbrowser(url string) {
+	var err error
+
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).
+			Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func (s *Stats) Server(port uint) error {
 	mux := http.NewServeMux()
 
@@ -126,6 +148,8 @@ func (s *Stats) Server(port uint) error {
 	mux.Handle("/", errorHandler(s.index))
 
 	pterm.Info.Printfln("starting server on port: %d", port)
+
+	openbrowser("http://localhost:1111")
 
 	//nolint:gosec // no timeout is ok
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
