@@ -3,9 +3,7 @@
 package config
 
 import (
-	"bufio"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/huh"
 	"github.com/pterm/pterm"
 	"github.com/pterm/pterm/putils"
 	"github.com/spf13/viper"
@@ -121,29 +120,6 @@ var (
 	)
 )
 
-func numberPrompt(reader *bufio.Reader, defaultVal int) (int, error) {
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return 0, errReadingInput
-	}
-
-	input = strings.TrimSpace(strings.TrimSuffix(input, "\n"))
-	if input == "" {
-		return defaultVal, nil
-	}
-
-	num, err := strconv.Atoi(input)
-	if err != nil {
-		return 0, errExpectedInteger
-	}
-
-	if num <= 0 {
-		return 0, errExpectedInteger
-	}
-
-	return num, nil
-}
-
 func parseTime(s, key string, d int) time.Duration {
 	_, err := strconv.Atoi(s)
 	if err == nil {
@@ -163,88 +139,92 @@ func parseTime(s, key string, d int) time.Duration {
 // prompt allows the user to state their preferred values for the most
 // important timer settings. It is run only when a configuration file
 // is not already present (e.g on first run).
-func prompt() {
-	pterm.Printf("%s\n\n", ascii)
+func prompt() error {
+	var (
+		workDur           int
+		shortBreakDur     int
+		longBreakDur      int
+		longBreakInterval int
+	)
 
-	pterm.Info.Printfln(
-		"Your preferences will be saved to: %s\n\n",
-		timerCfg.PathToConfig,
+	pterm.Fprintln(Stderr, pterm.Sprintf("%s\n", ascii))
+
+	pterm.Fprintln(
+		Stderr,
+		pterm.Sprintf(
+			"%s: your preferences will be saved to -> %s\n",
+			pterm.Green("info"),
+			timerCfg.PathToConfig,
+		),
 	)
 
 	_ = putils.BulletListFromString(`Follow the prompts below to configure Focus for the first time.
-Type your preferred value, or press ENTER to accept the defaults.
-Edit the configuration file (focus edit-config) to change any settings, or use command line arguments (see the --help flag)`, " ").
+Select your preferred value, or press ENTER to accept the defaults.
+Afterwards, edit the config file with 'focus edit-config' to change any settings.`, " ").
 		Render()
 
-	reader := bufio.NewReader(os.Stdin)
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[int]().
+				Title("Work length").
+				Options(
+					huh.NewOption("25 minutes", 25).Selected(true),
+					huh.NewOption("35 minutes", 35),
+					huh.NewOption("50 minutes", 50),
+					huh.NewOption("60 minutes", 60),
+					huh.NewOption("90 minutes", 90),
+				).
+				Value(&workDur),
+		),
 
-	pterm.Print("Press ENTER to continue")
+		huh.NewGroup(
+			huh.NewSelect[int]().
+				Title("Short break length").
+				Options(
+					huh.NewOption("5 minutes", 5).Selected(true),
+					huh.NewOption("10 minutes", 10),
+					huh.NewOption("15 minutes", 15),
+					huh.NewOption("20 minutes", 20),
+					huh.NewOption("30 minutes", 30),
+				).
+				Value(&shortBreakDur),
+		),
 
-	_, _ = reader.ReadString('\n')
+		huh.NewGroup(
+			huh.NewSelect[int]().
+				Title("Long break length").
+				Options(
+					huh.NewOption("15 minutes", 15).Selected(true),
+					huh.NewOption("30 minutes", 30),
+					huh.NewOption("45 minutes", 45),
+					huh.NewOption("60 minutes", 60),
+				).
+				Value(&longBreakDur),
+		),
 
-	for {
-		if !viper.IsSet(configWorkDur) {
-			pterm.Printf(
-				"\nWork length in minutes (default: %s): ",
-				pterm.Green(defaultWorkMins),
-			)
+		huh.NewGroup(
+			huh.NewSelect[int]().
+				Title("Long break interval").
+				Options(
+					huh.NewOption("4", 4).Selected(true),
+					huh.NewOption("6", 6),
+					huh.NewOption("8", 8),
+				).
+				Value(&longBreakInterval),
+		),
+	)
 
-			num, err := numberPrompt(reader, defaultWorkMins)
-			if err != nil {
-				pterm.Error.Println(err)
-				continue
-			}
-
-			viper.Set(configWorkDur, strconv.Itoa(num)+"m")
-		}
-
-		if !viper.IsSet(configShortBreakDur) {
-			pterm.Printf(
-				"Short break length in minutes (default: %s): ",
-				pterm.Green(defaultShortBreakMins),
-			)
-
-			num, err := numberPrompt(reader, defaultShortBreakMins)
-			if err != nil {
-				pterm.Error.Println(err)
-				continue
-			}
-
-			viper.Set(configShortBreakDur, strconv.Itoa(num)+"m")
-		}
-
-		if !viper.IsSet(configLongBreakDur) {
-			pterm.Printf(
-				"Long break length in minutes (default: %s): ",
-				pterm.Green(defaultLongBreakMins),
-			)
-
-			num, err := numberPrompt(reader, defaultLongBreakMins)
-			if err != nil {
-				pterm.Error.Println(err)
-				continue
-			}
-
-			viper.Set(configLongBreakDur, strconv.Itoa(num)+"m")
-		}
-
-		if !viper.IsSet(configLongBreakInterval) {
-			pterm.Printf(
-				"Work sessions before long break (default: %s): ",
-				pterm.Green(defaultLongBreakInterval),
-			)
-
-			num, err := numberPrompt(reader, defaultLongBreakInterval)
-			if err != nil {
-				pterm.Error.Println(err)
-				continue
-			}
-
-			viper.Set(configLongBreakInterval, num)
-		}
-
-		break
+	err := form.Run()
+	if err != nil {
+		return err
 	}
+
+	viper.Set(configWorkDur, strconv.Itoa(workDur)+"m")
+	viper.Set(configShortBreakDur, strconv.Itoa(shortBreakDur)+"m")
+	viper.Set(configLongBreakDur, strconv.Itoa(longBreakDur)+"m")
+	viper.Set(configLongBreakInterval, longBreakInterval)
+
+	return nil
 }
 
 // overrideConfigFromArgs retrieves user-defined configuration set through
@@ -427,16 +407,18 @@ func setTimerConfig(ctx *cli.Context) {
 // createTimerConfig saves the user's configuration to disk
 // after prompting for key settings.
 func createTimerConfig() error {
-	prompt()
-
-	timerDefaults()
-
-	err := viper.WriteConfigAs(timerCfg.PathToConfig)
+	err := prompt()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println()
+	timerDefaults()
+
+	err = viper.WriteConfigAs(timerCfg.PathToConfig)
+	if err != nil {
+		return err
+	}
+
 	pterm.Success.Printfln(
 		"Your settings have been saved. Thanks for using Focus!\n\n",
 	)
