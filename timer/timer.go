@@ -739,17 +739,18 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case btimer.TickMsg:
 		t.timer, cmd = t.timer.Update(msg)
 		t.update()
+
 		return t, cmd
 
 	case btimer.StartStopMsg:
 		t.timer, cmd = t.timer.Update(msg)
 
-		if !t.timer.Running() {
-			t.Current.UpdateEndTime()
-			_ = t.Persist(t.Context, t.Current)
-		} else {
+		if t.timer.Running() {
 			t.StartTime = time.Now()
 			t.Current.SetEndTime()
+		} else {
+			t.Current.UpdateEndTime()
+			_ = t.Persist(t.Context, t.Current)
 		}
 
 		return t, cmd
@@ -767,6 +768,7 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, t.keymap.beginSess):
 			t.waitForNextSession = false
+
 			return t, t.Init()
 
 		case key.Matches(msg, t.keymap.togglePlay):
@@ -823,12 +825,10 @@ func (t *Timer) timerView() string {
 	percent := (float64(
 		t.timer.Timeout.Seconds(),
 	) / float64(
-		t.Current.EndTime.Sub(t.StartTime).Seconds(),
+		t.Current.Duration.Seconds(),
 	))
 
 	timeRemaining := t.formatTimeRemaining()
-
-	isPaused := !t.timer.Running()
 
 	switch t.Current.Name {
 	case config.Work:
@@ -846,7 +846,7 @@ func (t *Timer) timerView() string {
 		timeFormat = "03:04:05 PM"
 	}
 
-	if isPaused {
+	if !t.timer.Running() {
 		s.WriteString(
 			lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#DB2763")).
