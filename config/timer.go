@@ -38,6 +38,9 @@ type (
 		PathToConfig        string   `json:"path_to_config"`
 		PathToDB            string   `json:"path_to_db"`
 		SessionCmd          string   `json:"session_cmd"`
+		WorkColor           string   `json:"work_color"`
+		ShortBreakColor     string   `json:"short_break_color"`
+		LongBreakColor      string   `json:"long_break_color"`
 		Tags                []string `json:"tags"`
 		LongBreakInterval   int      `json:"long_break_interval"`
 		Notify              bool     `json:"notify"`
@@ -71,6 +74,12 @@ const (
 	defaultLongBreakInterval = 4
 )
 
+const (
+	defaultWorkColor       = "#B0DB43"
+	defaultShortBreakColor = "#12EAEA"
+	defaultLongBreakColor  = "#C492B1"
+)
+
 const SoundOff = "off"
 
 // Legacy config.
@@ -99,6 +108,9 @@ const (
 	configBreakSound          = "break_sound"
 	configWorkSound           = "work_sound"
 	configStrict              = "strict"
+	configWorkColor           = "work_color"
+	configShortBreakColor     = "short_break_color"
+	configLongBreakColor      = "long_break_color"
 )
 
 var once sync.Once
@@ -160,7 +172,7 @@ func prompt() error {
 
 	_ = putils.BulletListFromString(`Follow the prompts below to configure Focus for the first time.
 Select your preferred value, or press ENTER to accept the defaults.
-Afterwards, edit the config file with 'focus edit-config' to change any settings.`, " ").
+Edit the config file with 'focus edit-config' to change any settings.`, " ").
 		Render()
 
 	form := huh.NewForm(
@@ -375,6 +387,9 @@ func updateConfigFromFile() {
 	timerCfg.SessionCmd = viper.GetString(configSessionCmd)
 	timerCfg.BreakSound = viper.GetString(configBreakSound)
 	timerCfg.WorkSound = viper.GetString(configWorkSound)
+	timerCfg.WorkColor = viper.GetString(configWorkColor)
+	timerCfg.ShortBreakColor = viper.GetString(configShortBreakColor)
+	timerCfg.LongBreakColor = viper.GetString(configLongBreakColor)
 
 	if viper.IsSet(configDarkTheme) {
 		timerCfg.DarkTheme = viper.GetBool(configDarkTheme)
@@ -445,6 +460,9 @@ func timerDefaults() {
 	viper.SetDefault(configBreakSound, "bell")
 	viper.SetDefault(configWorkSound, "loud_bell")
 	viper.SetDefault(configStrict, false)
+	viper.SetDefault(configWorkColor, defaultWorkColor)
+	viper.SetDefault(configShortBreakColor, defaultShortBreakColor)
+	viper.SetDefault(configLongBreakColor, defaultLongBreakColor)
 }
 
 // initTimerConfig initialises the application configuration.
@@ -477,7 +495,6 @@ func Timer(ctx *cli.Context) *TimerConfig {
 			pterm.Error.Printfln("%s: %s", errInitFailed.Error(), err.Error())
 			os.Exit(1)
 		}
-
 		setTimerConfig(ctx)
 	})
 

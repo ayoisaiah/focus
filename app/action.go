@@ -12,6 +12,7 @@ import (
 	"time"
 
 	slogcontext "github.com/PumpkinSeed/slog-context"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 
@@ -232,7 +233,7 @@ func resumeAction(ctx *cli.Context) error {
 	}
 
 	if ctx.Bool("reset") {
-		sess = t.NewSession(c, config.Work, time.Now())
+		sess = t.NewSession(config.Work, time.Now())
 		t.WorkCycle = 1
 
 		slog.InfoContext(
@@ -244,14 +245,14 @@ func resumeAction(ctx *cli.Context) error {
 	}
 
 	if sess == nil || sess.Completed {
-		sess = t.NewSession(c, config.Work, time.Now())
+		sess = t.NewSession(config.Work, time.Now())
 	}
 
 	c = slogcontext.WithValue(c, "session_key", sess.StartTime)
 
 	ui.DarkTheme = t.Opts.DarkTheme
 
-	return t.Run(c, sess)
+	return nil
 }
 
 // statsAction computes the stats for the specified time period.
@@ -312,9 +313,7 @@ func defaultAction(ctx *cli.Context) error {
 		return err
 	}
 
-	slog.Info("created new timer", slog.Any("timer", t))
-
-	c := slogcontext.WithValue(ctx.Context, "timer_key", t.StartTime)
+	c := ctx.Context
 
 	sinceFlag := ctx.String("since")
 
@@ -329,16 +328,9 @@ func defaultAction(ctx *cli.Context) error {
 		}
 	}
 
-	sess := t.NewSession(c, config.Work, startTime)
-
-	c = slogcontext.WithValue(c, "session_key", sess.StartTime)
+	sess := t.NewSession(config.Work, startTime)
 
 	if sinceFlag != "" {
-		slog.InfoContext(
-			c,
-			"--since flag provided, checking for session overlap",
-		)
-
 		sessions, err := dbClient.GetSessions(
 			sess.StartTime,
 			time.Now(),
@@ -349,20 +341,12 @@ func defaultAction(ctx *cli.Context) error {
 		}
 
 		if len(sessions) > 0 {
-			slog.InfoContext(
-				c,
-				"unable to start timer, found overlapping sessions",
-				slog.Any("sessions", sessions),
-			)
-
 			return errSessionOverlap
 		}
 	}
 
 	if time.Now().After(sess.EndTime) {
 		sess.Completed = true
-
-		slog.InfoContext(c, "session completed in the past: syncing to db")
 
 		err := t.Persist(c, sess)
 		if err != nil {
@@ -374,7 +358,14 @@ func defaultAction(ctx *cli.Context) error {
 		return nil
 	}
 
-	return t.Run(c, sess)
+	t.Current = sess
+	t.Context = c
+
+	p := tea.NewProgram(t)
+
+	p.Run()
+
+	return nil
 }
 
 func beforeAction(ctx *cli.Context) error {

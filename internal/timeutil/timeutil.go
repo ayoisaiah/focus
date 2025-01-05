@@ -70,6 +70,15 @@ func MinsToHoursAndMins(val int) (hrs, mins int) {
 	return
 }
 
+func SecsToMinsAndSecs(secs float64) (int, int) {
+	total := Round(secs)
+
+	minutes := total / 60
+	seconds := total % 60
+
+	return minutes, seconds
+}
+
 // DaysIn returns the number of days in the month for the specified time.
 func DaysIn(t time.Time) int {
 	m := t.Month()

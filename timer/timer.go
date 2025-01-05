@@ -8,19 +8,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"log/slog"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
-	slogcontext "github.com/PumpkinSeed/slog-context"
 	"github.com/adrg/xdg"
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/progress"
+	btimer "github.com/charmbracelet/bubbles/timer"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/flac"
 	"github.com/faiface/beep/mp3"
@@ -31,26 +33,55 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
-
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/models"
 	"github.com/ayoisaiah/focus/internal/static"
+	"github.com/ayoisaiah/focus/internal/timeutil"
 	"github.com/ayoisaiah/focus/internal/ui"
 	"github.com/ayoisaiah/focus/store"
+)
+
+const (
+	padding  = 2
+	maxWidth = 80
 )
 
 type (
 	// Timer represents a running timer.
 	Timer struct {
-		db          store.DB            `json:"-"`
-		Opts        *config.TimerConfig `json:"opts"`
-		SoundStream beep.Streamer       `json:"-"`
-		PausedTime  time.Time           `json:"paused_time"`
-		StartTime   time.Time           `json:"start_time"`
-		SessionKey  time.Time           `json:"session_key"`
-		WorkCycle   int                 `json:"work_cycle"`
+		timer              btimer.Model
+		db                 store.DB            `json:"-"`
+		Opts               *config.TimerConfig `json:"opts"`
+		SoundStream        beep.Streamer       `json:"-"`
+		PausedTime         time.Time           `json:"paused_time"`
+		StartTime          time.Time           `json:"start_time"`
+		SessionKey         time.Time           `json:"session_key"`
+		WorkCycle          int                 `json:"work_cycle"`
+		Counter            int
+		Current            *Session
+		Context            context.Context
+		waitForNextSession bool
+		style              Style
+		keymap             keymap
+		help               help.Model
+		progress           progress.Model
+	}
+
+	keymap struct {
+		togglePlay key.Binding
+		sound      key.Binding
+		beginSess  key.Binding
+		quit       key.Binding
+	}
+
+	Style struct {
+		work       lipgloss.Style
+		shortBreak lipgloss.Style
+		longBreak  lipgloss.Style
+		base       lipgloss.Style
+		help       lipgloss.Style
 	}
 
 	// Status represents the status of a running timer.
@@ -374,55 +405,6 @@ func (t *Timer) notify(
 	speaker.Close()
 }
 
-// handleInterruption saves the current state of the timer whenever it is
-// interrupted by pressing Ctrl-C.
-func (t *Timer) handleInterruption(
-	c context.Context,
-	sess *Session,
-) chan os.Signal {
-	ch := make(chan os.Signal, 1)
-
-	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		s := <-ch
-		// a settled signal indicates that the session was completed normally
-		if s.String() == sessionSettled {
-			return
-		}
-
-		slog.InfoContext(c, "session interrupted, persisting timer state to db")
-
-		exitFunc := func(err error) {
-			slog.ErrorContext(
-				c,
-				"unable to persist interrupted timer",
-				slog.Any("error", err),
-			)
-
-			pterm.Error.Printfln("unable to save interrupted timer: %v", err)
-			os.Exit(1)
-		}
-
-		sess.UpdateEndTime()
-
-		_ = os.Remove(config.StatusFilePath())
-
-		err := t.Persist(c, sess)
-		if err != nil {
-			exitFunc(err)
-		}
-
-		slog.InfoContext(c, "releasing database handle")
-
-		_ = t.db.Close()
-
-		os.Exit(0)
-	}()
-
-	return ch
-}
-
 // prepSoundStream returns an audio stream for the specified sound.
 func (t *Timer) prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
 	var (
@@ -491,72 +473,12 @@ func (t *Timer) prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
 	return stream, nil
 }
 
-// wait releases the handle to the datastore and waits for user input
-// before locking the datastore once more. This allows a new instance of Focus
-// to be launched in another terminal.
-func (t *Timer) wait(c context.Context, sessName config.SessType) error {
-	// only block if auto start options are disabled
-	if sessName != config.Work && t.Opts.AutoStartBreak ||
-		sessName == config.Work && t.Opts.AutoStartWork {
-		return nil
-	}
+// formatTimeRemaining returns the remaining time formatted as "MM:SS".
+func (t *Timer) formatTimeRemaining() string {
+	m, s := timeutil.SecsToMinsAndSecs(t.timer.Timeout.Seconds())
 
-	ch := make(chan os.Signal, 1)
-
-	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		s := <-ch
-
-		if s.String() == sessionSettled {
-			return
-		}
-
-		os.Exit(0)
-	}()
-
-	slog.InfoContext(c, "releasing database handle")
-
-	err := t.db.Close()
-	if err != nil {
-		return err
-	}
-
-	reader := bufio.NewReader(os.Stdin)
-
-	slog.InfoContext(c, "waiting for user input to begin next session")
-
-	fmt.Fprint(os.Stdout, "\033[s")
-	fmt.Fprint(os.Stdout, "Press ENTER to start the next session")
-
-	// Block until user input before beginning next session
-	_, err = reader.ReadString('\n')
-
-	ch <- Settled{}
-
-	if errors.Is(err, io.EOF) {
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	fmt.Print("\033[u\033[K")
-
-	slog.InfoContext(
-		c,
-		"received input to continue next session, acquiring database handle",
-	)
-
-	return t.db.Open()
-}
-
-// countdown prints the time remaining until the end of the current session.
-func (t *Timer) countdown(tr Remainder) {
-	fmt.Fprintf(
-		os.Stdout,
-		"\r🕒%s:%s",
-		pterm.Yellow(fmt.Sprintf("%02d", tr.M)),
-		pterm.Yellow(fmt.Sprintf("%02d", tr.S)),
+	return fmt.Sprintf(
+		"%s:%s", fmt.Sprintf("%02d", m), fmt.Sprintf("%02d", s),
 	)
 }
 
@@ -578,64 +500,48 @@ func (t *Timer) nextSession(current config.SessType) config.SessType {
 	return next
 }
 
-// start launches or resumes a session and blocks until its completion.
-func (t *Timer) start(c context.Context, sess *Session) {
-	t.printSession(sess)
+func (t *Timer) update() {
+	if int(t.timer.Timeout.Seconds())%60 == 0 {
+		go func(sess *Session) {
+			s := *sess
 
-	go func() {
-		_ = t.writeStatusFile(sess)
-	}()
+			s.UpdateEndTime()
 
-	fmt.Fprint(os.Stdout, "\033[s")
+			_ = t.Persist(t.Context, &s)
+		}(t.Current)
+	}
+}
 
-	remainder := sess.Remaining()
+func (t *Timer) endSession() error {
+	t.Current.UpdateEndTime()
+	t.Current.Completed = true
 
-	slog.InfoContext(c, "starting session", slog.Any("remainder", remainder))
-
-	t.countdown(remainder)
-
-	var counter int
-
-	ticker := time.NewTicker(time.Second)
-	for range ticker.C {
-		fmt.Fprint(os.Stdout, "\033[u\033[K")
-
-		remainder = sess.Remaining()
-
-		// save the timer once every minute to facilitate recovery on sudden
-		// shutdowns (e.g. process killed, system crashes etc)
-		if counter%60 == 0 {
-			go func(sess *Session) {
-				s := *sess
-
-				s.UpdateEndTime()
-
-				_ = t.Persist(c, &s)
-			}(sess)
-		}
-
-		counter++
-
-		if remainder.T <= 0 {
-			slog.InfoContext(c, "session completed")
-
-			fmt.Printf("Session completed!\n\n")
-
-			sess.UpdateEndTime()
-			sess.Completed = true
-
-			return
-		}
-
-		t.countdown(remainder)
+	err := t.Persist(t.Context, t.Current)
+	if err != nil {
+		return err
 	}
 
-	ticker.Stop()
+	sessName := t.nextSession(t.Current.Name)
+
+	t.notify(t.Context, t.Current.Name, sessName)
+
+	err = t.runSessionCmd(t.Context, t.Opts.SessionCmd)
+	if err != nil {
+		return err
+	}
+
+	if sessName == config.Work && !t.Opts.AutoStartWork ||
+		sessName != config.Work && !t.Opts.AutoStartBreak {
+		t.waitForNextSession = true
+	}
+
+	t.Current = t.NewSession(sessName, time.Now())
+
+	return nil
 }
 
 // NewSession initialises a new session.
 func (t *Timer) NewSession(
-	c context.Context,
 	name config.SessType,
 	startTime time.Time,
 ) *Session {
@@ -662,15 +568,6 @@ func (t *Timer) NewSession(
 			t.WorkCycle++
 		}
 	}
-
-	c = slogcontext.WithValue(c, "session_key", sess.StartTime)
-
-	slog.InfoContext(
-		c,
-		"created new session",
-		slog.Any("session", sess),
-		slog.Int("work_cycle", t.WorkCycle),
-	)
 
 	return sess
 }
@@ -719,59 +616,6 @@ func (t *Timer) overrideOptsOnResume(ctx *cli.Context) error {
 	}
 
 	return nil
-}
-
-// Run begins the timer and loops forever, alternating between work and
-// break sessions until it is terminated with Ctrl-C or a maximum number of work
-// sessions is reached.
-func (t *Timer) Run(c context.Context, sess *Session) error {
-	sessName := config.Work
-
-	for {
-		ch := t.handleInterruption(c, sess)
-
-		if t.Opts.AmbientSound != "" {
-			if sess.Name == config.Work || t.Opts.PlaySoundOnBreak {
-				speaker.Clear()
-				speaker.Play(t.SoundStream)
-			} else {
-				speaker.Clear()
-			}
-		}
-
-		t.start(c, sess)
-
-		ch <- Settled{}
-
-		err := t.Persist(c, sess)
-		if err != nil {
-			return err
-		}
-
-		sessName = t.nextSession(sessName)
-
-		slog.InfoContext(
-			c,
-			"retrieved next session",
-			slog.Any("session_name", sessName),
-		)
-
-		t.notify(c, sess.Name, sessName)
-
-		err = t.runSessionCmd(c, t.Opts.SessionCmd)
-		if err != nil {
-			return err
-		}
-
-		err = t.wait(c, sessName)
-		if err != nil {
-			return err
-		}
-
-		sess = t.NewSession(c, sessName, time.Now())
-
-		c = slogcontext.WithValue(c, "session_key", t.StartTime)
-	}
 }
 
 // Delete permanently removes one or more paused timers.
@@ -872,12 +716,222 @@ func (t *Timer) setAmbientSound() error {
 	return nil
 }
 
+func (t *Timer) Init() tea.Cmd {
+	t.StartTime = time.Now()
+	t.timer = btimer.New(t.Current.Duration)
+
+	if t.Opts.AmbientSound != "" {
+		if t.Current.Name == config.Work || t.Opts.PlaySoundOnBreak {
+			speaker.Clear()
+			speaker.Play(t.SoundStream)
+		} else {
+			speaker.Clear()
+		}
+	}
+
+	return t.timer.Init()
+}
+
+func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch msg := msg.(type) {
+	case btimer.TickMsg:
+		t.timer, cmd = t.timer.Update(msg)
+		t.update()
+		return t, cmd
+
+	case btimer.StartStopMsg:
+		t.timer, cmd = t.timer.Update(msg)
+
+		if !t.timer.Running() {
+			t.Current.UpdateEndTime()
+			_ = t.Persist(t.Context, t.Current)
+		} else {
+			t.StartTime = time.Now()
+			t.Current.SetEndTime()
+		}
+
+		return t, cmd
+
+	case btimer.TimeoutMsg:
+		_ = t.endSession()
+
+		if !t.waitForNextSession {
+			cmd = t.Init()
+		}
+
+		return t, cmd
+
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, t.keymap.beginSess):
+			t.waitForNextSession = false
+			return t, t.Init()
+
+		case key.Matches(msg, t.keymap.togglePlay):
+			cmd = t.timer.Toggle()
+			return t, cmd
+
+		case key.Matches(msg, t.keymap.quit):
+			return t, tea.Quit
+		}
+
+	case tea.WindowSizeMsg:
+		t.progress.Width = msg.Width - padding*2 - 4
+		if t.progress.Width > maxWidth {
+			t.progress.Width = maxWidth
+		}
+		return t, nil
+
+		// FrameMsg is sent when the progress bar wants to animate itself
+	case progress.FrameMsg:
+		progressModel, cmd := t.progress.Update(msg)
+		t.progress = progressModel.(progress.Model)
+		return t, cmd
+	}
+
+	return t, nil
+}
+
+func (t *Timer) sessionPromptView() string {
+	var s strings.Builder
+
+	title := "Your focus session is complete"
+	msg := "It's time to take a well-deserved break!"
+
+	if t.Current.Name != config.Work {
+		title = "Your break is over"
+		msg = "Time to refocus and get back to work!"
+	}
+
+	s.WriteString(
+		lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#DB2763")).
+			SetString(title).
+			String(),
+	)
+	s.WriteString("\n\n" + msg)
+	s.WriteString(t.style.help.Render("press ENTER to continue.\n"))
+
+	return t.style.base.Render(s.String())
+}
+
+func (t *Timer) timerView() string {
+	var s strings.Builder
+
+	percent := (float64(
+		t.timer.Timeout.Seconds(),
+	) / float64(
+		t.Current.EndTime.Sub(t.StartTime).Seconds(),
+	))
+
+	timeRemaining := t.formatTimeRemaining()
+
+	isPaused := !t.timer.Running()
+
+	switch t.Current.Name {
+	case config.Work:
+		s.WriteString(t.style.work.Render())
+	case config.ShortBreak:
+		s.WriteString(t.style.shortBreak.Render())
+	case config.LongBreak:
+		s.WriteString(t.style.longBreak.Render())
+	}
+
+	var timeFormat string
+	if t.Opts.TwentyFourHourClock {
+		timeFormat = "15:04:05"
+	} else {
+		timeFormat = "03:04:05 PM"
+	}
+
+	if isPaused {
+		s.WriteString(
+			lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#DB2763")).
+				SetString("[Paused]").
+				String(),
+		)
+	} else {
+		s.WriteString(
+			strings.TrimSpace(
+				t.style.help.SetString(fmt.Sprintf("(until %s)", t.Current.EndTime.Format(timeFormat))).String()),
+		)
+	}
+
+	s.WriteString("\n\n")
+	s.WriteString(timeRemaining)
+	s.WriteString("\n\n")
+	s.WriteString(t.progress.ViewAs(float64(1 - percent)))
+	s.WriteString("\n")
+	s.WriteString(t.helpView())
+
+	return t.style.base.Render(s.String())
+}
+
+func (t *Timer) View() string {
+	if t.waitForNextSession {
+		return t.sessionPromptView()
+	}
+
+	return t.timerView()
+}
+
+func (t *Timer) helpView() string {
+	return "\n" + t.help.ShortHelpView([]key.Binding{
+		t.keymap.togglePlay,
+		t.keymap.sound,
+		t.keymap.quit,
+	})
+}
+
 // New creates a new timer.
 func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
 	t := &Timer{
-		StartTime: time.Now(),
-		db:        dbClient,
-		Opts:      cfg,
+		db:   dbClient,
+		Opts: cfg,
+		style: Style{
+			work: lipgloss.NewStyle().
+				Foreground(lipgloss.Color(cfg.WorkColor)).
+				MarginRight(1).
+				SetString(cfg.Message[config.Work]),
+			shortBreak: lipgloss.NewStyle().
+				Foreground(lipgloss.Color(cfg.ShortBreakColor)).
+				MarginRight(1).
+				SetString(cfg.Message[config.ShortBreak]),
+			longBreak: lipgloss.NewStyle().
+				Foreground(lipgloss.Color(cfg.LongBreakColor)).
+				MarginRight(1).
+				SetString(cfg.Message[config.LongBreak]),
+			base: lipgloss.NewStyle().Padding(1, 2),
+			help: lipgloss.NewStyle().
+				Foreground(lipgloss.Color("240")).
+				MarginTop(2),
+		},
+		keymap: keymap{
+			togglePlay: key.NewBinding(
+				key.WithKeys("p"),
+				key.WithHelp("[p]", "play/pause"),
+			),
+			sound: key.NewBinding(
+				key.WithKeys("s"),
+				key.WithHelp("[s]", "sound"),
+			),
+			beginSess: key.NewBinding(
+				key.WithKeys("enter"),
+				key.WithHelp(
+					"[enter]",
+					"Press ENTER to start the next session",
+				),
+			),
+			quit: key.NewBinding(
+				key.WithKeys("ctrl+c", "q"),
+				key.WithHelp("[q]", "quit"),
+			),
+		},
+		help:     help.New(),
+		progress: progress.New(progress.WithDefaultGradient()),
 	}
 
 	err := t.setAmbientSound()
