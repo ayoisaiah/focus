@@ -22,13 +22,10 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	btimer "github.com/charmbracelet/bubbles/timer"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/faiface/beep"
-	"github.com/faiface/beep/flac"
-	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
-	"github.com/faiface/beep/vorbis"
-	"github.com/faiface/beep/wav"
 	"github.com/gen2brain/beeep"
 	"github.com/kballard/go-shellquote"
 	"github.com/pterm/pterm"
@@ -37,9 +34,7 @@ import (
 
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/models"
-	"github.com/ayoisaiah/focus/internal/static"
 	"github.com/ayoisaiah/focus/internal/timeutil"
-	"github.com/ayoisaiah/focus/internal/ui"
 	"github.com/ayoisaiah/focus/store"
 )
 
@@ -48,10 +43,16 @@ const (
 	maxWidth = 80
 )
 
+var (
+	defaultStyle  style
+	defaultKeymap keymap
+)
+
 type (
 	// Timer represents a running timer.
 	Timer struct {
-		timer              btimer.Model
+		clock              btimer.Model
+		soundForm          *huh.Form
 		db                 store.DB            `json:"-"`
 		Opts               *config.TimerConfig `json:"opts"`
 		SoundStream        beep.Streamer       `json:"-"`
@@ -59,12 +60,10 @@ type (
 		StartTime          time.Time           `json:"start_time"`
 		SessionKey         time.Time           `json:"session_key"`
 		WorkCycle          int                 `json:"work_cycle"`
-		Counter            int
+		SoundPicker        bool
 		Current            *Session
 		Context            context.Context
 		waitForNextSession bool
-		style              Style
-		keymap             keymap
 		help               help.Model
 		progress           progress.Model
 	}
@@ -76,7 +75,7 @@ type (
 		quit       key.Binding
 	}
 
-	Style struct {
+	style struct {
 		work       lipgloss.Style
 		shortBreak lipgloss.Style
 		longBreak  lipgloss.Style
@@ -92,38 +91,7 @@ type (
 		WorkCycle         int             `json:"work_cycle"`
 		LongBreakInterval int             `json:"long_break_interval"`
 	}
-
-	// Settled fulfills the os.Signal interface.
-	Settled struct{}
 )
-
-const sessionSettled = "settled"
-
-var (
-	errInvalidSoundFormat = errors.New(
-		"sound file must be in mp3, ogg, flac, or wav format",
-	)
-
-	errInvalidInput = errors.New(
-		"invalid input: only comma-separated numbers are accepted",
-	)
-)
-
-func (s Settled) String() string {
-	return sessionSettled
-}
-
-func (s Settled) Signal() {}
-
-func (t *Timer) LogValue() slog.Value {
-	return slog.GroupValue(
-		slog.Time("paused_time", t.PausedTime),
-		slog.Time("start_time", t.StartTime),
-		slog.Time("session_key", t.SessionKey),
-		slog.Int("work_cycle", t.WorkCycle),
-		slog.Any("config", t.Opts),
-	)
-}
 
 // Persist saves the current timer and session to the database.
 func (t *Timer) Persist(c context.Context, sess *Session) error {
@@ -302,54 +270,6 @@ func (t *Timer) writeStatusFile(
 	return writer.Flush()
 }
 
-// printSession writes the details of the current session to stdout.
-func (t *Timer) printSession(
-	sess *Session,
-) {
-	var text string
-
-	separator := ": "
-
-	switch sess.Name {
-	case config.Work:
-		total := t.Opts.LongBreakInterval
-
-		text = fmt.Sprintf(
-			ui.Green("[Work %d/%d]"),
-			t.WorkCycle,
-			total,
-		) + separator + t.Opts.Message[config.Work]
-	case config.ShortBreak:
-		text = ui.Blue(
-			"[Short break]",
-		) + separator + t.Opts.Message[config.ShortBreak]
-	case config.LongBreak:
-		text = ui.Magenta(
-			"[Long break]",
-		) + separator + t.Opts.Message[config.LongBreak]
-	}
-
-	var timeFormat string
-	if t.Opts.TwentyFourHourClock {
-		timeFormat = "15:04:05"
-	} else {
-		timeFormat = "03:04:05 PM"
-	}
-
-	var tags string
-	if len(sess.Tags) > 0 {
-		tags = " >>> " + strings.Join(sess.Tags, " | ")
-	}
-
-	fmt.Fprintf(
-		os.Stdout,
-		"%s (until %s)%s\n",
-		text,
-		ui.Highlight(sess.EndTime.Format(timeFormat)),
-		tags,
-	)
-}
-
 // notify sends a desktop notification and plays a notification sound.
 func (t *Timer) notify(
 	_ context.Context,
@@ -385,7 +305,7 @@ func (t *Timer) notify(
 		return
 	}
 
-	stream, err := t.prepSoundStream(sound)
+	stream, err := prepSoundStream(sound)
 	if err != nil {
 		pterm.Error.Printfln("unable to play sound: %v", err)
 		return
@@ -405,77 +325,9 @@ func (t *Timer) notify(
 	speaker.Close()
 }
 
-// prepSoundStream returns an audio stream for the specified sound.
-func (t *Timer) prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
-	var (
-		f      fs.File
-		err    error
-		stream beep.StreamSeekCloser
-		format beep.Format
-	)
-
-	ext := filepath.Ext(sound)
-	// without extension, treat as OGG file
-	if ext == "" {
-		sound += ".ogg"
-
-		f, err = static.Files.Open(static.FilePath(sound))
-		if err != nil {
-			// TODO: Update error
-			return nil, err
-		}
-	} else {
-		f, err = os.Open(sound)
-		// TODO: Update error
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	defer func() {
-		_ = f.Close()
-	}()
-
-	ext = filepath.Ext(sound)
-
-	switch ext {
-	case ".ogg":
-		stream, format, err = vorbis.Decode(f)
-	case ".mp3":
-		stream, format, err = mp3.Decode(f)
-	case ".flac":
-		stream, format, err = flac.Decode(f)
-	case ".wav":
-		stream, format, err = wav.Decode(f)
-	default:
-		return nil, errInvalidSoundFormat
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	bufferSize := 10
-
-	err = speaker.Init(
-		format.SampleRate,
-		format.SampleRate.N(time.Duration(int(time.Second)/bufferSize)),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	err = stream.Seek(0)
-	if err != nil {
-		return nil, err
-	}
-
-	return stream, nil
-}
-
 // formatTimeRemaining returns the remaining time formatted as "MM:SS".
 func (t *Timer) formatTimeRemaining() string {
-	m, s := timeutil.SecsToMinsAndSecs(t.timer.Timeout.Seconds())
+	m, s := timeutil.SecsToMinsAndSecs(t.clock.Timeout.Seconds())
 
 	return fmt.Sprintf(
 		"%s:%s", fmt.Sprintf("%02d", m), fmt.Sprintf("%02d", s),
@@ -501,7 +353,7 @@ func (t *Timer) nextSession(current config.SessType) config.SessType {
 }
 
 func (t *Timer) update() {
-	if int(t.timer.Timeout.Seconds())%60 == 0 {
+	if int(t.clock.Timeout.Seconds())%60 == 0 {
 		go func(sess *Session) {
 			s := *sess
 
@@ -699,26 +551,9 @@ func Recover(
 	return t, sess, err
 }
 
-func (t *Timer) setAmbientSound() error {
-	var infiniteStream beep.Streamer
-
-	if t.Opts.AmbientSound != "" {
-		stream, err := t.prepSoundStream(t.Opts.AmbientSound)
-		if err != nil {
-			return err
-		}
-
-		infiniteStream = beep.Loop(-1, stream)
-	}
-
-	t.SoundStream = infiniteStream
-
-	return nil
-}
-
 func (t *Timer) Init() tea.Cmd {
 	t.StartTime = time.Now()
-	t.timer = btimer.New(t.Current.Duration)
+	t.clock = btimer.New(t.Current.Duration)
 
 	if t.Opts.AmbientSound != "" {
 		if t.Current.Name == config.Work || t.Opts.PlaySoundOnBreak {
@@ -729,7 +564,9 @@ func (t *Timer) Init() tea.Cmd {
 		}
 	}
 
-	return t.timer.Init()
+	return tea.Batch(t.clock.Init(), t.soundForm.Init())
+
+	// return t.clock.Init()
 }
 
 func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -737,15 +574,15 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case btimer.TickMsg:
-		t.timer, cmd = t.timer.Update(msg)
+		t.clock, cmd = t.clock.Update(msg)
 		t.update()
 
 		return t, cmd
 
 	case btimer.StartStopMsg:
-		t.timer, cmd = t.timer.Update(msg)
+		t.clock, cmd = t.clock.Update(msg)
 
-		if t.timer.Running() {
+		if t.clock.Running() {
 			t.StartTime = time.Now()
 			t.Current.SetEndTime()
 		} else {
@@ -766,16 +603,23 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, t.keymap.beginSess):
+		case key.Matches(msg, defaultKeymap.beginSess):
 			t.waitForNextSession = false
+			cmd = t.Init()
 
-			return t, t.Init()
-
-		case key.Matches(msg, t.keymap.togglePlay):
-			cmd = t.timer.Toggle()
 			return t, cmd
 
-		case key.Matches(msg, t.keymap.quit):
+		case key.Matches(msg, defaultKeymap.sound):
+			t.SoundPicker = !t.SoundPicker
+			return t, nil
+
+		case key.Matches(msg, defaultKeymap.togglePlay):
+			cmd = t.clock.Toggle()
+			return t, cmd
+
+		case key.Matches(msg, defaultKeymap.quit):
+			t.Current.UpdateEndTime()
+			_ = t.Persist(t.Context, t.Current)
 			return t, tea.Quit
 		}
 
@@ -784,12 +628,20 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if t.progress.Width > maxWidth {
 			t.progress.Width = maxWidth
 		}
+
 		return t, nil
 
 		// FrameMsg is sent when the progress bar wants to animate itself
 	case progress.FrameMsg:
 		progressModel, cmd := t.progress.Update(msg)
-		t.progress = progressModel.(progress.Model)
+		t.progress, _ = progressModel.(progress.Model)
+
+		return t, cmd
+	}
+
+	form, cmd := t.soundForm.Update(msg)
+	if f, ok := form.(*huh.Form); ok {
+		t.soundForm = f
 		return t, cmd
 	}
 
@@ -814,16 +666,16 @@ func (t *Timer) sessionPromptView() string {
 			String(),
 	)
 	s.WriteString("\n\n" + msg)
-	s.WriteString(t.style.help.Render("press ENTER to continue.\n"))
+	s.WriteString(defaultStyle.help.Render("press ENTER to continue.\n"))
 
-	return t.style.base.Render(s.String())
+	return defaultStyle.base.Render(s.String())
 }
 
 func (t *Timer) timerView() string {
 	var s strings.Builder
 
 	percent := (float64(
-		t.timer.Timeout.Seconds(),
+		t.clock.Timeout.Seconds(),
 	) / float64(
 		t.Current.Duration.Seconds(),
 	))
@@ -832,11 +684,11 @@ func (t *Timer) timerView() string {
 
 	switch t.Current.Name {
 	case config.Work:
-		s.WriteString(t.style.work.Render())
+		s.WriteString(defaultStyle.work.Render())
 	case config.ShortBreak:
-		s.WriteString(t.style.shortBreak.Render())
+		s.WriteString(defaultStyle.shortBreak.Render())
 	case config.LongBreak:
-		s.WriteString(t.style.longBreak.Render())
+		s.WriteString(defaultStyle.longBreak.Render())
 	}
 
 	var timeFormat string
@@ -846,7 +698,7 @@ func (t *Timer) timerView() string {
 		timeFormat = "03:04:05 PM"
 	}
 
-	if !t.timer.Running() {
+	if !t.clock.Running() {
 		s.WriteString(
 			lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#DB2763")).
@@ -856,7 +708,7 @@ func (t *Timer) timerView() string {
 	} else {
 		s.WriteString(
 			strings.TrimSpace(
-				t.style.help.SetString(fmt.Sprintf("(until %s)", t.Current.EndTime.Format(timeFormat))).String()),
+				defaultStyle.help.SetString(fmt.Sprintf("(until %s)", t.Current.EndTime.Format(timeFormat))).String()),
 		)
 	}
 
@@ -867,7 +719,19 @@ func (t *Timer) timerView() string {
 	s.WriteString("\n")
 	s.WriteString(t.helpView())
 
-	return t.style.base.Render(s.String())
+	return defaultStyle.base.Render(s.String())
+}
+
+func (t *Timer) pickSoundView() string {
+	if t.soundForm.State == huh.StateCompleted {
+		class := t.soundForm.GetString("class")
+		level := t.soundForm.GetString("level")
+		t.SoundPicker = false
+
+		return fmt.Sprintf("You selected: %s, Lvl. %d", class, level)
+	}
+
+	return t.soundForm.View()
 }
 
 func (t *Timer) View() string {
@@ -875,63 +739,79 @@ func (t *Timer) View() string {
 		return t.sessionPromptView()
 	}
 
-	return t.timerView()
+	str := t.timerView()
+
+	if t.SoundPicker {
+		str += "\n" + t.pickSoundView()
+	}
+
+	return str
 }
 
 func (t *Timer) helpView() string {
 	return "\n" + t.help.ShortHelpView([]key.Binding{
-		t.keymap.togglePlay,
-		t.keymap.sound,
-		t.keymap.quit,
+		defaultKeymap.togglePlay,
+		defaultKeymap.sound,
+		defaultKeymap.quit,
 	})
 }
 
 // New creates a new timer.
 func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
+	defaultStyle = style{
+		work: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(cfg.WorkColor)).
+			MarginRight(1).
+			SetString(cfg.Message[config.Work]),
+		shortBreak: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(cfg.ShortBreakColor)).
+			MarginRight(1).
+			SetString(cfg.Message[config.ShortBreak]),
+		longBreak: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(cfg.LongBreakColor)).
+			MarginRight(1).
+			SetString(cfg.Message[config.LongBreak]),
+		base: lipgloss.NewStyle().Padding(1, 2),
+		help: lipgloss.NewStyle().
+			Foreground(lipgloss.Color("240")).
+			MarginTop(2),
+	}
+
+	defaultKeymap = keymap{
+		togglePlay: key.NewBinding(
+			key.WithKeys("p"),
+			key.WithHelp("[p]", "play/pause"),
+		),
+		sound: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp("[s]", "sound"),
+		),
+		beginSess: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp(
+				"[enter]",
+				"Press ENTER to start the next session",
+			),
+		),
+		quit: key.NewBinding(
+			key.WithKeys("ctrl+c", "q"),
+			key.WithHelp("[q]", "quit"),
+		),
+	}
+
 	t := &Timer{
-		db:   dbClient,
-		Opts: cfg,
-		style: Style{
-			work: lipgloss.NewStyle().
-				Foreground(lipgloss.Color(cfg.WorkColor)).
-				MarginRight(1).
-				SetString(cfg.Message[config.Work]),
-			shortBreak: lipgloss.NewStyle().
-				Foreground(lipgloss.Color(cfg.ShortBreakColor)).
-				MarginRight(1).
-				SetString(cfg.Message[config.ShortBreak]),
-			longBreak: lipgloss.NewStyle().
-				Foreground(lipgloss.Color(cfg.LongBreakColor)).
-				MarginRight(1).
-				SetString(cfg.Message[config.LongBreak]),
-			base: lipgloss.NewStyle().Padding(1, 2),
-			help: lipgloss.NewStyle().
-				Foreground(lipgloss.Color("240")).
-				MarginTop(2),
-		},
-		keymap: keymap{
-			togglePlay: key.NewBinding(
-				key.WithKeys("p"),
-				key.WithHelp("[p]", "play/pause"),
-			),
-			sound: key.NewBinding(
-				key.WithKeys("s"),
-				key.WithHelp("[s]", "sound"),
-			),
-			beginSess: key.NewBinding(
-				key.WithKeys("enter"),
-				key.WithHelp(
-					"[enter]",
-					"Press ENTER to start the next session",
-				),
-			),
-			quit: key.NewBinding(
-				key.WithKeys("ctrl+c", "q"),
-				key.WithHelp("[q]", "quit"),
-			),
-		},
+		db:       dbClient,
+		Opts:     cfg,
 		help:     help.New(),
 		progress: progress.New(progress.WithDefaultGradient()),
+		soundForm: huh.NewForm(
+			huh.NewGroup(
+				huh.NewSelect[string]().
+					Key("sound").
+					Options(huh.NewOptions(soundOpts...)...).
+					Title("Select ambient sound"),
+			),
+		),
 	}
 
 	err := t.setAmbientSound()

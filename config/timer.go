@@ -4,6 +4,7 @@ package config
 
 import (
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,6 +17,8 @@ import (
 	"github.com/pterm/pterm/putils"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
+
+	"github.com/ayoisaiah/focus/internal/timeutil"
 )
 
 type (
@@ -30,26 +33,28 @@ type (
 	// TimerConfig represents the program configuration derived from the config file
 	// and command-line arguments.
 	TimerConfig struct {
-		Duration            Duration `json:"duration"`
-		Message             Message  `json:"message"`
-		AmbientSound        string   `json:"sound"`
-		BreakSound          string   `json:"break_sound"`
-		WorkSound           string   `json:"work_sound"`
-		PathToConfig        string   `json:"path_to_config"`
-		PathToDB            string   `json:"path_to_db"`
-		SessionCmd          string   `json:"session_cmd"`
-		WorkColor           string   `json:"work_color"`
-		ShortBreakColor     string   `json:"short_break_color"`
-		LongBreakColor      string   `json:"long_break_color"`
-		Tags                []string `json:"tags"`
-		LongBreakInterval   int      `json:"long_break_interval"`
-		Notify              bool     `json:"notify"`
-		DarkTheme           bool     `json:"dark_theme"`
-		TwentyFourHourClock bool     `json:"twenty_four_hour_clock"`
-		PlaySoundOnBreak    bool     `json:"sound_on_break"`
-		AutoStartBreak      bool     `json:"auto_start_break"`
-		AutoStartWork       bool     `json:"auto_start_work"`
-		Strict              bool     `json:"strict"`
+		StartTime           time.Time `json:"-"`
+		Since               string    `json:"-"`
+		Duration            Duration  `json:"duration"`
+		Message             Message   `json:"message"`
+		AmbientSound        string    `json:"sound"`
+		BreakSound          string    `json:"break_sound"`
+		WorkSound           string    `json:"work_sound"`
+		PathToConfig        string    `json:"path_to_config"`
+		PathToDB            string    `json:"path_to_db"`
+		SessionCmd          string    `json:"session_cmd"`
+		WorkColor           string    `json:"work_color"`
+		ShortBreakColor     string    `json:"short_break_color"`
+		LongBreakColor      string    `json:"long_break_color"`
+		Tags                []string  `json:"tags"`
+		LongBreakInterval   int       `json:"long_break_interval"`
+		Notify              bool      `json:"notify"`
+		DarkTheme           bool      `json:"dark_theme"`
+		TwentyFourHourClock bool      `json:"twenty_four_hour_clock"`
+		PlaySoundOnBreak    bool      `json:"sound_on_break"`
+		AutoStartBreak      bool      `json:"auto_start_break"`
+		AutoStartWork       bool      `json:"auto_start_work"`
+		Strict              bool      `json:"strict"`
 	}
 )
 
@@ -320,6 +325,19 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 
 	if ctx.Uint("long-break-interval") > 0 {
 		timerCfg.LongBreakInterval = int(ctx.Uint("long-break-interval"))
+	}
+
+	timerCfg.Since = ctx.String("since")
+
+	timerCfg.StartTime = time.Now()
+
+	if timerCfg.Since != "" {
+		sinceTime, err := timeutil.FromStr(timerCfg.Since)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		timerCfg.StartTime = sinceTime
 	}
 }
 

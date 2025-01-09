@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"os"
 
-	slogcontext "github.com/PumpkinSeed/slog-context"
 	"github.com/pterm/pterm"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -23,7 +22,7 @@ func initLogger() {
 
 	opts := &slog.HandlerOptions{}
 
-	l := slog.New(slogcontext.NewHandler(slog.NewJSONHandler(out, opts))).With(
+	l := slog.New(slog.NewTextHandler(out, opts)).With(
 		slog.Int("pid", os.Getpid()),
 	)
 

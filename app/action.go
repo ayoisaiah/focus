@@ -11,15 +11,14 @@ import (
 	"runtime"
 	"time"
 
-	slogcontext "github.com/PumpkinSeed/slog-context"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/models"
-	"github.com/ayoisaiah/focus/internal/timeutil"
 	"github.com/ayoisaiah/focus/internal/ui"
+	"github.com/ayoisaiah/focus/report"
 	"github.com/ayoisaiah/focus/stats"
 	"github.com/ayoisaiah/focus/store"
 	"github.com/ayoisaiah/focus/timer"
@@ -219,15 +218,6 @@ func resumeAction(ctx *cli.Context) error {
 		return err
 	}
 
-	slog.InfoContext(
-		ctx.Context,
-		"paused timer and session recovered successfully",
-		slog.Any("timer", t),
-		slog.Any("session", sess),
-	)
-
-	c := slogcontext.WithValue(ctx.Context, "timer_key", t.StartTime)
-
 	if t.Opts.Strict {
 		return errStrictMode
 	}
@@ -235,24 +225,24 @@ func resumeAction(ctx *cli.Context) error {
 	if ctx.Bool("reset") {
 		sess = t.NewSession(config.Work, time.Now())
 		t.WorkCycle = 1
-
-		slog.InfoContext(
-			c,
-			"--reset flag provided: starting new pomodoro cycle",
-			slog.Any("session", sess),
-			slog.Any("timer", t),
-		)
 	}
 
 	if sess == nil || sess.Completed {
 		sess = t.NewSession(config.Work, time.Now())
 	}
 
-	c = slogcontext.WithValue(c, "session_key", sess.StartTime)
-
 	ui.DarkTheme = t.Opts.DarkTheme
 
-	return nil
+	t.Current = sess
+	t.Context = ctx.Context
+
+	slog.Info("yes", "sess", sess)
+
+	p := tea.NewProgram(t)
+
+	_, err = p.Run()
+
+	return err
 }
 
 // statsAction computes the stats for the specified time period.
@@ -306,31 +296,14 @@ func defaultAction(ctx *cli.Context) error {
 		return err
 	}
 
-	ui.DarkTheme = cfg.DarkTheme
-
 	t, err := timer.New(dbClient, cfg)
 	if err != nil {
 		return err
 	}
 
-	c := ctx.Context
+	sess := t.NewSession(config.Work, cfg.StartTime)
 
-	sinceFlag := ctx.String("since")
-
-	startTime := time.Now()
-
-	if sinceFlag != "" {
-		var err error
-
-		startTime, err = timeutil.FromStr(sinceFlag)
-		if err != nil {
-			return err
-		}
-	}
-
-	sess := t.NewSession(config.Work, startTime)
-
-	if sinceFlag != "" {
+	if cfg.Since != "" {
 		sessions, err := dbClient.GetSessions(
 			sess.StartTime,
 			time.Now(),
@@ -348,18 +321,18 @@ func defaultAction(ctx *cli.Context) error {
 	if time.Now().After(sess.EndTime) {
 		sess.Completed = true
 
-		err := t.Persist(c, sess)
+		err := t.Persist(ctx.Context, sess)
 		if err != nil {
 			return err
 		}
 
-		pterm.Info.Println("session added successfully")
+		report.SessionAdded()
 
 		return nil
 	}
 
 	t.Current = sess
-	t.Context = c
+	t.Context = ctx.Context
 
 	p := tea.NewProgram(t)
 
