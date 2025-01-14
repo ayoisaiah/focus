@@ -26,6 +26,11 @@ func FilePath(fileName string) string {
 	return filepath.Join(dir, fileName)
 }
 
+// AmbientSound returns the path to the specified ambient sound file.
+func AmbientSound(fileName string) string {
+	return filepath.Join(dir, "ambient_sound", fileName)
+}
+
 func init() {
 	_ = fs.WalkDir(
 		Files,

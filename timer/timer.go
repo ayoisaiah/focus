@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/adrg/xdg"
@@ -48,6 +47,10 @@ var (
 	defaultKeymap keymap
 )
 
+type settingsView string
+
+var soundView settingsView = "sound"
+
 type (
 	// Timer represents a running timer.
 	Timer struct {
@@ -60,12 +63,12 @@ type (
 		StartTime          time.Time           `json:"start_time"`
 		SessionKey         time.Time           `json:"session_key"`
 		WorkCycle          int                 `json:"work_cycle"`
-		SoundPicker        bool
 		Current            *Session
 		Context            context.Context
 		waitForNextSession bool
 		help               help.Model
 		progress           progress.Model
+		settings           settingsView
 	}
 
 	keymap struct {
@@ -73,6 +76,7 @@ type (
 		sound      key.Binding
 		beginSess  key.Binding
 		quit       key.Binding
+		esc        key.Binding
 	}
 
 	style struct {
@@ -569,193 +573,6 @@ func (t *Timer) Init() tea.Cmd {
 	// return t.clock.Init()
 }
 
-func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-
-	switch msg := msg.(type) {
-	case btimer.TickMsg:
-		t.clock, cmd = t.clock.Update(msg)
-		t.update()
-
-		return t, cmd
-
-	case btimer.StartStopMsg:
-		t.clock, cmd = t.clock.Update(msg)
-
-		if t.clock.Running() {
-			t.StartTime = time.Now()
-			t.Current.SetEndTime()
-		} else {
-			t.Current.UpdateEndTime()
-			_ = t.Persist(t.Context, t.Current)
-		}
-
-		return t, cmd
-
-	case btimer.TimeoutMsg:
-		_ = t.endSession()
-
-		if !t.waitForNextSession {
-			cmd = t.Init()
-		}
-
-		return t, cmd
-
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, defaultKeymap.beginSess):
-			t.waitForNextSession = false
-			cmd = t.Init()
-
-			return t, cmd
-
-		case key.Matches(msg, defaultKeymap.sound):
-			t.SoundPicker = !t.SoundPicker
-			return t, nil
-
-		case key.Matches(msg, defaultKeymap.togglePlay):
-			cmd = t.clock.Toggle()
-			return t, cmd
-
-		case key.Matches(msg, defaultKeymap.quit):
-			t.Current.UpdateEndTime()
-			_ = t.Persist(t.Context, t.Current)
-			return t, tea.Quit
-		}
-
-	case tea.WindowSizeMsg:
-		t.progress.Width = msg.Width - padding*2 - 4
-		if t.progress.Width > maxWidth {
-			t.progress.Width = maxWidth
-		}
-
-		return t, nil
-
-		// FrameMsg is sent when the progress bar wants to animate itself
-	case progress.FrameMsg:
-		progressModel, cmd := t.progress.Update(msg)
-		t.progress, _ = progressModel.(progress.Model)
-
-		return t, cmd
-	}
-
-	form, cmd := t.soundForm.Update(msg)
-	if f, ok := form.(*huh.Form); ok {
-		t.soundForm = f
-		return t, cmd
-	}
-
-	return t, nil
-}
-
-func (t *Timer) sessionPromptView() string {
-	var s strings.Builder
-
-	title := "Your focus session is complete"
-	msg := "It's time to take a well-deserved break!"
-
-	if t.Current.Name != config.Work {
-		title = "Your break is over"
-		msg = "Time to refocus and get back to work!"
-	}
-
-	s.WriteString(
-		lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#DB2763")).
-			SetString(title).
-			String(),
-	)
-	s.WriteString("\n\n" + msg)
-	s.WriteString(defaultStyle.help.Render("press ENTER to continue.\n"))
-
-	return defaultStyle.base.Render(s.String())
-}
-
-func (t *Timer) timerView() string {
-	var s strings.Builder
-
-	percent := (float64(
-		t.clock.Timeout.Seconds(),
-	) / float64(
-		t.Current.Duration.Seconds(),
-	))
-
-	timeRemaining := t.formatTimeRemaining()
-
-	switch t.Current.Name {
-	case config.Work:
-		s.WriteString(defaultStyle.work.Render())
-	case config.ShortBreak:
-		s.WriteString(defaultStyle.shortBreak.Render())
-	case config.LongBreak:
-		s.WriteString(defaultStyle.longBreak.Render())
-	}
-
-	var timeFormat string
-	if t.Opts.TwentyFourHourClock {
-		timeFormat = "15:04:05"
-	} else {
-		timeFormat = "03:04:05 PM"
-	}
-
-	if !t.clock.Running() {
-		s.WriteString(
-			lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#DB2763")).
-				SetString("[Paused]").
-				String(),
-		)
-	} else {
-		s.WriteString(
-			strings.TrimSpace(
-				defaultStyle.help.SetString(fmt.Sprintf("(until %s)", t.Current.EndTime.Format(timeFormat))).String()),
-		)
-	}
-
-	s.WriteString("\n\n")
-	s.WriteString(timeRemaining)
-	s.WriteString("\n\n")
-	s.WriteString(t.progress.ViewAs(float64(1 - percent)))
-	s.WriteString("\n")
-	s.WriteString(t.helpView())
-
-	return defaultStyle.base.Render(s.String())
-}
-
-func (t *Timer) pickSoundView() string {
-	if t.soundForm.State == huh.StateCompleted {
-		class := t.soundForm.GetString("class")
-		level := t.soundForm.GetString("level")
-		t.SoundPicker = false
-
-		return fmt.Sprintf("You selected: %s, Lvl. %d", class, level)
-	}
-
-	return t.soundForm.View()
-}
-
-func (t *Timer) View() string {
-	if t.waitForNextSession {
-		return t.sessionPromptView()
-	}
-
-	str := t.timerView()
-
-	if t.SoundPicker {
-		str += "\n" + t.pickSoundView()
-	}
-
-	return str
-}
-
-func (t *Timer) helpView() string {
-	return "\n" + t.help.ShortHelpView([]key.Binding{
-		defaultKeymap.togglePlay,
-		defaultKeymap.sound,
-		defaultKeymap.quit,
-	})
-}
-
 // New creates a new timer.
 func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
 	defaultStyle = style{
@@ -771,7 +588,7 @@ func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
 			Foreground(lipgloss.Color(cfg.LongBreakColor)).
 			MarginRight(1).
 			SetString(cfg.Message[config.LongBreak]),
-		base: lipgloss.NewStyle().Padding(1, 2),
+		base: lipgloss.NewStyle().Padding(1, 1),
 		help: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("240")).
 			MarginTop(2),
@@ -780,22 +597,26 @@ func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
 	defaultKeymap = keymap{
 		togglePlay: key.NewBinding(
 			key.WithKeys("p"),
-			key.WithHelp("[p]", "play/pause"),
+			key.WithHelp("p", "play/pause"),
 		),
 		sound: key.NewBinding(
 			key.WithKeys("s"),
-			key.WithHelp("[s]", "sound"),
+			key.WithHelp("s", "sound"),
 		),
 		beginSess: key.NewBinding(
 			key.WithKeys("enter"),
 			key.WithHelp(
-				"[enter]",
+				"enter",
 				"Press ENTER to start the next session",
 			),
 		),
 		quit: key.NewBinding(
 			key.WithKeys("ctrl+c", "q"),
-			key.WithHelp("[q]", "quit"),
+			key.WithHelp("q", "quit"),
+		),
+		esc: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "cancel"),
 		),
 	}
 

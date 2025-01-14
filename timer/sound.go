@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/adrg/xdg"
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/flac"
 	"github.com/faiface/beep/mp3"
@@ -15,7 +14,6 @@ import (
 	"github.com/faiface/beep/vorbis"
 	"github.com/faiface/beep/wav"
 
-	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/pathutil"
 	"github.com/ayoisaiah/focus/internal/static"
 )
@@ -23,7 +21,10 @@ import (
 var soundOpts []string
 
 func init() {
-	dir, err := os.ReadDir(filepath.Join(xdg.DataHome, config.Dir(), "static"))
+	dir, err := fs.ReadDir(
+		static.Files,
+		filepath.Join("files", "ambient_sound"),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -31,6 +32,8 @@ func init() {
 	for _, v := range dir {
 		soundOpts = append(soundOpts, pathutil.StripExtension(v.Name()))
 	}
+
+	// TODO: Add directory for custom sound
 }
 
 // prepSoundStream returns an audio stream for the specified sound.
@@ -47,7 +50,7 @@ func prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
 	if ext == "" {
 		sound += ".ogg"
 
-		f, err = static.Files.Open(static.FilePath(sound))
+		f, err = static.Files.Open(static.AmbientSound(sound))
 		if err != nil {
 			// TODO: Update error
 			return nil, err
