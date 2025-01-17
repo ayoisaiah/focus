@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/faiface/beep/speaker"
 
 	"github.com/ayoisaiah/focus/config"
 )
@@ -92,9 +91,10 @@ func (t *Timer) pickSoundView() string {
 		t.Opts.AmbientSound = sound
 		t.settings = ""
 
-		_ = t.setAmbientSound()
-		speaker.Clear()
-		speaker.Play(t.SoundStream)
+		err := t.setAmbientSound()
+		if err != nil {
+			return err.Error()
+		}
 
 		return ""
 	}

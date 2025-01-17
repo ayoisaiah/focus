@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/faiface/beep"
-	"github.com/faiface/beep/flac"
-	"github.com/faiface/beep/mp3"
-	"github.com/faiface/beep/speaker"
-	"github.com/faiface/beep/vorbis"
-	"github.com/faiface/beep/wav"
+	"github.com/gopxl/beep/v2"
+	"github.com/gopxl/beep/v2/flac"
+	"github.com/gopxl/beep/v2/mp3"
+	"github.com/gopxl/beep/v2/speaker"
+	"github.com/gopxl/beep/v2/vorbis"
+	"github.com/gopxl/beep/v2/wav"
 
 	"github.com/ayoisaiah/focus/internal/pathutil"
 	"github.com/ayoisaiah/focus/internal/static"
@@ -113,7 +113,10 @@ func (t *Timer) setAmbientSound() error {
 			return err
 		}
 
-		infiniteStream = beep.Loop(-1, stream)
+		infiniteStream, err = beep.Loop2(stream)
+		if err != nil {
+			return err
+		}
 	}
 
 	t.SoundStream = infiniteStream
