@@ -1,8 +1,6 @@
 package timer
 
 import (
-	"context"
-	"log/slog"
 	"time"
 
 	"github.com/ayoisaiah/focus/config"
@@ -46,6 +44,15 @@ func (s *Session) IsResuming() bool {
 	}
 
 	return true
+}
+
+// Adjust will be used when --since / --until is used
+// TODO: Add until.
+func (s *Session) Adjust(since time.Time) {
+	s.StartTime = since
+	s.EndTime = s.StartTime.Add(s.Duration)
+
+	s.Timeline[0].EndTime = s.EndTime
 }
 
 // SetEndTime calculates the end time for the current session.
@@ -135,20 +142,11 @@ func (s *Session) UpdateEndTime() {
 // It mostly helps with normalising the end time when the system is suspended
 // with a session in progress, and resumed at a later time in the future
 // that surpasses the normal end time.
-func (s *Session) Normalise(c context.Context) {
+func (s *Session) Normalise() {
 	elapsed := s.ElapsedTimeInSeconds()
 	realElapsed := s.RealElapsedTimeInSeconds()
 	durationSecs := s.Duration.Seconds()
 	diffSecs := realElapsed - elapsed
-
-	slog.InfoContext(c, "session duration timings",
-		slog.Float64("monotonic_elapsed", elapsed),
-		slog.Float64("real_elapsed", realElapsed),
-		slog.Float64("session_duration_secs", durationSecs),
-		slog.Float64("seconds_left", durationSecs-elapsed),
-		slog.Bool("session_completed", s.Completed),
-		slog.Any("session_timeline", s.Timeline),
-	)
 
 	// Normalize end time to precisely fulfill the session duration
 	if s.Completed {
@@ -169,12 +167,6 @@ func (s *Session) Normalise(c context.Context) {
 			time.Duration(secondsLeft * float64(time.Second)),
 		)
 
-		slog.InfoContext(
-			c,
-			"normalizing completed session end time",
-			slog.Time("end_time", end),
-		)
-
 		s.Timeline[lastIndex].EndTime = end
 		s.EndTime = end
 		s.Completed = true
@@ -184,13 +176,6 @@ func (s *Session) Normalise(c context.Context) {
 		// suspending the computer while the timer was running.
 		lastIndex := len(s.Timeline) - 1
 		end := s.EndTime.Add(-time.Duration(diffSecs * float64(time.Second)))
-
-		slog.InfoContext(
-			c,
-			"normalizing interrupted session end time due to difference in monotonic and real timings",
-			slog.Time("end_time", end),
-			slog.Float64("timing_diff_secs", diffSecs),
-		)
 
 		s.EndTime = end
 		s.Timeline[lastIndex].EndTime = end

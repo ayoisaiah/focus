@@ -28,7 +28,7 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.Current.SetEndTime()
 		} else {
 			t.Current.UpdateEndTime()
-			_ = t.Persist(t.Context, t.Current)
+			_ = t.Persist(t.Current)
 		}
 
 		return t, cmd
@@ -36,21 +36,20 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case btimer.TimeoutMsg:
 		_ = t.endSession()
 
-		if !t.waitForNextSession {
-			cmd = t.Init()
-		}
+		cmd = t.new()
 
 		return t, cmd
 
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, defaultKeymap.beginSess):
+		case key.Matches(msg, defaultKeymap.enter):
 			if t.settings != "" {
 				break
 			}
 
 			t.waitForNextSession = false
-			cmd = t.Init()
+			t.clock = btimer.New(t.Current.Duration)
+			cmd = t.clock.Init()
 
 			return t, cmd
 
@@ -67,9 +66,11 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, cmd
 
 		case key.Matches(msg, defaultKeymap.quit):
+			// TODO: endSesssion should take care of this
 			t.Current.UpdateEndTime()
-			_ = t.Persist(t.Context, t.Current)
-			return t, tea.Quit
+			_ = t.Persist(t.Current)
+
+			return t, tea.Batch(tea.ClearScreen, tea.Quit)
 		}
 
 	case tea.WindowSizeMsg:

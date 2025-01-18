@@ -17,7 +17,7 @@ func (t *Timer) sessionPromptView() string {
 	title := "Your focus session is complete"
 	msg := "It's time to take a well-deserved break!"
 
-	if t.Current.Name != config.Work {
+	if t.Current.Name == config.Work {
 		title = "Your break is over"
 		msg = "Time to refocus and get back to work!"
 	}
@@ -31,7 +31,7 @@ func (t *Timer) sessionPromptView() string {
 	s.WriteString("\n\n" + msg)
 	s.WriteString(defaultStyle.help.Render("press ENTER to continue.\n"))
 
-	return defaultStyle.base.Render(s.String())
+	return s.String()
 }
 
 func (t *Timer) timerView() string {
@@ -61,7 +61,7 @@ func (t *Timer) timerView() string {
 		timeFormat = "03:04:05 PM"
 	}
 
-	if !t.clock.Running() {
+	if !t.clock.Running() && t.Current.Completed {
 		s.WriteString(
 			lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#DB2763")).
@@ -82,7 +82,7 @@ func (t *Timer) timerView() string {
 	s.WriteString("\n")
 	s.WriteString(t.helpView())
 
-	return defaultStyle.base.Render(s.String())
+	return s.String()
 }
 
 func (t *Timer) pickSoundView() string {
@@ -99,7 +99,7 @@ func (t *Timer) pickSoundView() string {
 		return ""
 	}
 
-	return defaultStyle.base.Render(t.soundForm.View())
+	return t.soundForm.View()
 }
 
 func (t *Timer) settingsView() string {
@@ -110,24 +110,24 @@ func (t *Timer) settingsView() string {
 	return ""
 }
 
-func (t *Timer) View() string {
-	if t.waitForNextSession {
-		return t.sessionPromptView()
-	}
-
-	str := t.timerView()
-
-	if t.settings != "" {
-		str += "\n" + t.settingsView()
-	}
-
-	return str
-}
-
 func (t *Timer) helpView() string {
 	return "\n" + t.help.ShortHelpView([]key.Binding{
 		defaultKeymap.togglePlay,
 		defaultKeymap.sound,
 		defaultKeymap.quit,
 	})
+}
+
+func (t *Timer) View() string {
+	if t.waitForNextSession {
+		return defaultStyle.base.Render(t.sessionPromptView())
+	}
+
+	view := t.timerView()
+
+	if t.settings != "" {
+		view += "\n" + t.settingsView()
+	}
+
+	return defaultStyle.base.Render(view)
 }

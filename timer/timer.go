@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log/slog"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,6 +34,7 @@ import (
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/models"
 	"github.com/ayoisaiah/focus/internal/timeutil"
+	"github.com/ayoisaiah/focus/report"
 	"github.com/ayoisaiah/focus/store"
 )
 
@@ -64,7 +65,6 @@ type (
 		SessionKey         time.Time           `json:"session_key"`
 		WorkCycle          int                 `json:"work_cycle"`
 		Current            *Session
-		Context            context.Context
 		waitForNextSession bool
 		help               help.Model
 		progress           progress.Model
@@ -74,7 +74,7 @@ type (
 	keymap struct {
 		togglePlay key.Binding
 		sound      key.Binding
-		beginSess  key.Binding
+		enter      key.Binding
 		quit       key.Binding
 		esc        key.Binding
 	}
@@ -98,25 +98,18 @@ type (
 )
 
 // Persist saves the current timer and session to the database.
-func (t *Timer) Persist(c context.Context, sess *Session) error {
+func (t *Timer) Persist(sess *Session) error {
 	if sess.Name != config.Work {
 		return nil
 	}
 
-	sess.Normalise(c)
+	sess.Normalise()
 
 	sessModel := sess.ToDBModel()
 
 	m := map[time.Time]*models.Session{
 		sess.StartTime: sessModel,
 	}
-
-	logMsg := "syncing in-progress session to db"
-	if sess.Completed {
-		logMsg = "syncing completed session to db"
-	}
-
-	slog.InfoContext(c, logMsg, slog.Any("session", sessModel))
 
 	err := t.db.UpdateSessions(m)
 	if err != nil {
@@ -133,8 +126,6 @@ func (t *Timer) Persist(c context.Context, sess *Session) error {
 		StartTime:  t.StartTime,
 	}
 
-	slog.InfoContext(c, "syncing timer to db", slog.Any("timer", timer))
-
 	err = t.db.UpdateTimer(&timer)
 	if err != nil {
 		return err
@@ -144,7 +135,7 @@ func (t *Timer) Persist(c context.Context, sess *Session) error {
 }
 
 // runSessionCmd executes the specified command.
-func (t *Timer) runSessionCmd(c context.Context, sessionCmd string) error {
+func (t *Timer) runSessionCmd(sessionCmd string) error {
 	if sessionCmd == "" {
 		return nil
 	}
@@ -160,13 +151,6 @@ func (t *Timer) runSessionCmd(c context.Context, sessionCmd string) error {
 
 	name := cmdSlice[0]
 	args := cmdSlice[1:]
-
-	slog.InfoContext(
-		c,
-		"executing session command",
-		slog.Any("name", name),
-		slog.Any("args", args),
-	)
 
 	cmd := exec.Command(name, args...)
 
@@ -363,7 +347,7 @@ func (t *Timer) update() {
 
 			s.UpdateEndTime()
 
-			_ = t.Persist(t.Context, &s)
+			_ = t.Persist(&s)
 		}(t.Current)
 	}
 }
@@ -372,26 +356,17 @@ func (t *Timer) endSession() error {
 	t.Current.UpdateEndTime()
 	t.Current.Completed = true
 
-	err := t.Persist(t.Context, t.Current)
+	err := t.Persist(t.Current)
 	if err != nil {
 		return err
 	}
 
-	sessName := t.nextSession(t.Current.Name)
+	// t.notify(t.Context, t.Current.Name, sessName)
 
-	t.notify(t.Context, t.Current.Name, sessName)
-
-	err = t.runSessionCmd(t.Context, t.Opts.SessionCmd)
+	err = t.runSessionCmd(t.Opts.SessionCmd)
 	if err != nil {
 		return err
 	}
-
-	if sessName == config.Work && !t.Opts.AutoStartWork ||
-		sessName != config.Work && !t.Opts.AutoStartBreak {
-		t.waitForNextSession = true
-	}
-
-	t.Current = t.NewSession(sessName, time.Now())
 
 	return nil
 }
@@ -399,24 +374,28 @@ func (t *Timer) endSession() error {
 // NewSession initialises a new session.
 func (t *Timer) NewSession(
 	name config.SessType,
-	startTime time.Time,
 ) *Session {
+	duration := t.Opts.Duration[name]
+	startTime := time.Now()
+	endTime := startTime.Add(duration)
+
 	sess := &Session{
 		Name:      name,
-		Duration:  t.Opts.Duration[name],
+		Duration:  duration,
 		Tags:      t.Opts.Tags,
 		Completed: false,
 		StartTime: startTime,
+		EndTime:   endTime,
 		Timeline: []Timeline{
 			{
 				StartTime: startTime,
+				EndTime:   endTime,
 			},
 		},
 	}
 
-	sess.SetEndTime()
-
 	// increment or reset the work cycle accordingly
+	// TODO:: This should be a part of the timer lifecycle
 	if name == config.Work {
 		if t.WorkCycle == t.Opts.LongBreakInterval {
 			t.WorkCycle = 1
@@ -555,22 +534,80 @@ func Recover(
 	return t, sess, err
 }
 
-func (t *Timer) Init() tea.Cmd {
-	t.StartTime = time.Now()
-	t.clock = btimer.New(t.Current.Duration)
+func (t *Timer) new() tea.Cmd {
+	sessName := t.nextSession(t.Current.Name)
+	t.Current = t.NewSession(sessName)
 
-	if t.Opts.AmbientSound != "" {
-		if t.Current.Name == config.Work || t.Opts.PlaySoundOnBreak {
-			speaker.Clear()
-			speaker.Play(t.SoundStream)
-		} else {
-			speaker.Clear()
+	if t.Current.Name == config.Work && !t.Opts.AutoStartWork ||
+		t.Current.Name != config.Work && !t.Opts.AutoStartBreak {
+		t.waitForNextSession = true
+	}
+
+	if !t.waitForNextSession {
+		t.clock = btimer.New(t.Current.Duration)
+		return t.clock.Init()
+	}
+
+	return nil
+}
+
+func (t *Timer) createSession() (*Session, error) {
+	sess := t.NewSession(config.Work)
+
+	if t.Opts.Since != "" {
+		sess.Adjust(t.Opts.StartTime)
+
+		sessions, err := t.db.GetSessions(
+			sess.StartTime,
+			time.Now(),
+			[]string{},
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(sessions) > 0 {
+			return nil, errSessionOverlap
+		}
+
+		if time.Now().After(sess.EndTime) {
+			// TODO: This should be a call to end session ideally
+			sess.Completed = true
+
+			err := t.Persist(sess)
+			if err != nil {
+				return nil, err
+			}
+
+			report.SessionAdded()
+
+			return nil, nil
 		}
 	}
 
-	return tea.Batch(t.clock.Init(), t.soundForm.Init())
+	return sess, nil
+}
 
-	// return t.clock.Init()
+func (t *Timer) Init() tea.Cmd {
+	t.StartTime = time.Now()
+
+	if t.Current == nil {
+		sess, err := t.createSession()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// If the session is already completed or abandoned
+		if sess == nil {
+			return tea.Quit
+		}
+
+		t.Current = sess
+	}
+
+	t.clock = btimer.New(t.Current.Duration)
+
+	return tea.Batch(t.clock.Init(), t.soundForm.Init())
 }
 
 // New creates a new timer.
@@ -603,7 +640,7 @@ func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
 			key.WithKeys("s"),
 			key.WithHelp("s", "sound"),
 		),
-		beginSess: key.NewBinding(
+		enter: key.NewBinding(
 			key.WithKeys("enter"),
 			key.WithHelp(
 				"enter",

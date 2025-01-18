@@ -18,7 +18,6 @@ import (
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/models"
 	"github.com/ayoisaiah/focus/internal/ui"
-	"github.com/ayoisaiah/focus/report"
 	"github.com/ayoisaiah/focus/stats"
 	"github.com/ayoisaiah/focus/store"
 	"github.com/ayoisaiah/focus/timer"
@@ -30,14 +29,8 @@ const (
 	envFocusNoColor   = "FOCUS_NO_COLOR"
 )
 
-var (
-	errSessionOverlap = errors.New(
-		"new sessions cannot overlap with existing ones",
-	)
-
-	errStrictMode = errors.New(
-		"session resumption failed: strict mode is enabled",
-	)
+var errStrictMode = errors.New(
+	"session resumption failed: strict mode is enabled",
 )
 
 // firstNonEmptyString returns its first non-empty argument, or "" if all
@@ -223,18 +216,17 @@ func resumeAction(ctx *cli.Context) error {
 	}
 
 	if ctx.Bool("reset") {
-		sess = t.NewSession(config.Work, time.Now())
+		sess = t.NewSession(config.Work)
 		t.WorkCycle = 1
 	}
 
 	if sess == nil || sess.Completed {
-		sess = t.NewSession(config.Work, time.Now())
+		sess = t.NewSession(config.Work)
 	}
 
 	ui.DarkTheme = t.Opts.DarkTheme
 
 	t.Current = sess
-	t.Context = ctx.Context
 
 	slog.Info("yes", "sess", sess)
 
@@ -300,39 +292,6 @@ func defaultAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
-	sess := t.NewSession(config.Work, cfg.StartTime)
-
-	if cfg.Since != "" {
-		sessions, err := dbClient.GetSessions(
-			sess.StartTime,
-			time.Now(),
-			[]string{},
-		)
-		if err != nil {
-			return err
-		}
-
-		if len(sessions) > 0 {
-			return errSessionOverlap
-		}
-	}
-
-	if time.Now().After(sess.EndTime) {
-		sess.Completed = true
-
-		err := t.Persist(ctx.Context, sess)
-		if err != nil {
-			return err
-		}
-
-		report.SessionAdded()
-
-		return nil
-	}
-
-	t.Current = sess
-	t.Context = ctx.Context
 
 	p := tea.NewProgram(t)
 
