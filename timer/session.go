@@ -129,9 +129,10 @@ func (s *Session) RealElapsedTimeInSeconds() float64 {
 }
 
 // UpdateEndTime sets the session end time to the current time.
-func (s *Session) UpdateEndTime() {
+func (s *Session) UpdateEndTime(isCompleted bool) {
 	endTime := time.Now()
 	s.EndTime = endTime
+	s.Completed = isCompleted
 
 	lastIndex := len(s.Timeline) - 1
 	s.Timeline[lastIndex].EndTime = endTime

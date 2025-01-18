@@ -61,7 +61,7 @@ func (t *Timer) timerView() string {
 		timeFormat = "03:04:05 PM"
 	}
 
-	if !t.clock.Running() && t.Current.Completed {
+	if !t.clock.Running() && !t.clock.Timedout() {
 		s.WriteString(
 			lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#DB2763")).

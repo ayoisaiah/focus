@@ -192,51 +192,6 @@ func listAction(ctx *cli.Context) error {
 	return listSessions(sessions)
 }
 
-// resumeAction handles the resume command and recovers a previously interrupted
-// timer.
-func resumeAction(ctx *cli.Context) error {
-	cfg := config.Timer(ctx)
-
-	if cfg.Strict {
-		return errStrictMode
-	}
-
-	dbClient, err := store.NewClient(config.DBFilePath())
-	if err != nil {
-		return err
-	}
-
-	t, sess, err := timer.Recover(dbClient, ctx)
-	if err != nil {
-		return err
-	}
-
-	if t.Opts.Strict {
-		return errStrictMode
-	}
-
-	if ctx.Bool("reset") {
-		sess = t.NewSession(config.Work)
-		t.WorkCycle = 1
-	}
-
-	if sess == nil || sess.Completed {
-		sess = t.NewSession(config.Work)
-	}
-
-	ui.DarkTheme = t.Opts.DarkTheme
-
-	t.Current = sess
-
-	slog.Info("yes", "sess", sess)
-
-	p := tea.NewProgram(t)
-
-	_, err = p.Run()
-
-	return err
-}
-
 // statsAction computes the stats for the specified time period.
 func statsAction(ctx *cli.Context) error {
 	sessions, db, err := sessionHelper(ctx)
@@ -276,6 +231,49 @@ func statusAction(_ *cli.Context) error {
 	t := &timer.Timer{}
 
 	return t.ReportStatus()
+}
+
+// resumeAction handles the resume command and recovers a previously interrupted
+// timer.
+func resumeAction(ctx *cli.Context) error {
+	cfg := config.Timer(ctx)
+
+	if cfg.Strict {
+		return errStrictMode
+	}
+
+	dbClient, err := store.NewClient(config.DBFilePath())
+	if err != nil {
+		return err
+	}
+
+	t, sess, err := timer.Recover(dbClient, ctx)
+	if err != nil {
+		return err
+	}
+
+	if t.Opts.Strict {
+		return errStrictMode
+	}
+
+	if ctx.Bool("reset") {
+		sess = t.NewSession(config.Work)
+		t.WorkCycle = 1
+	}
+
+	if sess == nil || sess.Completed {
+		sess = t.NewSession(config.Work)
+	}
+
+	ui.DarkTheme = t.Opts.DarkTheme
+
+	t.Current = sess
+
+	p := tea.NewProgram(t)
+
+	_, err = p.Run()
+
+	return err
 }
 
 // defaultAction starts a timer or adds a completed session depending on the

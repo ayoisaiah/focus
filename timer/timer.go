@@ -98,10 +98,14 @@ type (
 )
 
 // Persist saves the current timer and session to the database.
-func (t *Timer) Persist(sess *Session) error {
+func (t *Timer) Persist() error {
+	sess := *t.Current
+
 	if sess.Name != config.Work {
 		return nil
 	}
+
+	sess.UpdateEndTime(t.clock.Timedout())
 
 	sess.Normalise()
 
@@ -340,30 +344,22 @@ func (t *Timer) nextSession(current config.SessType) config.SessType {
 	return next
 }
 
-func (t *Timer) update() {
-	if int(t.clock.Timeout.Seconds())%60 == 0 {
-		go func(sess *Session) {
-			s := *sess
+// func (t *Timer) update() {
+// 	if int(t.clock.Timeout.Seconds())%60 == 0 {
+// 		go func(sess *Session) {
+// 			s := *sess
+//
+// 			s.UpdateEndTime()
+//
+// 			_ = t.Persist(&s)
+// 		}(t.Current)
+// 	}
+// }
 
-			s.UpdateEndTime()
-
-			_ = t.Persist(&s)
-		}(t.Current)
-	}
-}
-
-func (t *Timer) endSession() error {
-	t.Current.UpdateEndTime()
-	t.Current.Completed = true
-
-	err := t.Persist(t.Current)
-	if err != nil {
-		return err
-	}
-
+func (t *Timer) postSessionTasks() error {
 	// t.notify(t.Context, t.Current.Name, sessName)
 
-	err = t.runSessionCmd(t.Opts.SessionCmd)
+	err := t.runSessionCmd(t.Opts.SessionCmd)
 	if err != nil {
 		return err
 	}
@@ -379,7 +375,7 @@ func (t *Timer) NewSession(
 	startTime := time.Now()
 	endTime := startTime.Add(duration)
 
-	sess := &Session{
+	return &Session{
 		Name:      name,
 		Duration:  duration,
 		Tags:      t.Opts.Tags,
@@ -393,18 +389,6 @@ func (t *Timer) NewSession(
 			},
 		},
 	}
-
-	// increment or reset the work cycle accordingly
-	// TODO:: This should be a part of the timer lifecycle
-	if name == config.Work {
-		if t.WorkCycle == t.Opts.LongBreakInterval {
-			t.WorkCycle = 1
-		} else {
-			t.WorkCycle++
-		}
-	}
-
-	return sess
 }
 
 // overrideOptsOnResume overrides timer options if specified through
@@ -548,6 +532,15 @@ func (t *Timer) new() tea.Cmd {
 		return t.clock.Init()
 	}
 
+	// increment or reset the work cycle accordingly
+	if sessName == config.Work {
+		if t.WorkCycle == t.Opts.LongBreakInterval {
+			t.WorkCycle = 1
+		} else {
+			t.WorkCycle++
+		}
+	}
+
 	return nil
 }
 
@@ -571,10 +564,7 @@ func (t *Timer) createSession() (*Session, error) {
 		}
 
 		if time.Now().After(sess.EndTime) {
-			// TODO: This should be a call to end session ideally
-			sess.Completed = true
-
-			err := t.Persist(sess)
+			err := t.Persist()
 			if err != nil {
 				return nil, err
 			}
@@ -603,9 +593,11 @@ func (t *Timer) Init() tea.Cmd {
 		}
 
 		t.Current = sess
+		t.WorkCycle = 1
+		t.clock = btimer.New(t.Current.Duration)
+	} else {
+		t.clock = btimer.New(time.Until(t.Current.EndTime))
 	}
-
-	t.clock = btimer.New(t.Current.Duration)
 
 	return tea.Batch(t.clock.Init(), t.soundForm.Init())
 }

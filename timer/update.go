@@ -16,7 +16,7 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case btimer.TickMsg:
 		t.clock, cmd = t.clock.Update(msg)
-		t.update()
+		// t.update()
 
 		return t, cmd
 
@@ -27,14 +27,13 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.StartTime = time.Now()
 			t.Current.SetEndTime()
 		} else {
-			t.Current.UpdateEndTime()
-			_ = t.Persist(t.Current)
+			_ = t.Persist()
 		}
 
 		return t, cmd
 
 	case btimer.TimeoutMsg:
-		_ = t.endSession()
+		_ = t.Persist()
 
 		cmd = t.new()
 
@@ -66,9 +65,7 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, cmd
 
 		case key.Matches(msg, defaultKeymap.quit):
-			// TODO: endSesssion should take care of this
-			t.Current.UpdateEndTime()
-			_ = t.Persist(t.Current)
+			_ = t.Persist()
 
 			return t, tea.Batch(tea.ClearScreen, tea.Quit)
 		}
@@ -83,7 +80,9 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// FrameMsg is sent when the progress bar wants to animate itself
 	case progress.FrameMsg:
-		progressModel, cmd := t.progress.Update(msg)
+		var progressModel tea.Model
+
+		progressModel, cmd = t.progress.Update(msg)
 		t.progress, _ = progressModel.(progress.Model)
 
 		return t, cmd
