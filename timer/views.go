@@ -29,7 +29,6 @@ func (t *Timer) sessionPromptView() string {
 			String(),
 	)
 	s.WriteString("\n\n" + msg)
-	s.WriteString(defaultStyle.help.Render("press ENTER to continue.\n"))
 
 	return s.String()
 }
@@ -71,8 +70,20 @@ func (t *Timer) timerView() string {
 	} else {
 		s.WriteString(
 			strings.TrimSpace(
-				defaultStyle.help.SetString(fmt.Sprintf("(until %s)", t.Current.EndTime.Format(timeFormat))).String()),
+				defaultStyle.help.SetString("until " + t.Current.EndTime.Format(timeFormat)).String()),
 		)
+	}
+
+	if t.Current.Name == config.Work {
+		s.WriteString(
+			strings.TrimSpace(
+				defaultStyle.help.SetString(
+					fmt.Sprintf(
+						" (%d/%d)",
+						t.WorkCycle,
+						t.Opts.LongBreakInterval,
+					),
+				).String()))
 	}
 
 	s.WriteString("\n\n")
@@ -111,22 +122,44 @@ func (t *Timer) settingsView() string {
 }
 
 func (t *Timer) helpView() string {
+	if t.waitForNextSession {
+		return "\n" + t.help.ShortHelpView([]key.Binding{
+			defaultKeymap.enter,
+			defaultKeymap.quit,
+		})
+	}
+
+	if t.Current.Name == config.Work {
+		return "\n" + t.help.ShortHelpView([]key.Binding{
+			defaultKeymap.togglePlay,
+			defaultKeymap.sound,
+			defaultKeymap.quit,
+		})
+	}
+
 	return "\n" + t.help.ShortHelpView([]key.Binding{
-		defaultKeymap.togglePlay,
-		defaultKeymap.sound,
+		defaultKeymap.esc,
 		defaultKeymap.quit,
 	})
 }
 
 func (t *Timer) View() string {
 	if t.waitForNextSession {
-		return defaultStyle.base.Render(t.sessionPromptView())
+		return defaultStyle.base.Render(
+			t.sessionPromptView(),
+			"\n",
+			t.helpView(),
+		)
+	}
+
+	if t.clock.Timedout() || t.Current.Completed {
+		return ""
 	}
 
 	view := t.timerView()
 
 	if t.settings != "" {
-		view += "\n" + t.settingsView()
+		view += "\n\n" + t.settingsView()
 	}
 
 	return defaultStyle.base.Render(view)

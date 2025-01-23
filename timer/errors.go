@@ -11,7 +11,7 @@ var (
 		Message: "invalid input: only comma-separated numbers are accepted",
 	}
 
-	errSessionOverlap = &apperr.Error{
-		Message: "new sessions cannot overlap with existing ones",
+	errStrictMode = &apperr.Error{
+		Message: "session resumption failed: strict mode is enabled",
 	}
 )

@@ -46,8 +46,6 @@ func (s *Session) IsResuming() bool {
 	return true
 }
 
-// Adjust will be used when --since / --until is used
-// TODO: Add until.
 func (s *Session) Adjust(since time.Time) {
 	s.StartTime = since
 	s.EndTime = s.StartTime.Add(s.Duration)

@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -344,18 +343,6 @@ func (t *Timer) nextSession(current config.SessType) config.SessType {
 	return next
 }
 
-// func (t *Timer) update() {
-// 	if int(t.clock.Timeout.Seconds())%60 == 0 {
-// 		go func(sess *Session) {
-// 			s := *sess
-//
-// 			s.UpdateEndTime()
-//
-// 			_ = t.Persist(&s)
-// 		}(t.Current)
-// 	}
-// }
-
 func (t *Timer) postSessionTasks() error {
 	// t.notify(t.Context, t.Current.Name, sessName)
 
@@ -367,8 +354,8 @@ func (t *Timer) postSessionTasks() error {
 	return nil
 }
 
-// NewSession initialises a new session.
-func (t *Timer) NewSession(
+// newSession creates a new session.
+func (t *Timer) newSession(
 	name config.SessType,
 ) *Session {
 	duration := t.Opts.Duration[name]
@@ -475,10 +462,10 @@ func newSessionFromDB(s *models.Session) *Session {
 func Recover(
 	db store.DB,
 	ctx *cli.Context,
-) (*Timer, *Session, error) {
+) (*Timer, error) {
 	pausedTimers, pausedSessions, err := getTimerSessions(db)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var selectedTimer *models.Timer
@@ -488,7 +475,7 @@ func Recover(
 
 		selectedTimer, err = selectPausedTimer(pausedTimers)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	} else {
 		selectedTimer = pausedTimers[0]
@@ -496,12 +483,12 @@ func Recover(
 
 	s, err := db.GetSession(selectedTimer.SessionKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	t, err := New(db, selectedTimer.Opts)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	t.PausedTime = selectedTimer.PausedTime
@@ -513,23 +500,20 @@ func Recover(
 
 	sess.SetEndTime()
 
+	t.Current = sess
+
 	err = t.overrideOptsOnResume(ctx)
 
-	return t, sess, err
+	return t, err
 }
 
-func (t *Timer) new() tea.Cmd {
+func (t *Timer) initSession() tea.Cmd {
 	sessName := t.nextSession(t.Current.Name)
-	t.Current = t.NewSession(sessName)
+	t.Current = t.newSession(sessName)
 
 	if t.Current.Name == config.Work && !t.Opts.AutoStartWork ||
 		t.Current.Name != config.Work && !t.Opts.AutoStartBreak {
 		t.waitForNextSession = true
-	}
-
-	if !t.waitForNextSession {
-		t.clock = btimer.New(t.Current.Duration)
-		return t.clock.Init()
 	}
 
 	// increment or reset the work cycle accordingly
@@ -541,62 +525,88 @@ func (t *Timer) new() tea.Cmd {
 		}
 	}
 
+	if !t.waitForNextSession {
+		t.clock = btimer.New(t.Current.Duration)
+		return t.clock.Init()
+	}
+
 	return nil
 }
 
 func (t *Timer) createSession() (*Session, error) {
-	sess := t.NewSession(config.Work)
+	sess := t.newSession(config.Work)
 
 	if t.Opts.Since != "" {
 		sess.Adjust(t.Opts.StartTime)
 
-		sessions, err := t.db.GetSessions(
-			sess.StartTime,
-			time.Now(),
-			[]string{},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(sessions) > 0 {
-			return nil, errSessionOverlap
-		}
-
 		if time.Now().After(sess.EndTime) {
+			t.Current = sess
+
 			err := t.Persist()
 			if err != nil {
 				return nil, err
 			}
 
-			report.SessionAdded()
-
-			return nil, nil
+			sess.Completed = true
 		}
 	}
 
 	return sess, nil
 }
 
+func (t *Timer) resuming() error {
+	if t.Opts.Strict {
+		return errStrictMode
+	}
+
+	// TODO: Reset should be in Opts
+	// if ctx.Bool("reset") {
+	// 	t.Current = t.NewSession(config.Work)
+	// 	t.WorkCycle = 1
+	// }
+
+	if t.Current.Completed {
+		t.Current = t.newSession(config.Work)
+
+		// TODO: May need to increment work session here
+	}
+
+	t.clock = btimer.New(time.Until(t.Current.EndTime))
+
+	return nil
+}
+
+func (t *Timer) new() error {
+	sess, err := t.createSession()
+	if err != nil {
+		return err
+	}
+
+	t.Current = sess
+	t.WorkCycle = 1
+	t.clock = btimer.New(t.Current.Duration)
+
+	return nil
+}
+
 func (t *Timer) Init() tea.Cmd {
 	t.StartTime = time.Now()
 
-	if t.Current == nil {
-		sess, err := t.createSession()
-		if err != nil {
-			log.Fatal(err)
-		}
+	var err error
 
-		// If the session is already completed or abandoned
-		if sess == nil {
+	if t.Current == nil {
+		err = t.new()
+
+		if t.Current.Completed {
+			report.SessionAdded()
 			return tea.Quit
 		}
-
-		t.Current = sess
-		t.WorkCycle = 1
-		t.clock = btimer.New(t.Current.Duration)
 	} else {
-		t.clock = btimer.New(time.Until(t.Current.EndTime))
+		err = t.resuming()
+	}
+
+	if err != nil {
+		return report.Fatal(err)
 	}
 
 	return tea.Batch(t.clock.Init(), t.soundForm.Init())
@@ -636,7 +646,7 @@ func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
 			key.WithKeys("enter"),
 			key.WithHelp(
 				"enter",
-				"Press ENTER to start the next session",
+				"continue",
 			),
 		),
 		quit: key.NewBinding(
@@ -645,7 +655,7 @@ func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
 		),
 		esc: key.NewBinding(
 			key.WithKeys("esc"),
-			key.WithHelp("esc", "cancel"),
+			key.WithHelp("esc", "skip"),
 		),
 	}
 

@@ -8,6 +8,8 @@ import (
 	btimer "github.com/charmbracelet/bubbles/timer"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+
+	"github.com/ayoisaiah/focus/config"
 )
 
 func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -16,7 +18,13 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case btimer.TickMsg:
 		t.clock, cmd = t.clock.Update(msg)
-		// t.update()
+
+		// Persist timer every 60 seconds to aid recovery
+		if int(t.clock.Timeout.Seconds())%60 == 0 {
+			go func() {
+				_ = t.Persist()
+			}()
+		}
 
 		return t, cmd
 
@@ -35,7 +43,7 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case btimer.TimeoutMsg:
 		_ = t.Persist()
 
-		cmd = t.new()
+		cmd = t.initSession()
 
 		return t, cmd
 
@@ -53,15 +61,29 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, cmd
 
 		case key.Matches(msg, defaultKeymap.sound):
-			t.settings = soundView
+			if !t.clock.Timedout() {
+				t.settings = soundView
+			}
+
 			return t, nil
 
 		case key.Matches(msg, defaultKeymap.esc):
+			// Skip break sessions
+			if t.Current.Name != config.Work && t.clock.Running() {
+				return t, tea.Batch(t.clock.Stop(), t.initSession())
+			}
+
 			t.settings = ""
+
 			return t, nil
 
 		case key.Matches(msg, defaultKeymap.togglePlay):
+			if t.Current.Name != config.Work {
+				return t, nil
+			}
+
 			cmd = t.clock.Toggle()
+
 			return t, cmd
 
 		case key.Matches(msg, defaultKeymap.quit):

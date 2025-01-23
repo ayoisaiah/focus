@@ -10,7 +10,6 @@ import (
 	"time"
 
 	bolt "go.etcd.io/bbolt"
-	"golang.org/x/exp/slog"
 
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/models"
@@ -322,12 +321,6 @@ func NewClient(dbFilePath string) (*Client, error) {
 		}
 
 		if version != config.Version {
-			slog.Info(
-				"updating db version",
-				slog.Any("previous_version", version),
-				slog.Any("new_version", config.Version),
-			)
-
 			return bucket.Put([]byte("version"), []byte(config.Version))
 		}
 

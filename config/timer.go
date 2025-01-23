@@ -4,8 +4,6 @@ package config
 
 import (
 	"errors"
-	"log"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -19,6 +17,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/ayoisaiah/focus/internal/timeutil"
+	"github.com/ayoisaiah/focus/report"
 )
 
 type (
@@ -334,7 +333,7 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 	if timerCfg.Since != "" {
 		sinceTime, err := timeutil.FromStr(timerCfg.Since)
 		if err != nil {
-			log.Fatal(err)
+			report.Quit(err)
 		}
 
 		timerCfg.StartTime = sinceTime
@@ -505,15 +504,42 @@ func initTimerConfig() error {
 	return nil
 }
 
+func validate() error {
+	// db, err := store.NewClient(dbFilePath)
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// sessions, err := db.GetSessions(
+	// 	timerCfg.StartTime,
+	// 	time.Now(),
+	// 	[]string{},
+	// )
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// if len(sessions) > 0 {
+	// 	return errSessionOverlap
+	// }
+
+	return nil
+}
+
 // Timer initializes and returns the timer configuration.
 func Timer(ctx *cli.Context) *TimerConfig {
 	once.Do(func() {
 		err := initTimerConfig()
 		if err != nil {
-			pterm.Error.Printfln("%s: %s", errInitFailed.Error(), err.Error())
-			os.Exit(1)
+			report.Quit(err)
 		}
+
 		setTimerConfig(ctx)
+
+		err = validate()
+		if err != nil {
+			report.Quit(err)
+		}
 	})
 
 	return timerCfg

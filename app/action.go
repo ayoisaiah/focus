@@ -17,7 +17,6 @@ import (
 
 	"github.com/ayoisaiah/focus/config"
 	"github.com/ayoisaiah/focus/internal/models"
-	"github.com/ayoisaiah/focus/internal/ui"
 	"github.com/ayoisaiah/focus/stats"
 	"github.com/ayoisaiah/focus/store"
 	"github.com/ayoisaiah/focus/timer"
@@ -247,27 +246,10 @@ func resumeAction(ctx *cli.Context) error {
 		return err
 	}
 
-	t, sess, err := timer.Recover(dbClient, ctx)
+	t, err := timer.Recover(dbClient, ctx)
 	if err != nil {
 		return err
 	}
-
-	if t.Opts.Strict {
-		return errStrictMode
-	}
-
-	if ctx.Bool("reset") {
-		sess = t.NewSession(config.Work)
-		t.WorkCycle = 1
-	}
-
-	if sess == nil || sess.Completed {
-		sess = t.NewSession(config.Work)
-	}
-
-	ui.DarkTheme = t.Opts.DarkTheme
-
-	t.Current = sess
 
 	p := tea.NewProgram(t)
 
@@ -293,9 +275,9 @@ func defaultAction(ctx *cli.Context) error {
 
 	p := tea.NewProgram(t)
 
-	p.Run()
+	_, err = p.Run()
 
-	return nil
+	return err
 }
 
 func beforeAction(ctx *cli.Context) error {
