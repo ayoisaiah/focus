@@ -343,7 +343,7 @@ func (t *Timer) nextSession(current config.SessType) config.SessType {
 	return next
 }
 
-func (t *Timer) postSessionTasks() error {
+func (t *Timer) postSession() error {
 	// t.notify(t.Context, t.Current.Name, sessName)
 
 	err := t.runSessionCmd(t.Opts.SessionCmd)

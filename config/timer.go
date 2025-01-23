@@ -316,9 +316,9 @@ func overrideConfigFromArgs(ctx *cli.Context) {
 
 	if ctx.String("long-break") != "" {
 		timerCfg.Duration[LongBreak] = parseTime(
-			ctx.String("short-break"),
-			configShortBreakDur,
-			defaultShortBreakMins,
+			ctx.String("long-break"),
+			configLongBreakDur,
+			defaultLongBreakMins,
 		)
 	}
 
