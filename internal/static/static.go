@@ -11,7 +11,7 @@ import (
 	"github.com/adrg/xdg"
 	"github.com/pterm/pterm"
 
-	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/config"
 )
 
 const (

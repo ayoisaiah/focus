@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/exp/slog"
 
-	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/config"
 )
 
 type SessionTimeline struct {

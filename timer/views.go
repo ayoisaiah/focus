@@ -8,8 +8,19 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/config"
+	"github.com/ayoisaiah/focus/internal/timeutil"
 )
+
+// formatTimeRemaining returns the remaining time formatted as "MM:SS".
+// Uses the timer's clock to calculate the remaining duration.
+func (t *Timer) formatTimeRemaining() string {
+	m, s := timeutil.SecsToMinsAndSecs(t.clock.Timeout.Seconds())
+
+	return fmt.Sprintf(
+		"%s:%s", fmt.Sprintf("%02d", m), fmt.Sprintf("%02d", s),
+	)
+}
 
 func (t *Timer) sessionPromptView() string {
 	var s strings.Builder

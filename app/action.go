@@ -15,7 +15,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 
-	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/config"
 	"github.com/ayoisaiah/focus/internal/models"
 	"github.com/ayoisaiah/focus/stats"
 	"github.com/ayoisaiah/focus/store"

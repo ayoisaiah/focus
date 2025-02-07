@@ -3,7 +3,7 @@ package timer
 import (
 	"time"
 
-	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/config"
 	"github.com/ayoisaiah/focus/internal/models"
 	"github.com/ayoisaiah/focus/internal/timeutil"
 )

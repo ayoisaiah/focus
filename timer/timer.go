@@ -30,44 +30,32 @@ import (
 	"github.com/urfave/cli/v2"
 	bolt "go.etcd.io/bbolt"
 
-	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/config"
 	"github.com/ayoisaiah/focus/internal/models"
-	"github.com/ayoisaiah/focus/internal/timeutil"
+	"github.com/ayoisaiah/focus/internal/pathutil"
 	"github.com/ayoisaiah/focus/report"
 	"github.com/ayoisaiah/focus/store"
 )
 
-const (
-	padding  = 2
-	maxWidth = 80
-)
-
-var (
-	defaultStyle  style
-	defaultKeymap keymap
-)
-
-type settingsView string
-
-var soundView settingsView = "sound"
-
 type (
+	settingsView string
+
 	// Timer represents a running timer.
 	Timer struct {
-		clock              btimer.Model
-		soundForm          *huh.Form
-		db                 store.DB            `json:"-"`
-		Opts               *config.TimerConfig `json:"opts"`
-		SoundStream        beep.Streamer       `json:"-"`
-		PausedTime         time.Time           `json:"paused_time"`
+		help               help.Model
 		StartTime          time.Time           `json:"start_time"`
 		SessionKey         time.Time           `json:"session_key"`
-		WorkCycle          int                 `json:"work_cycle"`
+		PausedTime         time.Time           `json:"paused_time"`
+		SoundStream        beep.Streamer       `json:"-"`
+		db                 store.DB            `json:"-"`
+		Opts               *config.TimerConfig `json:"opts"`
 		Current            *Session
-		waitForNextSession bool
-		help               help.Model
-		progress           progress.Model
+		soundForm          *huh.Form
 		settings           settingsView
+		progress           progress.Model
+		clock              btimer.Model
+		WorkCycle          int `json:"work_cycle"`
+		waitForNextSession bool
 	}
 
 	keymap struct {
@@ -85,19 +73,235 @@ type (
 		base       lipgloss.Style
 		help       lipgloss.Style
 	}
+)
 
-	// Status represents the status of a running timer.
-	Status struct {
-		EndTime           time.Time       `json:"end_date"`
-		Name              config.SessType `json:"name"`
-		Tags              []string        `json:"tags"`
-		WorkCycle         int             `json:"work_cycle"`
-		LongBreakInterval int             `json:"long_break_interval"`
+const (
+	padding  = 2
+	maxWidth = 80
+)
+
+var (
+	defaultStyle  style
+	defaultKeymap = keymap{
+		togglePlay: key.NewBinding(
+			key.WithKeys("p"),
+			key.WithHelp("p", "play/pause"),
+		),
+		sound: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp("s", "sound"),
+		),
+		enter: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp(
+				"enter",
+				"continue",
+			),
+		),
+		quit: key.NewBinding(
+			key.WithKeys("ctrl+c", "q"),
+			key.WithHelp("q", "quit"),
+		),
+		esc: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "skip"),
+		),
 	}
 )
 
-// Persist saves the current timer and session to the database.
-func (t *Timer) Persist() error {
+var soundView settingsView = "sound"
+
+// New creates a new timer.
+func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
+	defaultStyle = style{
+		work: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(cfg.WorkColor)).
+			MarginRight(1).
+			SetString(cfg.Message[config.Work]),
+		shortBreak: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(cfg.ShortBreakColor)).
+			MarginRight(1).
+			SetString(cfg.Message[config.ShortBreak]),
+		longBreak: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(cfg.LongBreakColor)).
+			MarginRight(1).
+			SetString(cfg.Message[config.LongBreak]),
+		base: lipgloss.NewStyle().Padding(1, 1),
+		help: lipgloss.NewStyle().
+			Foreground(lipgloss.Color("240")).
+			MarginTop(2),
+	}
+
+	t := &Timer{
+		db:       dbClient,
+		Opts:     cfg,
+		help:     help.New(),
+		progress: progress.New(progress.WithDefaultGradient()),
+		soundForm: huh.NewForm(
+			huh.NewGroup(
+				huh.NewSelect[string]().
+					Key("sound").
+					Options(huh.NewOptions(soundOpts...)...).
+					Title("Select ambient sound"),
+			),
+		),
+	}
+
+	err := t.setAmbientSound()
+
+	return t, err
+}
+
+// Init initializes the timer state and starts the first session.
+// For new timers, it creates a work session. For resumed timers,
+// restores the previous session state.
+func (t *Timer) Init() tea.Cmd {
+	t.StartTime = time.Now()
+
+	var err error
+
+	if t.Current == nil {
+		err = t.new()
+
+		if t.Current.Completed {
+			report.SessionAdded()
+
+			return tea.Quit
+		}
+	} else {
+		err = t.resuming()
+	}
+
+	if err != nil {
+		return report.Fatal(err)
+	}
+
+	return tea.Batch(t.clock.Init(), t.soundForm.Init())
+}
+
+// new creates a new timer.
+func (t *Timer) new() error {
+	sess, err := t.createSession()
+	if err != nil {
+		return err
+	}
+
+	t.Current = sess
+	t.WorkCycle = 1
+	t.clock = btimer.New(t.Current.Duration)
+
+	return nil
+}
+
+// newSession creates a new session.
+func (t *Timer) newSession(
+	name config.SessType,
+) *Session {
+	duration := t.Opts.Duration[name]
+	startTime := time.Now()
+	endTime := startTime.Add(duration)
+
+	return &Session{
+		Name:      name,
+		Duration:  duration,
+		Tags:      t.Opts.Tags,
+		Completed: false,
+		StartTime: startTime,
+		EndTime:   endTime,
+		Timeline: []Timeline{
+			{
+				StartTime: startTime,
+				EndTime:   endTime,
+			},
+		},
+	}
+}
+
+// nextSession determines the type of the next session based on the current
+// session and work cycle count.
+func (t *Timer) nextSession(current config.SessType) config.SessType {
+	var next config.SessType
+
+	switch current {
+	case config.Work:
+		if t.WorkCycle == t.Opts.LongBreakInterval {
+			next = config.LongBreak
+		} else {
+			next = config.ShortBreak
+		}
+	case config.ShortBreak, config.LongBreak:
+		next = config.Work
+	}
+
+	return next
+}
+
+// initSession prepares the next session based on the current session type.
+// It handles work cycle counting, session creation, and auto-start settings.
+// Returns a tea.Cmd for initializing the timer if auto-start is enabled.
+func (t *Timer) initSession() tea.Cmd {
+	sessName := t.nextSession(t.Current.Name)
+	t.Current = t.newSession(sessName)
+
+	if t.Current.Name == config.Work && !t.Opts.AutoStartWork ||
+		t.Current.Name != config.Work && !t.Opts.AutoStartBreak {
+		t.waitForNextSession = true
+	}
+
+	// increment or reset the work cycle accordingly
+	if sessName == config.Work {
+		if t.WorkCycle == t.Opts.LongBreakInterval {
+			t.WorkCycle = 1
+		} else {
+			t.WorkCycle++
+		}
+	}
+
+	if !t.waitForNextSession {
+		t.clock = btimer.New(t.Current.Duration)
+		return t.clock.Init()
+	}
+
+	return nil
+}
+
+// createSession initializes a new work session with the configured start time.
+// If --since is specified, adjusts the session time accordingly.
+// Returns the session and marks it completed if the end time is in the past.
+func (t *Timer) createSession() (*Session, error) {
+	sess := t.newSession(config.Work)
+
+	if t.Opts.Since != "" {
+		sess.Adjust(t.Opts.StartTime)
+
+		if time.Now().After(sess.EndTime) {
+			t.Current = sess
+
+			err := t.persist()
+			if err != nil {
+				return nil, err
+			}
+
+			sess.Completed = true
+		}
+	}
+
+	return sess, nil
+}
+
+func (t *Timer) postSession() error {
+	// t.notify(t.Context, t.Current.Name, sessName)
+
+	err := t.runSessionCmd(t.Opts.SessionCmd)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// persist saves the current timer and session to the database.
+func (t *Timer) persist() error {
 	sess := *t.Current
 
 	if sess.Name != config.Work {
@@ -137,95 +341,14 @@ func (t *Timer) Persist() error {
 	return nil
 }
 
-// runSessionCmd executes the specified command.
-func (t *Timer) runSessionCmd(sessionCmd string) error {
-	if sessionCmd == "" {
-		return nil
-	}
+// writeStatusFile writes the current timer status to a JSON file.
+// The status includes session details, work cycle count, and timing information.
+// This file is used by other processes to query the timer's current state.
+func (t *Timer) writeStatusFile() error {
+	sess := t.Current
 
-	cmdSlice, err := shellquote.Split(sessionCmd)
-	if err != nil {
-		return fmt.Errorf("unable to parse session_cmd option: %w", err)
-	}
-
-	if len(cmdSlice) == 0 {
-		return nil
-	}
-
-	name := cmdSlice[0]
-	args := cmdSlice[1:]
-
-	cmd := exec.Command(name, args...)
-
-	return cmd.Run()
-}
-
-// ReportStatus reports the status of the currently running timer.
-func (t *Timer) ReportStatus() error {
-	dbFilePath := config.DBFilePath()
-	statusFilePath := config.StatusFilePath()
-
-	var fileMode fs.FileMode = 0o600
-
-	_, err := bolt.Open(dbFilePath, fileMode, &bolt.Options{
-		Timeout: 100 * time.Millisecond,
-	})
-	// This means focus is not running, so no status to report
-	if err == nil {
-		return nil
-	}
-
-	if !errors.Is(err, bolt.ErrDatabaseOpen) &&
-		!errors.Is(err, bolt.ErrTimeout) {
-		return err
-	}
-
-	fileBytes, err := os.ReadFile(statusFilePath)
-	if err != nil {
-		// missing file should not return an error
-		return nil
-	}
-
-	var s Status
-
-	err = json.Unmarshal(fileBytes, &s)
-	if err != nil {
-		return err
-	}
-
-	sess := &Session{
-		EndTime: s.EndTime,
-	}
-	tr := sess.Remaining()
-
-	if tr.T < 0 {
-		return nil
-	}
-
-	var text string
-
-	switch s.Name {
-	case config.Work:
-		text = fmt.Sprintf("[Work %d/%d]",
-			s.WorkCycle,
-			s.LongBreakInterval,
-		)
-	case config.ShortBreak:
-		text = "[Short break]"
-	case config.LongBreak:
-		text = "[Long break]"
-	}
-
-	pterm.Printfln("%s: %02d:%02d", text, tr.M, tr.S)
-
-	return nil
-}
-
-func (t *Timer) writeStatusFile(
-	sess *Session,
-) error {
-	s := Status{
-		Name:              sess.Name,
+	s := report.Status{
+		Name:              string(sess.Name),
 		WorkCycle:         t.WorkCycle,
 		Tags:              sess.Tags,
 		LongBreakInterval: t.Opts.LongBreakInterval,
@@ -261,7 +384,32 @@ func (t *Timer) writeStatusFile(
 	return writer.Flush()
 }
 
-// notify sends a desktop notification and plays a notification sound.
+// runSessionCmd executes the specified command (if any) after a session
+// completes.
+func (t *Timer) runSessionCmd(sessionCmd string) error {
+	if sessionCmd == "" {
+		return nil
+	}
+
+	cmdSlice, err := shellquote.Split(sessionCmd)
+	if err != nil {
+		return fmt.Errorf("unable to parse session_cmd option: %w", err)
+	}
+
+	if len(cmdSlice) == 0 {
+		return nil
+	}
+
+	name := cmdSlice[0]
+	args := cmdSlice[1:]
+
+	cmd := exec.Command(name, args...)
+
+	return cmd.Run()
+}
+
+// notify sends a desktop notification and plays a notification sound when a
+// session ends if enabled.
 func (t *Timer) notify(
 	_ context.Context,
 	sessName, nextSessName config.SessType,
@@ -316,70 +464,144 @@ func (t *Timer) notify(
 	speaker.Close()
 }
 
-// formatTimeRemaining returns the remaining time formatted as "MM:SS".
-func (t *Timer) formatTimeRemaining() string {
-	m, s := timeutil.SecsToMinsAndSecs(t.clock.Timeout.Seconds())
+// ReportStatus reports the status of the currently running timer.
+func (t *Timer) ReportStatus() error {
+	dbFilePath := pathutil.DBFilePath()
+	statusFilePath := pathutil.StatusFilePath()
 
-	return fmt.Sprintf(
-		"%s:%s", fmt.Sprintf("%02d", m), fmt.Sprintf("%02d", s),
-	)
-}
+	var fileMode fs.FileMode = 0o600
 
-// nextSession retrieves the name of the next session.
-func (t *Timer) nextSession(current config.SessType) config.SessType {
-	var next config.SessType
-
-	switch current {
-	case config.Work:
-		if t.WorkCycle == t.Opts.LongBreakInterval {
-			next = config.LongBreak
-		} else {
-			next = config.ShortBreak
-		}
-	case config.ShortBreak, config.LongBreak:
-		next = config.Work
+	_, err := bolt.Open(dbFilePath, fileMode, &bolt.Options{
+		Timeout: 100 * time.Millisecond,
+	})
+	// This means focus is not running, so no status to report
+	if err == nil {
+		return nil
 	}
 
-	return next
-}
+	if !errors.Is(err, bolt.ErrDatabaseOpen) &&
+		!errors.Is(err, bolt.ErrTimeout) {
+		return err
+	}
 
-func (t *Timer) postSession() error {
-	// t.notify(t.Context, t.Current.Name, sessName)
+	fileBytes, err := os.ReadFile(statusFilePath)
+	if err != nil {
+		// missing file should not return an error
+		return nil
+	}
 
-	err := t.runSessionCmd(t.Opts.SessionCmd)
+	var s report.Status
+
+	err = json.Unmarshal(fileBytes, &s)
 	if err != nil {
 		return err
 	}
 
+	sess := &Session{
+		EndTime: s.EndTime,
+	}
+	tr := sess.Remaining()
+
+	if tr.T < 0 {
+		return nil
+	}
+
+	var text string
+
+	switch config.SessType(s.Name) {
+	case config.Work:
+		text = fmt.Sprintf("[Work %d/%d]",
+			s.WorkCycle,
+			s.LongBreakInterval,
+		)
+	case config.ShortBreak:
+		text = "[Short break]"
+	case config.LongBreak:
+		text = "[Long break]"
+	}
+
+	pterm.Printfln("%s: %02d:%02d", text, tr.M, tr.S)
+
 	return nil
 }
 
-// newSession creates a new session.
-func (t *Timer) newSession(
-	name config.SessType,
-) *Session {
-	duration := t.Opts.Duration[name]
-	startTime := time.Now()
-	endTime := startTime.Add(duration)
-
-	return &Session{
-		Name:      name,
-		Duration:  duration,
-		Tags:      t.Opts.Tags,
-		Completed: false,
-		StartTime: startTime,
-		EndTime:   endTime,
-		Timeline: []Timeline{
-			{
-				StartTime: startTime,
-				EndTime:   endTime,
-			},
-		},
+// Recover attempts to recover an interrupted timer.
+func Recover(
+	db store.DB,
+	ctx *cli.Context,
+) (*Timer, error) {
+	pausedTimers, pausedSessions, err := getTimerSessions(db)
+	if err != nil {
+		return nil, err
 	}
+
+	var selectedTimer *models.Timer
+
+	if ctx.Bool("select") {
+		printPausedTimers(pausedTimers, pausedSessions)
+
+		selectedTimer, err = selectPausedTimer(pausedTimers)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		selectedTimer = pausedTimers[0]
+	}
+
+	s, err := db.GetSession(selectedTimer.SessionKey)
+	if err != nil {
+		return nil, err
+	}
+
+	t, err := New(db, selectedTimer.Opts)
+	if err != nil {
+		return nil, err
+	}
+
+	t.PausedTime = selectedTimer.PausedTime
+	t.StartTime = selectedTimer.StartTime
+	t.SessionKey = selectedTimer.SessionKey
+	t.WorkCycle = selectedTimer.WorkCycle
+
+	sess := newSessionFromDB(s)
+
+	sess.SetEndTime()
+
+	t.Current = sess
+
+	err = t.overrideOptsOnResume(ctx)
+
+	return t, err
 }
 
-// overrideOptsOnResume overrides timer options if specified through
-// command-line arguments.
+// resuming handles the logic for resuming an interrupted timer session.
+// Returns an error in strict mode. Otherwise, initializes the clock
+// with the remaining duration of the current session.
+func (t *Timer) resuming() error {
+	if t.Opts.Strict {
+		return errStrictMode
+	}
+
+	// TODO: Reset should be in Opts
+	// if ctx.Bool("reset") {
+	// 	t.Current = t.NewSession(config.Work)
+	// 	t.WorkCycle = 1
+	// }
+
+	if t.Current.Completed {
+		t.Current = t.newSession(config.Work)
+
+		// TODO: May need to increment work session here
+	}
+
+	t.clock = btimer.New(time.Until(t.Current.EndTime))
+
+	return nil
+}
+
+// overrideOptsOnResume updates timer options based on command-line arguments
+// when resuming a session. It allows modification of notifications, sounds,
+// and session commands.
 func (t *Timer) overrideOptsOnResume(ctx *cli.Context) error {
 	if ctx.Bool("disable-notification") {
 		t.Opts.Notify = false
@@ -456,225 +678,4 @@ func newSessionFromDB(s *models.Session) *Session {
 	}
 
 	return sess
-}
-
-// Recover attempts to recover an interrupted timer.
-func Recover(
-	db store.DB,
-	ctx *cli.Context,
-) (*Timer, error) {
-	pausedTimers, pausedSessions, err := getTimerSessions(db)
-	if err != nil {
-		return nil, err
-	}
-
-	var selectedTimer *models.Timer
-
-	if ctx.Bool("select") {
-		printPausedTimers(pausedTimers, pausedSessions)
-
-		selectedTimer, err = selectPausedTimer(pausedTimers)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		selectedTimer = pausedTimers[0]
-	}
-
-	s, err := db.GetSession(selectedTimer.SessionKey)
-	if err != nil {
-		return nil, err
-	}
-
-	t, err := New(db, selectedTimer.Opts)
-	if err != nil {
-		return nil, err
-	}
-
-	t.PausedTime = selectedTimer.PausedTime
-	t.StartTime = selectedTimer.StartTime
-	t.SessionKey = selectedTimer.SessionKey
-	t.WorkCycle = selectedTimer.WorkCycle
-
-	sess := newSessionFromDB(s)
-
-	sess.SetEndTime()
-
-	t.Current = sess
-
-	err = t.overrideOptsOnResume(ctx)
-
-	return t, err
-}
-
-func (t *Timer) initSession() tea.Cmd {
-	sessName := t.nextSession(t.Current.Name)
-	t.Current = t.newSession(sessName)
-
-	if t.Current.Name == config.Work && !t.Opts.AutoStartWork ||
-		t.Current.Name != config.Work && !t.Opts.AutoStartBreak {
-		t.waitForNextSession = true
-	}
-
-	// increment or reset the work cycle accordingly
-	if sessName == config.Work {
-		if t.WorkCycle == t.Opts.LongBreakInterval {
-			t.WorkCycle = 1
-		} else {
-			t.WorkCycle++
-		}
-	}
-
-	if !t.waitForNextSession {
-		t.clock = btimer.New(t.Current.Duration)
-		return t.clock.Init()
-	}
-
-	return nil
-}
-
-func (t *Timer) createSession() (*Session, error) {
-	sess := t.newSession(config.Work)
-
-	if t.Opts.Since != "" {
-		sess.Adjust(t.Opts.StartTime)
-
-		if time.Now().After(sess.EndTime) {
-			t.Current = sess
-
-			err := t.Persist()
-			if err != nil {
-				return nil, err
-			}
-
-			sess.Completed = true
-		}
-	}
-
-	return sess, nil
-}
-
-func (t *Timer) resuming() error {
-	if t.Opts.Strict {
-		return errStrictMode
-	}
-
-	// TODO: Reset should be in Opts
-	// if ctx.Bool("reset") {
-	// 	t.Current = t.NewSession(config.Work)
-	// 	t.WorkCycle = 1
-	// }
-
-	if t.Current.Completed {
-		t.Current = t.newSession(config.Work)
-
-		// TODO: May need to increment work session here
-	}
-
-	t.clock = btimer.New(time.Until(t.Current.EndTime))
-
-	return nil
-}
-
-func (t *Timer) new() error {
-	sess, err := t.createSession()
-	if err != nil {
-		return err
-	}
-
-	t.Current = sess
-	t.WorkCycle = 1
-	t.clock = btimer.New(t.Current.Duration)
-
-	return nil
-}
-
-func (t *Timer) Init() tea.Cmd {
-	t.StartTime = time.Now()
-
-	var err error
-
-	if t.Current == nil {
-		err = t.new()
-
-		if t.Current.Completed {
-			report.SessionAdded()
-			return tea.Quit
-		}
-	} else {
-		err = t.resuming()
-	}
-
-	if err != nil {
-		return report.Fatal(err)
-	}
-
-	return tea.Batch(t.clock.Init(), t.soundForm.Init())
-}
-
-// New creates a new timer.
-func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
-	defaultStyle = style{
-		work: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(cfg.WorkColor)).
-			MarginRight(1).
-			SetString(cfg.Message[config.Work]),
-		shortBreak: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(cfg.ShortBreakColor)).
-			MarginRight(1).
-			SetString(cfg.Message[config.ShortBreak]),
-		longBreak: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(cfg.LongBreakColor)).
-			MarginRight(1).
-			SetString(cfg.Message[config.LongBreak]),
-		base: lipgloss.NewStyle().Padding(1, 1),
-		help: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("240")).
-			MarginTop(2),
-	}
-
-	defaultKeymap = keymap{
-		togglePlay: key.NewBinding(
-			key.WithKeys("p"),
-			key.WithHelp("p", "play/pause"),
-		),
-		sound: key.NewBinding(
-			key.WithKeys("s"),
-			key.WithHelp("s", "sound"),
-		),
-		enter: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp(
-				"enter",
-				"continue",
-			),
-		),
-		quit: key.NewBinding(
-			key.WithKeys("ctrl+c", "q"),
-			key.WithHelp("q", "quit"),
-		),
-		esc: key.NewBinding(
-			key.WithKeys("esc"),
-			key.WithHelp("esc", "skip"),
-		),
-	}
-
-	t := &Timer{
-		db:       dbClient,
-		Opts:     cfg,
-		help:     help.New(),
-		progress: progress.New(progress.WithDefaultGradient()),
-		soundForm: huh.NewForm(
-			huh.NewGroup(
-				huh.NewSelect[string]().
-					Key("sound").
-					Options(huh.NewOptions(soundOpts...)...).
-					Title("Select ambient sound"),
-			),
-		),
-	}
-
-	err := t.setAmbientSound()
-
-	return t, err
 }

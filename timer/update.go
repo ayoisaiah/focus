@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 
-	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/config"
 )
 
 func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -19,10 +19,13 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case btimer.TickMsg:
 		t.clock, cmd = t.clock.Update(msg)
 
-		// Persist timer every 60 seconds to aid recovery
+		_ = t.writeStatusFile()
+
+		// Persist timer every 60 seconds to aid recovery in case of unintended
+		// interruption
 		if int(t.clock.Timeout.Seconds())%60 == 0 {
 			go func() {
-				_ = t.Persist()
+				_ = t.persist()
 			}()
 		}
 
@@ -35,13 +38,15 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.StartTime = time.Now()
 			t.Current.SetEndTime()
 		} else {
-			_ = t.Persist()
+			_ = t.persist()
 		}
 
 		return t, cmd
 
 	case btimer.TimeoutMsg:
-		_ = t.Persist()
+		_ = t.persist()
+
+		_ = t.postSession()
 
 		cmd = t.initSession()
 
@@ -87,7 +92,7 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, cmd
 
 		case key.Matches(msg, defaultKeymap.quit):
-			_ = t.Persist()
+			_ = t.persist()
 
 			return t, tea.Batch(tea.ClearScreen, tea.Quit)
 		}

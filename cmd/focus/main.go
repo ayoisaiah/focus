@@ -8,7 +8,8 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/ayoisaiah/focus/app"
-	"github.com/ayoisaiah/focus/config"
+	"github.com/ayoisaiah/focus/internal/config"
+	"github.com/ayoisaiah/focus/internal/pathutil"
 )
 
 func initLogger() {
@@ -34,6 +35,7 @@ func run(args []string) error {
 }
 
 func main() {
+	pathutil.Initialize()
 	config.InitializePaths()
 
 	initLogger()
