@@ -112,21 +112,6 @@ func deleteAction(ctx *cli.Context) error {
 	return delSessions(db, sessions)
 }
 
-// deleteTimerAction handles the delete-timer command for initiating the
-// deletion of one or more paused timers.
-func deleteTimerAction(ctx *cli.Context) error {
-	db, err := store.NewClient(config.DBFilePath())
-	if err != nil {
-		return err
-	}
-
-	if ctx.Bool("all") {
-		return db.DeleteAllTimers()
-	}
-
-	return timer.Delete(db)
-}
-
 // editConfigAction handles the edit-config command which opens the focus config
 // file in the user's default text editor.
 func editConfigAction(ctx *cli.Context) error {

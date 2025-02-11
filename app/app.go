@@ -8,12 +8,6 @@ import (
 )
 
 var (
-	deleteAllTimersFlag = &cli.BoolFlag{
-		Name:    "all",
-		Aliases: []string{"a"},
-		Usage:   "Delete all paused timers",
-	}
-
 	endTimeFlag = &cli.StringFlag{
 		Name:    "end",
 		Aliases: []string{"e"},
@@ -108,12 +102,6 @@ var (
 		Name:  "port",
 		Usage: "Specify the port for the statistics server",
 		Value: 1111,
-	}
-
-	selectPausedFlag = &cli.BoolFlag{
-		Name:    "select",
-		Aliases: []string{"s"},
-		Usage:   "Select a paused timer from a list",
 	}
 
 	resetTimerFlag = &cli.BoolFlag{
@@ -214,13 +202,6 @@ func Get() *cli.App {
 				Flags:  filterFlags,
 			},
 			{
-				Name:      "delete-timer",
-				Usage:     "Permanently delete the specified paused timers",
-				UsageText: "Provide one or more timer numbers to delete, separated by commas. If you enter 0, all timers will be deleted.",
-				Flags:     []cli.Flag{deleteAllTimersFlag},
-				Action:    deleteTimerAction,
-			},
-			{
 				Name:   "edit-config",
 				Usage:  "Edit the configuration file",
 				Action: editConfigAction,
@@ -242,7 +223,6 @@ func Get() *cli.App {
 				Usage: "Resume a previously interrupted timer",
 				Flags: append(
 					timerFlags,
-					selectPausedFlag,
 					resetTimerFlag,
 				),
 				Action: resumeAction,

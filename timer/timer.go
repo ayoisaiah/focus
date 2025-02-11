@@ -530,23 +530,14 @@ func Recover(
 	db store.DB,
 	ctx *cli.Context,
 ) (*Timer, error) {
-	pausedTimers, pausedSessions, err := getTimerSessions(db)
+	pausedTimers, _, err := getTimerSessions(db)
 	if err != nil {
 		return nil, err
 	}
 
 	var selectedTimer *models.Timer
 
-	if ctx.Bool("select") {
-		printPausedTimers(pausedTimers, pausedSessions)
-
-		selectedTimer, err = selectPausedTimer(pausedTimers)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		selectedTimer = pausedTimers[0]
-	}
+	selectedTimer = pausedTimers[0]
 
 	s, err := db.GetSession(selectedTimer.SessionKey)
 	if err != nil {
@@ -644,18 +635,6 @@ func (t *Timer) overrideOptsOnResume(ctx *cli.Context) error {
 	}
 
 	return nil
-}
-
-// Delete permanently removes one or more paused timers.
-func Delete(db store.DB) error {
-	pausedTimers, pausedSessions, err := getTimerSessions(db)
-	if err != nil {
-		return err
-	}
-
-	printPausedTimers(pausedTimers, pausedSessions)
-
-	return selectAndDeleteTimers(db, pausedTimers)
 }
 
 func newSessionFromDB(s *models.Session) *Session {
