@@ -51,6 +51,7 @@ func migrateSessionsV1_4_0(tx *bbolt.Tx) error {
 // Delete all exisiting timers as it won't be possible to resume paused sessions
 // after migrating the sessions.
 func migrateTimersV1_4_0(tx *bbolt.Tx) error {
+	timerBucket := "timers"
 	bucket := tx.Bucket([]byte(timerBucket))
 
 	cur := bucket.Cursor()

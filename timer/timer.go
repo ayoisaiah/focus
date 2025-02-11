@@ -27,7 +27,6 @@ import (
 	"github.com/gen2brain/beeep"
 	"github.com/kballard/go-shellquote"
 	"github.com/pterm/pterm"
-	"github.com/urfave/cli/v2"
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/ayoisaiah/focus/internal/config"
@@ -152,24 +151,20 @@ func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
 	return t, err
 }
 
-// Init initializes the timer state and starts the first session.
-// For new timers, it creates a work session. For resumed timers,
-// restores the previous session state.
+// Init initializes a timer and starts the first session. It also handles
+// sessions added with the --since flag
 func (t *Timer) Init() tea.Cmd {
 	t.StartTime = time.Now()
 
 	var err error
 
-	if t.Current == nil {
-		err = t.new()
+	err = t.new()
 
-		if t.Current.Completed {
-			report.SessionAdded()
+	// If --since is used to add a completed session
+	if t.Current.Completed {
+		report.SessionAdded()
 
-			return tea.Quit
-		}
-	} else {
-		err = t.resuming()
+		return tea.Quit
 	}
 
 	if err != nil {
@@ -319,21 +314,6 @@ func (t *Timer) persist() error {
 	}
 
 	err := t.db.UpdateSessions(m)
-	if err != nil {
-		return err
-	}
-
-	t.SessionKey = sess.StartTime
-
-	timer := models.Timer{
-		Opts:       t.Opts,
-		PausedTime: time.Now(),
-		SessionKey: t.SessionKey,
-		WorkCycle:  t.WorkCycle,
-		StartTime:  t.StartTime,
-	}
-
-	err = t.db.UpdateTimer(&timer)
 	if err != nil {
 		return err
 	}
@@ -523,138 +503,4 @@ func (t *Timer) ReportStatus() error {
 	pterm.Printfln("%s: %02d:%02d", text, tr.M, tr.S)
 
 	return nil
-}
-
-// Recover attempts to recover an interrupted timer.
-func Recover(
-	db store.DB,
-	ctx *cli.Context,
-) (*Timer, error) {
-	pausedTimers, _, err := getTimerSessions(db)
-	if err != nil {
-		return nil, err
-	}
-
-	var selectedTimer *models.Timer
-
-	selectedTimer = pausedTimers[0]
-
-	s, err := db.GetSession(selectedTimer.SessionKey)
-	if err != nil {
-		return nil, err
-	}
-
-	t, err := New(db, selectedTimer.Opts)
-	if err != nil {
-		return nil, err
-	}
-
-	t.PausedTime = selectedTimer.PausedTime
-	t.StartTime = selectedTimer.StartTime
-	t.SessionKey = selectedTimer.SessionKey
-	t.WorkCycle = selectedTimer.WorkCycle
-
-	sess := newSessionFromDB(s)
-
-	sess.SetEndTime()
-
-	t.Current = sess
-
-	err = t.overrideOptsOnResume(ctx)
-
-	return t, err
-}
-
-// resuming handles the logic for resuming an interrupted timer session.
-// Returns an error in strict mode. Otherwise, initializes the clock
-// with the remaining duration of the current session.
-func (t *Timer) resuming() error {
-	if t.Opts.Strict {
-		return errStrictMode
-	}
-
-	// TODO: Reset should be in Opts
-	// if ctx.Bool("reset") {
-	// 	t.Current = t.NewSession(config.Work)
-	// 	t.WorkCycle = 1
-	// }
-
-	if t.Current.Completed {
-		t.Current = t.newSession(config.Work)
-
-		// TODO: May need to increment work session here
-	}
-
-	t.clock = btimer.New(time.Until(t.Current.EndTime))
-
-	return nil
-}
-
-// overrideOptsOnResume updates timer options based on command-line arguments
-// when resuming a session. It allows modification of notifications, sounds,
-// and session commands.
-func (t *Timer) overrideOptsOnResume(ctx *cli.Context) error {
-	if ctx.Bool("disable-notification") {
-		t.Opts.Notify = false
-	}
-
-	ambientSound := ctx.String("sound")
-	if ambientSound != "" {
-		if ambientSound == config.SoundOff {
-			t.Opts.AmbientSound = ""
-		} else {
-			t.Opts.AmbientSound = ambientSound
-
-			err := t.setAmbientSound()
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	breakSound := ctx.String("break-sound")
-	if breakSound != "" {
-		if breakSound == config.SoundOff {
-			t.Opts.BreakSound = ""
-		} else {
-			t.Opts.BreakSound = breakSound
-		}
-	}
-
-	workSound := ctx.String("work-sound")
-	if workSound != "" {
-		if workSound == config.SoundOff {
-			t.Opts.WorkSound = ""
-		} else {
-			t.Opts.WorkSound = workSound
-		}
-	}
-
-	if ctx.String("session-cmd") != "" {
-		t.Opts.SessionCmd = ctx.String("session-cmd")
-	}
-
-	return nil
-}
-
-func newSessionFromDB(s *models.Session) *Session {
-	sess := &Session{}
-
-	sess.StartTime = s.StartTime
-	sess.EndTime = s.EndTime
-	sess.Name = s.Name
-	sess.Tags = s.Tags
-	sess.Duration = s.Duration
-	sess.Completed = s.Completed
-
-	for _, v := range s.Timeline {
-		timeline := Timeline{
-			StartTime: v.StartTime,
-			EndTime:   v.EndTime,
-		}
-
-		sess.Timeline = append(sess.Timeline, timeline)
-	}
-
-	return sess
 }

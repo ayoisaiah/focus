@@ -217,32 +217,6 @@ func statusAction(_ *cli.Context) error {
 	return t.ReportStatus()
 }
 
-// resumeAction handles the resume command and recovers a previously interrupted
-// timer.
-func resumeAction(ctx *cli.Context) error {
-	cfg := config.Timer(ctx)
-
-	if cfg.Strict {
-		return errStrictMode
-	}
-
-	dbClient, err := store.NewClient(config.DBFilePath())
-	if err != nil {
-		return err
-	}
-
-	t, err := timer.Recover(dbClient, ctx)
-	if err != nil {
-		return err
-	}
-
-	p := tea.NewProgram(t)
-
-	_, err = p.Run()
-
-	return err
-}
-
 // defaultAction starts a timer or adds a completed session depending on the
 // value of --since.
 func defaultAction(ctx *cli.Context) error {

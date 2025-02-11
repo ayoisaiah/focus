@@ -3,8 +3,6 @@ package models
 import (
 	"time"
 
-	"golang.org/x/exp/slog"
-
 	"github.com/ayoisaiah/focus/internal/config"
 )
 
@@ -25,21 +23,4 @@ type Session struct {
 	Timeline  []SessionTimeline `json:"timeline"`
 	Duration  time.Duration     `json:"duration"`
 	Completed bool              `json:"completed"`
-}
-
-type Timer struct {
-	Opts       *config.TimerConfig `json:"opts"`
-	PausedTime time.Time           `json:"paused_time"`
-	StartTime  time.Time           `json:"start_time"`
-	SessionKey time.Time           `json:"session_key"`
-	WorkCycle  int                 `json:"work_cycle"`
-}
-
-func (t *Timer) LogValue() slog.Value {
-	return slog.GroupValue(
-		slog.Time("paused_time", t.PausedTime),
-		slog.Time("start_time", t.StartTime),
-		slog.Time("session_key", t.SessionKey),
-		slog.Int("work_cycle", t.WorkCycle),
-	)
 }

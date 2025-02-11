@@ -23,17 +23,11 @@ type Client struct {
 
 const (
 	sessionBucket = "sessions"
-	timerBucket   = "timers"
 	focusBucket   = "focus"
 )
 
-var (
-	errFocusRunning = errors.New(
-		"is Focus already running? Only one instance can be active at a time",
-	)
-	errNoPausedTimer = errors.New(
-		"no paused timers were found",
-	)
+var errFocusRunning = errors.New(
+	"is Focus already running? Only one instance can be active at a time",
 )
 
 func (c *Client) UpdateSessions(sessions map[time.Time]*models.Session) error {
@@ -53,44 +47,6 @@ func (c *Client) UpdateSessions(sessions map[time.Time]*models.Session) error {
 	return nil
 }
 
-func (c *Client) UpdateTimer(timer *models.Timer) error {
-	b, err := json.Marshal(timer)
-	if err != nil {
-		return err
-	}
-
-	return c.Update(func(tx *bolt.Tx) error {
-		bk := tx.Bucket([]byte(timerBucket))
-
-		return bk.Put(timeutil.ToKey(timer.StartTime), b)
-	})
-}
-
-func (c *Client) GetSession(
-	startTime time.Time,
-) (*models.Session, error) {
-	var sessBytes []byte
-
-	err := c.View(func(tx *bolt.Tx) error {
-		key := timeutil.ToKey(startTime)
-
-		sessBytes = tx.Bucket([]byte(sessionBucket)).Get(key)
-
-		return nil
-	})
-
-	var sess models.Session
-
-	if len(sessBytes) != 0 {
-		err = json.Unmarshal(sessBytes, &sess)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &sess, err
-}
-
 func (c *Client) DeleteSessions(startTimes []time.Time) error {
 	return c.Update(func(tx *bolt.Tx) error {
 		for i := range startTimes {
@@ -100,50 +56,10 @@ func (c *Client) DeleteSessions(startTimes []time.Time) error {
 			if err != nil {
 				return err
 			}
-
-			// Delete any associated timers
-			cur := tx.Bucket([]byte(timerBucket)).Cursor()
-			for k, v := cur.First(); k != nil; k, v = cur.Next() {
-				var t models.Timer
-				err := json.Unmarshal(v, &t)
-				if err != nil {
-					return err
-				}
-
-				if t.SessionKey.Equal(startTimes[i]) {
-					err = cur.Delete()
-					if err != nil {
-						return err
-					}
-				}
-			}
 		}
 
 		return nil
 	})
-}
-
-func (c *Client) DeleteTimer(startTime time.Time) error {
-	return c.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket([]byte(timerBucket)).Delete(timeutil.ToKey(startTime))
-	})
-}
-
-func (c *Client) DeleteAllTimers() error {
-	err := c.Update(func(tx *bolt.Tx) error {
-		c := tx.Bucket([]byte(timerBucket)).Cursor()
-
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			err := c.Delete()
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	return err
 }
 
 func (c *Client) Open() error {
@@ -157,39 +73,6 @@ func (c *Client) Open() error {
 	}
 
 	return nil
-}
-
-func (c *Client) RetrievePausedTimers() ([]*models.Timer, error) {
-	var timers [][]byte
-
-	err := c.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket([]byte(timerBucket)).Cursor()
-
-		for k, v := c.Last(); k != nil; k, v = c.Prev() {
-			timers = append(timers, v)
-		}
-
-		return nil
-	})
-
-	if len(timers) == 0 {
-		return nil, errNoPausedTimer
-	}
-
-	pausedTimers := make([]*models.Timer, len(timers))
-
-	for i := range timers {
-		var t models.Timer
-
-		err = json.Unmarshal(timers[i], &t)
-		if err != nil {
-			return nil, err
-		}
-
-		pausedTimers[i] = &t
-	}
-
-	return pausedTimers, err
 }
 
 func (c *Client) GetSessions(
@@ -281,11 +164,6 @@ func NewClient(dbFilePath string) (*Client, error) {
 	// Create the necessary buckets for storing data if they do not exist already
 	err = db.Update(func(tx *bolt.Tx) error {
 		_, err = tx.CreateBucketIfNotExists([]byte(sessionBucket))
-		if err != nil {
-			return err
-		}
-
-		_, err = tx.CreateBucketIfNotExists([]byte(timerBucket))
 		if err != nil {
 			return err
 		}

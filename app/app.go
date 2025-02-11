@@ -219,15 +219,6 @@ func Get() *cli.App {
 				Flags:  append(filterFlags, listJSONFlag),
 			},
 			{
-				Name:  "resume",
-				Usage: "Resume a previously interrupted timer",
-				Flags: append(
-					timerFlags,
-					resetTimerFlag,
-				),
-				Action: resumeAction,
-			},
-			{
 				Name:   "stats",
 				Usage:  "Track your progress with detailed statistics reporting. Defaults to a reporting period of 7 days",
 				Action: statsAction,
