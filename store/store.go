@@ -10,6 +10,7 @@ import (
 	"time"
 
 	bolt "go.etcd.io/bbolt"
+	bolterr "go.etcd.io/bbolt/errors"
 
 	"github.com/ayoisaiah/focus/internal/config"
 	"github.com/ayoisaiah/focus/internal/models"
@@ -93,6 +94,7 @@ func (c *Client) GetSessions(
 		pk, pv := c.Prev()
 		if pk != nil {
 			var sess models.Session
+
 			err := json.Unmarshal(pv, &sess)
 			if err != nil {
 				return err
@@ -111,6 +113,7 @@ func (c *Client) GetSessions(
 
 		for k, v := sk, sv; k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
 			var sess models.Session
+
 			err := json.Unmarshal(v, &sess)
 			if err != nil {
 				return err
@@ -143,13 +146,9 @@ func openDB(dbFilePath string) (*bolt.DB, error) {
 		fileMode,
 		&bolt.Options{Timeout: 1 * time.Second},
 	)
-	if err != nil {
-		if errors.Is(err, bolt.ErrDatabaseOpen) ||
-			errors.Is(err, bolt.ErrTimeout) {
-			return nil, errFocusRunning
-		}
 
-		return nil, err
+	if err != nil && errors.Is(err, bolterr.ErrTimeout) {
+		return nil, errFocusRunning
 	}
 
 	return db, nil

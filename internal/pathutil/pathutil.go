@@ -57,6 +57,7 @@ func Must() *Paths {
 	if paths == nil {
 		panic("pathutil.Initialize() must be called before accessing paths")
 	}
+
 	return paths
 }
 

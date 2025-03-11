@@ -32,7 +32,6 @@ func init() {
 	for _, v := range dir {
 		soundOpts = append(soundOpts, pathutil.StripExtension(v.Name()))
 	}
-
 	// TODO: Add directory for custom sound
 }
 

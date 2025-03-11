@@ -1,8 +1,6 @@
 package app
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -26,10 +24,6 @@ const (
 	envUpdateNotifier = "FOCUS_UPDATE_NOTIFIER"
 	envNoColor        = "NO_COLOR"
 	envFocusNoColor   = "FOCUS_NO_COLOR"
-)
-
-var errStrictMode = errors.New(
-	"session resumption failed: strict mode is enabled",
 )
 
 // firstNonEmptyString returns its first non-empty argument, or "" if all
@@ -101,17 +95,6 @@ func sessionHelper(ctx *cli.Context) ([]*models.Session, store.DB, error) {
 	return sessions, db, nil
 }
 
-// deleteAction handles the delete command which deletes one or more
-// sessions.
-func deleteAction(ctx *cli.Context) error {
-	sessions, db, err := sessionHelper(ctx)
-	if err != nil {
-		return err
-	}
-
-	return delSessions(db, sessions)
-}
-
 // editConfigAction handles the edit-config command which opens the focus config
 // file in the user's default text editor.
 func editConfigAction(ctx *cli.Context) error {
@@ -141,39 +124,6 @@ func editConfigAction(ctx *cli.Context) error {
 	}
 
 	return nil
-}
-
-// editTagsAction handles the edit-tag command which edits tags for the
-// specified sessions.
-func editTagsAction(ctx *cli.Context) error {
-	sessions, db, err := sessionHelper(ctx)
-	if err != nil {
-		return err
-	}
-
-	return editTags(db, sessions, ctx.Args().Slice())
-}
-
-// listAction handles the list command and prints a table of all the sessions
-// started within a time period.
-func listAction(ctx *cli.Context) error {
-	sessions, _, err := sessionHelper(ctx)
-	if err != nil {
-		return err
-	}
-
-	if ctx.Bool("json") {
-		b, err := json.Marshal(sessions)
-		if err != nil {
-			return err
-		}
-
-		pterm.Println(string(b))
-
-		return nil
-	}
-
-	return listSessions(sessions)
 }
 
 // statsAction computes the stats for the specified time period.
@@ -276,12 +226,6 @@ func beforeAction(ctx *cli.Context) error {
 	if ctx.Bool("no-color") {
 		disableStyling()
 	}
-
-	return nil
-}
-
-func afterAction(ctx *cli.Context) error {
-	slog.InfoContext(ctx.Context, "exiting focus")
 
 	return nil
 }

@@ -87,6 +87,8 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return t, nil
 			}
 
+			// TODO: Check strict mode
+
 			cmd = t.clock.Toggle()
 
 			return t, cmd

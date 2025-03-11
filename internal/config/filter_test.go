@@ -32,6 +32,7 @@ func TestFilter(t *testing.T) {
 			f := flag.NewFlagSet("stats", flag.PanicOnError)
 			for k, v := range tc.Flags {
 				_ = f.String(k, "", "")
+
 				err := f.Set(k, v)
 				if err != nil {
 					t.Log(err)

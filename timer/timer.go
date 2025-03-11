@@ -28,6 +28,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/pterm/pterm"
 	bolt "go.etcd.io/bbolt"
+	bolterr "go.etcd.io/bbolt/errors"
 
 	"github.com/ayoisaiah/focus/internal/config"
 	"github.com/ayoisaiah/focus/internal/models"
@@ -151,14 +152,11 @@ func New(dbClient store.DB, cfg *config.TimerConfig) (*Timer, error) {
 	return t, err
 }
 
-// Init initializes a timer and starts the first session. It also handles
-// sessions added with the --since flag
+// sessions added with the --since flag.
 func (t *Timer) Init() tea.Cmd {
 	t.StartTime = time.Now()
 
-	var err error
-
-	err = t.new()
+	err := t.new()
 
 	// If --since is used to add a completed session
 	if t.Current.Completed {
@@ -286,7 +284,6 @@ func (t *Timer) createSession() (*Session, error) {
 
 func (t *Timer) postSession() error {
 	// t.notify(t.Context, t.Current.Name, sessName)
-
 	err := t.runSessionCmd(t.Opts.SessionCmd)
 	if err != nil {
 		return err
@@ -459,8 +456,7 @@ func (t *Timer) ReportStatus() error {
 		return nil
 	}
 
-	if !errors.Is(err, bolt.ErrDatabaseOpen) &&
-		!errors.Is(err, bolt.ErrTimeout) {
+	if !errors.Is(err, bolterr.ErrTimeout) {
 		return err
 	}
 

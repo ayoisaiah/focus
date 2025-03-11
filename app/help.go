@@ -7,15 +7,9 @@ import (
 )
 
 func helpText() string {
-	description := fmt.Sprintf(
-		"%s\n\t\t{{.Usage}}\n\n",
-		pterm.Yellow("DESCRIPTION"),
-	)
+	description := pterm.Yellow("DESCRIPTION") + "\n\t\t{{.Usage}}\n\n"
 
-	usage := fmt.Sprintf(
-		"%s\n\t\t{{.HelpName}} {{if .UsageText}}{{ .UsageText }}{{end}}\n\n",
-		pterm.Yellow("USAGE"),
-	)
+	usage := pterm.Yellow("USAGE") + "\n\t\t{{.HelpName}} {{if .UsageText}}{{ .UsageText }}{{end}}\n\n"
 
 	author := fmt.Sprintf(
 		"{{if len .Authors}}%s\n\t\t{{range .Authors}}{{ . }}{{end}}{{end}}\n\n",
@@ -52,10 +46,7 @@ func helpText() string {
 		"https://github.com/ayoisaiah/focus/wiki",
 	)
 
-	website := fmt.Sprintf(
-		"%s\n\t\thttps://github.com/ayoisaiah/focus\n",
-		pterm.Yellow("WEBSITE"),
-	)
+	website := pterm.Yellow("WEBSITE") + "\n\t\thttps://github.com/ayoisaiah/focus\n"
 
 	return description + usage + author + version + commands + options + env + docs + website
 }

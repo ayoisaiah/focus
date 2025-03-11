@@ -522,7 +522,6 @@ func validate() error {
 	// if len(sessions) > 0 {
 	// 	return errSessionOverlap
 	// }
-
 	return nil
 }
 
