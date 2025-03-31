@@ -20,13 +20,13 @@ type (
 
 	// Session represents an active work or break session.
 	Session struct {
-		StartTime time.Time       `json:"start_time"`
-		EndTime   time.Time       `json:"end_time"`
-		Name      config.SessType `json:"name"`
-		Tags      []string        `json:"tags"`
-		Timeline  []Timeline      `json:"timeline"`
-		Duration  time.Duration   `json:"duration"`
-		Completed bool            `json:"completed"`
+		StartTime time.Time          `json:"start_time"`
+		EndTime   time.Time          `json:"end_time"`
+		Name      config.SessionType `json:"name"`
+		Tags      []string           `json:"tags"`
+		Timeline  []Timeline         `json:"timeline"`
+		Duration  time.Duration      `json:"duration"`
+		Completed bool               `json:"completed"`
 	}
 
 	// Remainder is the time remaining in an active session.

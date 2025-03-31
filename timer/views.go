@@ -65,7 +65,7 @@ func (t *Timer) timerView() string {
 	}
 
 	var timeFormat string
-	if t.Opts.TwentyFourHourClock {
+	if t.Opts.Display.TwentyFourHour {
 		timeFormat = "15:04:05"
 	} else {
 		timeFormat = "03:04:05 PM"
@@ -92,7 +92,7 @@ func (t *Timer) timerView() string {
 					fmt.Sprintf(
 						" (%d/%d)",
 						t.WorkCycle,
-						t.Opts.LongBreakInterval,
+						t.Opts.Sessions.LongBreakInterval,
 					),
 				).String()))
 	}
@@ -110,7 +110,7 @@ func (t *Timer) timerView() string {
 func (t *Timer) pickSoundView() string {
 	if t.soundForm.State == huh.StateCompleted {
 		sound := t.soundForm.GetString("sound")
-		t.Opts.AmbientSound = sound
+		t.Opts.Sound.AmbientSound = sound
 		t.settings = ""
 
 		err := t.setAmbientSound()

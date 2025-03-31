@@ -14,7 +14,7 @@ import (
 
 func initLogger() {
 	out := &lumberjack.Logger{
-		Filename:   config.LogFilePath(),
+		Filename:   "app.log",
 		MaxSize:    10,
 		MaxBackups: 5,
 		MaxAge:     14,
@@ -23,9 +23,7 @@ func initLogger() {
 
 	opts := &slog.HandlerOptions{}
 
-	l := slog.New(slog.NewTextHandler(out, opts)).With(
-		slog.Int("pid", os.Getpid()),
-	)
+	l := slog.New(slog.NewTextHandler(out, opts))
 
 	slog.SetDefault(l)
 }

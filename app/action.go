@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
@@ -110,9 +109,7 @@ func editConfigAction(ctx *cli.Context) error {
 		defaultEditor,
 	)
 
-	cfg := config.Timer(ctx)
-
-	cmd := exec.Command(editor, cfg.PathToConfig)
+	cmd := exec.Command(editor, config.ConfigFilePath())
 
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -170,9 +167,18 @@ func statusAction(_ *cli.Context) error {
 // defaultAction starts a timer or adds a completed session depending on the
 // value of --since.
 func defaultAction(ctx *cli.Context) error {
-	cfg := config.Timer(ctx)
+	configPath := config.ConfigFilePath()
 
-	dbClient, err := store.NewClient(cfg.PathToDB)
+	cfg, err := config.New(
+		config.WithPromptConfig(configPath),
+		config.WithViperConfig(configPath),
+		config.WithCLIConfig(ctx),
+	)
+	if err != nil {
+		return err
+	}
+
+	dbClient, err := store.NewClient(config.DBFilePath())
 	if err != nil {
 		return err
 	}

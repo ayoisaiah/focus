@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/adrg/xdg"
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/flac"
 	"github.com/gopxl/beep/v2/mp3"
@@ -18,7 +19,12 @@ import (
 	"github.com/ayoisaiah/focus/internal/static"
 )
 
+// DefaultBufferSize controls audio buffering.
+const DefaultBufferSize = 10
+
 var soundOpts []string
+
+var speakerInitialized bool
 
 func init() {
 	dir, err := fs.ReadDir(
@@ -32,7 +38,35 @@ func init() {
 	for _, v := range dir {
 		soundOpts = append(soundOpts, pathutil.StripExtension(v.Name()))
 	}
-	// TODO: Add directory for custom sound
+
+	path := filepath.Join(xdg.DataHome, "focus", "ambient_sound")
+
+	dirs, err := os.ReadDir(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, v := range dirs {
+		soundOpts = append(soundOpts, v.Name())
+	}
+}
+
+func initSpeaker(format beep.Format) error {
+	if speakerInitialized {
+		return nil
+	}
+
+	err := speaker.Init(
+		format.SampleRate,
+		format.SampleRate.N(time.Duration(int(time.Second)/DefaultBufferSize)),
+	)
+	if err != nil {
+		return err
+	}
+
+	speakerInitialized = true
+
+	return nil
 }
 
 // prepSoundStream returns an audio stream for the specified sound.
@@ -55,7 +89,7 @@ func prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
 			return nil, err
 		}
 	} else {
-		f, err = os.Open(sound)
+		f, err = os.Open(filepath.Join(xdg.DataHome, "focus", "ambient_sound", sound))
 		// TODO: Update error
 		if err != nil {
 			return nil, err
@@ -85,12 +119,7 @@ func prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
 		return nil, err
 	}
 
-	bufferSize := 10
-
-	err = speaker.Init(
-		format.SampleRate,
-		format.SampleRate.N(time.Duration(int(time.Second)/bufferSize)),
-	)
+	err = initSpeaker(format)
 	if err != nil {
 		return nil, err
 	}
@@ -104,21 +133,27 @@ func prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
 }
 
 func (t *Timer) setAmbientSound() error {
-	var infiniteStream beep.Streamer
+	if t.SoundStream != nil {
+		speaker.Clear()
+	}
 
-	if t.Opts.AmbientSound != "" {
-		stream, err := prepSoundStream(t.Opts.AmbientSound)
-		if err != nil {
-			return err
-		}
+	if t.Opts.Sound.AmbientSound == "" {
+		return nil
+	}
 
-		infiniteStream, err = beep.Loop2(stream)
-		if err != nil {
-			return err
-		}
+	stream, err := prepSoundStream(t.Opts.Sound.AmbientSound)
+	if err != nil {
+		return err
+	}
+
+	infiniteStream, err := beep.Loop2(stream)
+	if err != nil {
+		return err
 	}
 
 	t.SoundStream = infiniteStream
+
+	speaker.Play(t.SoundStream)
 
 	return nil
 }
