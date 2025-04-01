@@ -5,28 +5,29 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ayoisaiah/focus/internal/timeutil"
 	"github.com/urfave/cli/v2"
+
+	"github.com/ayoisaiah/focus/internal/timeutil"
 )
 
-// CLIOptions represents command-line configuration options
+// CLIOptions represents command-line configuration options.
 type CLIOptions struct {
-	Work              string
+	Since             string
 	ShortBreak        string
 	LongBreak         string
-	LongBreakInterval uint
 	Tags              string
 	AmbientSound      string
 	BreakSound        string
 	WorkSound         string
 	SessionCmd        string
-	Since             string
+	Work              string
+	LongBreakInterval uint
 	DisableNotify     bool
 	SoundOnBreak      bool
 	Strict            bool
 }
 
-// WithCLIConfig returns an Option that loads configuration from CLI flags
+// WithCLIConfig returns an Option that loads configuration from CLI flags.
 func WithCLIConfig(ctx *cli.Context) Option {
 	return func(c *Config) error {
 		opts := CLIOptions{
@@ -49,7 +50,7 @@ func WithCLIConfig(ctx *cli.Context) Option {
 	}
 }
 
-// applyCLIOptions applies CLI options to the config
+// applyCLIOptions applies CLI options to the config.
 func applyCLIOptions(c *Config, opts CLIOptions) error {
 	// Handle session durations
 	if err := applyCLIDurations(c, opts); err != nil {
@@ -87,6 +88,7 @@ func applyCLIOptions(c *Config, opts CLIOptions) error {
 		if err != nil {
 			return fmt.Errorf("invalid since time: %w", err)
 		}
+
 		c.Sessions.StartTime = startTime
 	} else {
 		c.Sessions.StartTime = time.Now()
@@ -95,7 +97,7 @@ func applyCLIOptions(c *Config, opts CLIOptions) error {
 	return nil
 }
 
-// applyCLIDurations handles parsing and applying duration settings from CLI
+// applyCLIDurations handles parsing and applying duration settings from CLI.
 func applyCLIDurations(c *Config, opts CLIOptions) error {
 	durationsMap := map[SessionType]string{
 		Work:       opts.Work,
@@ -109,6 +111,7 @@ func applyCLIDurations(c *Config, opts CLIOptions) error {
 			if err != nil {
 				return fmt.Errorf("invalid duration for %s: %w", sessType, err)
 			}
+
 			c.Sessions.Durations[sessType] = dur
 		}
 	}
@@ -120,7 +123,7 @@ func applyCLIDurations(c *Config, opts CLIOptions) error {
 	return nil
 }
 
-// applyCLISounds handles sound-related CLI options
+// applyCLISounds handles sound-related CLI options.
 func applyCLISounds(c *Config, opts CLIOptions) error {
 	// Handle ambient sound
 	if opts.AmbientSound != "" {
@@ -157,7 +160,7 @@ func applyCLISounds(c *Config, opts CLIOptions) error {
 	return nil
 }
 
-// splitAndTrimTags splits a comma-separated tag string and trims whitespace
+// splitAndTrimTags splits a comma-separated tag string and trims whitespace.
 func splitAndTrimTags(tags string) []string {
 	split := strings.Split(tags, ",")
 

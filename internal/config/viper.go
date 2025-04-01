@@ -3,12 +3,13 @@ package config
 import (
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/viper"
 )
 
-// viperKeys defines the mapping between config keys and their Viper counterparts
+// viperKeys defines the mapping between config keys and their Viper counterparts.
 const (
 	keyWorkDuration       = "work_duration"
 	keyShortBreakDuration = "short_break_duration"
@@ -33,7 +34,7 @@ const (
 	keyLongBreakColor     = "long_break_color"
 )
 
-// WithViperConfig returns an Option that loads configuration from Viper
+// WithViperConfig returns an Option that loads configuration from Viper.
 func WithViperConfig(configPath string) Option {
 	return func(c *Config) error {
 		v := viper.New()
@@ -50,7 +51,7 @@ func WithViperConfig(configPath string) Option {
 			return loadViperConfig(v, c)
 		}
 
-		if !errors.Is(err, viper.ConfigFileNotFoundError{}) {
+		if !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("reading config file failed: %w", err)
 		}
 
@@ -62,7 +63,7 @@ func WithViperConfig(configPath string) Option {
 	}
 }
 
-// setupViper configures Viper with defaults and prompt values
+// setupViper configures Viper with defaults and prompt values.
 func setupViper(v *viper.Viper, c *Config) error {
 	// Set defaults
 	v.SetDefault(keyWorkDuration, "25m")
@@ -83,6 +84,8 @@ func setupViper(v *viper.Viper, c *Config) error {
 	v.SetDefault(keyWorkColor, "#B0DB43")
 	v.SetDefault(keyShortBreakColor, "#12EAEA")
 	v.SetDefault(keyLongBreakColor, "#C492B1")
+	v.SetDefault(keyAmbientSound, "")
+	v.SetDefault(keySessionCmd, "")
 
 	if c.Sessions.Durations != nil {
 		v.Set(keyWorkDuration, c.Sessions.Durations[Work].String())
@@ -97,7 +100,7 @@ func setupViper(v *viper.Viper, c *Config) error {
 	return nil
 }
 
-// loadViperConfig loads configuration from Viper into the Config struct
+// loadViperConfig loads configuration from Viper into the Config struct.
 func loadViperConfig(v *viper.Viper, c *Config) error {
 	if err := loadDurations(v, c); err != nil {
 		return fmt.Errorf("loading durations failed: %w", err)
@@ -138,7 +141,7 @@ func loadViperConfig(v *viper.Viper, c *Config) error {
 	return nil
 }
 
-// loadDurations handles parsing duration strings from Viper
+// loadDurations handles parsing duration strings from Viper.
 func loadDurations(v *viper.Viper, c *Config) error {
 	durations := map[SessionType]string{
 		Work:       v.GetString(keyWorkDuration),
@@ -153,14 +156,14 @@ func loadDurations(v *viper.Viper, c *Config) error {
 		if err != nil {
 			return fmt.Errorf("invalid duration for %s: %w", sessType, err)
 		}
+
 		c.Sessions.Durations[sessType] = dur
 	}
 
 	return nil
 }
 
-// parseDuration parses a duration string, handling both minute integers and
-// duration strings
+// duration strings.
 func parseDuration(s string) (time.Duration, error) {
 	// Try parsing as duration string first
 	dur, err := time.ParseDuration(s)

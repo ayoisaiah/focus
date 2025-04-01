@@ -13,57 +13,57 @@ import (
 )
 
 type (
-	// Config holds all configuration settings
+	// Config holds all configuration settings.
 	Config struct {
-		Sessions     SessionConfig
+		System       SystemConfig
 		Notification NotificationConfig
 		Display      DisplayConfig
 		Sound        SoundConfig
-		System       SystemConfig
+		Sessions     SessionConfig
 	}
 
-	// SessionConfig holds session-related settings
+	// SessionConfig holds session-related settings.
 	SessionConfig struct {
+		StartTime         time.Time
 		Durations         map[SessionType]time.Duration
 		Messages          map[SessionType]string
+		Tags              []string
 		LongBreakInterval int
 		AutoStartWork     bool
 		AutoStartBreak    bool
 		Strict            bool
-		Tags              []string
-		StartTime         time.Time
 	}
 
-	// NotificationConfig holds notification settings
+	// NotificationConfig holds notification settings.
 	NotificationConfig struct {
-		Enabled bool
 		Sounds  map[SessionType]string
+		Enabled bool
 	}
 
-	// DisplayConfig holds display-related settings
+	// DisplayConfig holds display-related settings.
 	DisplayConfig struct {
 		Colors         map[SessionType]string
 		DarkTheme      bool
 		TwentyFourHour bool
 	}
 
-	// SoundConfig holds sound-related settings
+	// SoundConfig holds sound-related settings.
 	SoundConfig struct {
 		AmbientSound string
 		PlayOnBreak  bool
 	}
 
-	// SystemConfig holds system-related settings
+	// SystemConfig holds system-related settings.
 	SystemConfig struct {
 		ConfigPath string
 		DBPath     string
 		SessionCmd string
 	}
 
-	// Option is a function that modifies Config
+	// Option is a function that modifies Config.
 	Option func(*Config) error
 
-	// SessionType represents the type of timer session
+	// SessionType represents the type of timer session.
 	SessionType string
 )
 
@@ -145,7 +145,7 @@ func InitializePaths() {
 	logFilePath = filepath.Join(dataDir, "log", logFileName)
 }
 
-// New creates a new Config with default values and applies options
+// New creates a new Config with default values and applies options.
 func New(opts ...Option) (*Config, error) {
 	cfg := &Config{}
 

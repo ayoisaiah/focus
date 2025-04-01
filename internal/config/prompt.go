@@ -19,7 +19,7 @@ const asciiLogo = `
 ██║     ╚██████╔╝╚██████╗╚██████╔╝███████║
 ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝`
 
-// PromptOptions holds the user's responses to the configuration prompts
+// PromptOptions holds the user's responses to the configuration prompts.
 type PromptOptions struct {
 	WorkDuration       int
 	ShortBreakDuration int
@@ -27,7 +27,7 @@ type PromptOptions struct {
 	LongBreakInterval  int
 }
 
-// WithPromptConfig returns an Option that configures settings via interactive prompts
+// WithPromptConfig returns an Option that configures settings via interactive prompts.
 func WithPromptConfig(configPath string) Option {
 	return func(c *Config) error {
 		_, err := os.Stat(configPath)
@@ -44,7 +44,7 @@ func WithPromptConfig(configPath string) Option {
 	}
 }
 
-// promptUser handles the interactive configuration process
+// promptUser handles the interactive configuration process.
 func promptUser() (PromptOptions, error) {
 	var opts PromptOptions
 
@@ -111,7 +111,7 @@ Edit the config file with 'focus edit-config' to change any settings.`, " ").
 	return opts, nil
 }
 
-// applyPromptOptions applies the user's prompt responses to the configuration
+// applyPromptOptions applies the user's prompt responses to the configuration.
 func applyPromptOptions(c *Config, opts PromptOptions) error {
 	c.Sessions.Durations = map[SessionType]time.Duration{
 		Work:       time.Duration(opts.WorkDuration) * time.Minute,

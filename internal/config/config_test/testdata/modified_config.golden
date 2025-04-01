@@ -1,0 +1,20 @@
+auto_start_break: false
+auto_start_work: false
+break_sound: loud_bell
+dark_theme: false
+long_break_color: '#C492B1'
+long_break_duration: 30m
+long_break_interval: 6
+long_break_msg: Rest a little longer
+notify: true
+session_cmd: ""
+short_break_color: '#12EAEA'
+short_break_duration: 10m
+short_break_msg: Take a short rest
+sound: ""
+sound_on_break: false
+strict: false
+work_color: '#B0DB43'
+work_duration: 50m
+work_msg: Focus on your task
+work_sound: loud_bell
