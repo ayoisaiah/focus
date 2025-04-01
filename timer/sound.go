@@ -137,11 +137,11 @@ func (t *Timer) setAmbientSound() error {
 		speaker.Clear()
 	}
 
-	if t.Opts.Sound.AmbientSound == "" {
+	if t.Opts.Settings.AmbientSound == "" {
 		return nil
 	}
 
-	stream, err := prepSoundStream(t.Opts.Sound.AmbientSound)
+	stream, err := prepSoundStream(t.Opts.Settings.AmbientSound)
 	if err != nil {
 		return err
 	}

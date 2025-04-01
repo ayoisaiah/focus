@@ -1,20 +1,27 @@
-auto_start_break: true
-auto_start_work: false
-break_sound: bell
-dark_theme: true
-long_break_color: '#C492B1'
-long_break_duration: 15m
-long_break_interval: 4
-long_break_msg: Take a long break
-notify: true
-session_cmd: ""
-short_break_color: '#12EAEA'
-short_break_duration: 5m
-short_break_msg: Take a breather
-sound: ""
-sound_on_break: false
-strict: false
-work_color: '#B0DB43'
-work_duration: 25m
-work_msg: Focus on your task
-work_sound: loud_bell
+display:
+    dark_theme: true
+long_break:
+    color: '#C492B1'
+    duration: 15m
+    message: Take a long break
+    sound: bell
+notifications:
+    enabled: true
+settings:
+    ambient_sound: ""
+    auto_start_break: true
+    auto_start_work: false
+    cmd: ""
+    long_break_interval: 4
+    sound_on_break: false
+    strict: false
+short_break:
+    color: '#12EAEA'
+    duration: 5m
+    message: Take a breather
+    sound: bell
+work:
+    color: '#B0DB43'
+    duration: 25m
+    message: Focus on your task
+    sound: loud_bell

@@ -26,45 +26,39 @@ func (t TestCase) Output() (out []byte, name string) {
 // defaultConfig returns a new Config instance with default values.
 func defaultConfig() *config.Config {
 	return &config.Config{
-		Sessions: config.SessionConfig{
-			Durations: map[config.SessionType]time.Duration{
-				config.Work:       25 * time.Minute,
-				config.ShortBreak: 5 * time.Minute,
-				config.LongBreak:  15 * time.Minute,
-			},
-			Messages: map[config.SessionType]string{
-				config.Work:       "Focus on your task",
-				config.ShortBreak: "Take a breather",
-				config.LongBreak:  "Take a long break",
-			},
-			LongBreakInterval: 4,
-			AutoStartWork:     false,
-			AutoStartBreak:    true,
-			Strict:            false,
+		Work: config.SessionConfig{
+			Message:  "Focus on your task",
+			Color:    "#B0DB43",
+			Sound:    "loud_bell",
+			Duration: 25 * time.Minute,
 		},
-		Notification: config.NotificationConfig{
+		ShortBreak: config.SessionConfig{
+			Message:  "Take a breather",
+			Color:    "#12EAEA",
+			Sound:    "bell",
+			Duration: 5 * time.Minute,
+		},
+		LongBreak: config.SessionConfig{
+			Message:  "Take a long break",
+			Color:    "#C492B1",
+			Sound:    "bell",
+			Duration: 15 * time.Minute,
+		},
+		Settings: config.SettingsConfig{
+			AmbientSound:      "",
+			AutoStartBreak:    true,
+			AutoStartWork:     false,
+			Cmd:               "",
+			LongBreakInterval: 4,
+			SoundOnBreak:      false,
+			Strict:            false,
+			TwentyFourHour:    false,
+		},
+		Notifications: config.NotificationConfig{
 			Enabled: true,
-			Sounds: map[config.SessionType]string{
-				config.Work:       "loud_bell",
-				config.ShortBreak: "bell",
-				config.LongBreak:  "bell",
-			},
 		},
 		Display: config.DisplayConfig{
-			Colors: map[config.SessionType]string{
-				config.Work:       "#B0DB43",
-				config.ShortBreak: "#12EAEA",
-				config.LongBreak:  "#C492B1",
-			},
-			DarkTheme:      true,
-			TwentyFourHour: false,
-		},
-		Sound: config.SoundConfig{
-			AmbientSound: "",
-			PlayOnBreak:  false,
-		},
-		System: config.SystemConfig{
-			SessionCmd: "",
+			DarkTheme: true,
 		},
 	}
 }
@@ -78,8 +72,6 @@ func TestViperWriteConfig(t *testing.T) {
 		GoldenFile: "defaults",
 		Want:       defaultConfig(),
 	}
-
-	tc.Want.System.ConfigPath = configPath
 
 	cfg, err := config.New(
 		config.WithViperConfig(configPath),
@@ -110,50 +102,42 @@ func TestViperReadConfig(t *testing.T) {
 	tc := TestCase{
 		Name: "read a modified config file",
 		Want: &config.Config{
-			Sessions: config.SessionConfig{
-				Durations: map[config.SessionType]time.Duration{
-					config.Work:       50 * time.Minute,
-					config.ShortBreak: 10 * time.Minute,
-					config.LongBreak:  30 * time.Minute,
-				},
-				Messages: map[config.SessionType]string{
-					config.Work:       "Focus on your task",
-					config.ShortBreak: "Take a short rest",
-					config.LongBreak:  "Rest a little longer",
-				},
-				LongBreakInterval: 6,
-				AutoStartWork:     false,
-				AutoStartBreak:    false,
-				Strict:            false,
+			Work: config.SessionConfig{
+				Message:  "Focus on your task",
+				Color:    "#B0DB43",
+				Sound:    "loud_bell",
+				Duration: 50 * time.Minute,
 			},
-			Notification: config.NotificationConfig{
+			ShortBreak: config.SessionConfig{
+				Message:  "Take a short rest",
+				Color:    "#12EAEA",
+				Sound:    "loud_bell",
+				Duration: 10 * time.Minute,
+			},
+			LongBreak: config.SessionConfig{
+				Message:  "Rest a little longer",
+				Color:    "#C492B1",
+				Sound:    "loud_bell",
+				Duration: 30 * time.Minute,
+			},
+			Settings: config.SettingsConfig{
+				AmbientSound:      "",
+				AutoStartBreak:    true,
+				AutoStartWork:     false,
+				Cmd:               "",
+				LongBreakInterval: 6,
+				SoundOnBreak:      false,
+				Strict:            false,
+				TwentyFourHour:    false,
+			},
+			Notifications: config.NotificationConfig{
 				Enabled: true,
-				Sounds: map[config.SessionType]string{
-					config.Work:       "loud_bell",
-					config.ShortBreak: "loud_bell",
-					config.LongBreak:  "loud_bell",
-				},
 			},
 			Display: config.DisplayConfig{
-				Colors: map[config.SessionType]string{
-					config.Work:       "#B0DB43",
-					config.ShortBreak: "#12EAEA",
-					config.LongBreak:  "#C492B1",
-				},
-				DarkTheme:      false,
-				TwentyFourHour: false,
-			},
-			Sound: config.SoundConfig{
-				AmbientSound: "",
-				PlayOnBreak:  false,
-			},
-			System: config.SystemConfig{
-				SessionCmd: "",
+				DarkTheme: true,
 			},
 		},
 	}
-
-	tc.Want.System.ConfigPath = configPath
 
 	cfg, err := config.New(
 		config.WithViperConfig(configPath),

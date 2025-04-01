@@ -15,49 +15,48 @@ import (
 type (
 	// Config holds all configuration settings.
 	Config struct {
-		System       SystemConfig
-		Notification NotificationConfig
-		Display      DisplayConfig
-		Sound        SoundConfig
-		Sessions     SessionConfig
+		Work          SessionConfig `mapstructure:"work"`
+		ShortBreak    SessionConfig `mapstructure:"short_break"`
+		LongBreak     SessionConfig `mapstructure:"long_break"`
+		CLI           CLIConfig
+		Settings      SettingsConfig `mapstructure:"settings"`
+		Display       DisplayConfig  `mapstructue:"display"`
+		Notifications NotificationConfig
 	}
 
-	// SessionConfig holds session-related settings.
 	SessionConfig struct {
-		StartTime         time.Time
-		Durations         map[SessionType]time.Duration
-		Messages          map[SessionType]string
-		Tags              []string
-		LongBreakInterval int
-		AutoStartWork     bool
-		AutoStartBreak    bool
-		Strict            bool
+		Message  string        `mapstructure:"message"`
+		Color    string        `mapstructue:"color"`
+		Sound    string        `mapstructure:"sound"`
+		Duration time.Duration `mapstructure:"duration"`
+	}
+
+	// SettingsConfig contains general application settings.
+	SettingsConfig struct {
+		AmbientSound      string `mapstructure:"ambient_sound"`
+		Cmd               string `mapstructure:"cmd"`
+		LongBreakInterval int    `mapstructure:"long_break_interval"`
+		AutoStartBreak    bool   `mapstructure:"auto_start_break"`
+		AutoStartWork     bool   `mapstructure:"auto_start_work"`
+		SoundOnBreak      bool   `mapstructure:"sound_on_break"`
+		Strict            bool   `mapstructure:"strict"`
+		TwentyFourHour    bool   `mapstructure:"24hr_clock"`
+	}
+
+	// arguments.
+	CLIConfig struct {
+		StartTime time.Time
+		Tags      []string
 	}
 
 	// NotificationConfig holds notification settings.
 	NotificationConfig struct {
-		Sounds  map[SessionType]string
-		Enabled bool
+		Enabled bool `mapstructure:"enabled"`
 	}
 
 	// DisplayConfig holds display-related settings.
 	DisplayConfig struct {
-		Colors         map[SessionType]string
-		DarkTheme      bool
-		TwentyFourHour bool
-	}
-
-	// SoundConfig holds sound-related settings.
-	SoundConfig struct {
-		AmbientSound string
-		PlayOnBreak  bool
-	}
-
-	// SystemConfig holds system-related settings.
-	SystemConfig struct {
-		ConfigPath string
-		DBPath     string
-		SessionCmd string
+		DarkTheme bool `mapstructure:"dark_theme"`
 	}
 
 	// Option is a function that modifies Config.

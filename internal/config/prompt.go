@@ -113,13 +113,10 @@ Edit the config file with 'focus edit-config' to change any settings.`, " ").
 
 // applyPromptOptions applies the user's prompt responses to the configuration.
 func applyPromptOptions(c *Config, opts PromptOptions) error {
-	c.Sessions.Durations = map[SessionType]time.Duration{
-		Work:       time.Duration(opts.WorkDuration) * time.Minute,
-		ShortBreak: time.Duration(opts.ShortBreakDuration) * time.Minute,
-		LongBreak:  time.Duration(opts.LongBreakDuration) * time.Minute,
-	}
-
-	c.Sessions.LongBreakInterval = opts.LongBreakInterval
+	c.Work.Duration = time.Duration(opts.WorkDuration) * time.Minute
+	c.ShortBreak.Duration = time.Duration(opts.ShortBreakDuration) * time.Minute
+	c.LongBreak.Duration = time.Duration(opts.LongBreakDuration) * time.Minute
+	c.Settings.LongBreakInterval = opts.LongBreakInterval
 
 	return nil
 }

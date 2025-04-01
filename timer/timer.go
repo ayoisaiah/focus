@@ -40,6 +40,11 @@ import (
 type (
 	settingsView string
 
+	S map[config.SessionType]struct {
+		Message  string
+		Duration time.Duration
+	}
+
 	// Timer represents a running timer.
 	Timer struct {
 		help               help.Model
@@ -51,6 +56,7 @@ type (
 		Opts               *config.Config `json:"opts"`
 		Current            *Session
 		soundForm          *huh.Form
+		S                  S
 		settings           settingsView
 		progress           progress.Model
 		clock              btimer.Model
@@ -115,17 +121,17 @@ var soundView settingsView = "sound"
 func New(dbClient store.DB, cfg *config.Config) (*Timer, error) {
 	defaultStyle = style{
 		work: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(cfg.Display.Colors[config.Work])).
+			Foreground(lipgloss.Color(cfg.Work.Color)).
 			MarginRight(1).
-			SetString(cfg.Sessions.Messages[config.Work]),
+			SetString(cfg.Work.Message),
 		shortBreak: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(cfg.Display.Colors[config.ShortBreak])).
+			Foreground(lipgloss.Color(cfg.ShortBreak.Color)).
 			MarginRight(1).
-			SetString(cfg.Sessions.Messages[config.ShortBreak]),
+			SetString(cfg.ShortBreak.Message),
 		longBreak: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(cfg.Display.Colors[config.LongBreak])).
+			Foreground(lipgloss.Color(cfg.LongBreak.Color)).
 			MarginRight(1).
-			SetString(cfg.Sessions.Messages[config.LongBreak]),
+			SetString(cfg.LongBreak.Message),
 		base: lipgloss.NewStyle().Padding(1, 1),
 		help: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("240")).
@@ -137,6 +143,20 @@ func New(dbClient store.DB, cfg *config.Config) (*Timer, error) {
 		Opts:     cfg,
 		help:     help.New(),
 		progress: progress.New(progress.WithDefaultGradient()),
+		S: S{
+			config.Work: {
+				Duration: cfg.Work.Duration,
+				Message:  cfg.Work.Message,
+			},
+			config.ShortBreak: {
+				Duration: cfg.ShortBreak.Duration,
+				Message:  cfg.Work.Message,
+			},
+			config.LongBreak: {
+				Duration: cfg.LongBreak.Duration,
+				Message:  cfg.LongBreak.Message,
+			},
+		},
 	}
 
 	err := t.setAmbientSound()
@@ -182,14 +202,14 @@ func (t *Timer) new() error {
 func (t *Timer) newSession(
 	name config.SessionType,
 ) *Session {
-	duration := t.Opts.Sessions.Durations[name]
+	duration := t.S[name].Duration
 	startTime := time.Now()
 	endTime := startTime.Add(duration)
 
 	return &Session{
 		Name:      name,
 		Duration:  duration,
-		Tags:      t.Opts.Sessions.Tags,
+		Tags:      t.Opts.CLI.Tags,
 		Completed: false,
 		StartTime: startTime,
 		EndTime:   endTime,
@@ -209,7 +229,7 @@ func (t *Timer) nextSession(current config.SessionType) config.SessionType {
 
 	switch current {
 	case config.Work:
-		if t.WorkCycle == t.Opts.Sessions.LongBreakInterval {
+		if t.WorkCycle == t.Opts.Settings.LongBreakInterval {
 			next = config.LongBreak
 		} else {
 			next = config.ShortBreak
@@ -228,14 +248,14 @@ func (t *Timer) initSession() tea.Cmd {
 	sessName := t.nextSession(t.Current.Name)
 	t.Current = t.newSession(sessName)
 
-	if t.Current.Name == config.Work && !t.Opts.Sessions.AutoStartWork ||
-		t.Current.Name != config.Work && !t.Opts.Sessions.AutoStartBreak {
+	if t.Current.Name == config.Work && !t.Opts.Settings.AutoStartWork ||
+		t.Current.Name != config.Work && !t.Opts.Settings.AutoStartBreak {
 		t.waitForNextSession = true
 	}
 
 	// increment or reset the work cycle accordingly
 	if sessName == config.Work {
-		if t.WorkCycle == t.Opts.Sessions.LongBreakInterval {
+		if t.WorkCycle == t.Opts.Settings.LongBreakInterval {
 			t.WorkCycle = 1
 		} else {
 			t.WorkCycle++
@@ -256,8 +276,8 @@ func (t *Timer) initSession() tea.Cmd {
 func (t *Timer) createSession() (*Session, error) {
 	sess := t.newSession(config.Work)
 
-	if !t.Opts.Sessions.StartTime.IsZero() {
-		sess.Adjust(t.Opts.Sessions.StartTime)
+	if !t.Opts.CLI.StartTime.IsZero() {
+		sess.Adjust(t.Opts.CLI.StartTime)
 
 		if time.Now().After(sess.EndTime) {
 			t.Current = sess
@@ -276,7 +296,7 @@ func (t *Timer) createSession() (*Session, error) {
 
 func (t *Timer) postSession() error {
 	// t.notify(t.Context, t.Current.Name, sessName)
-	err := t.runSessionCmd(t.Opts.System.SessionCmd)
+	err := t.runSessionCmd(t.Opts.Settings.Cmd)
 	if err != nil {
 		return err
 	}
@@ -320,7 +340,7 @@ func (t *Timer) writeStatusFile() error {
 		Name:              string(sess.Name),
 		WorkCycle:         t.WorkCycle,
 		Tags:              sess.Tags,
-		LongBreakInterval: t.Opts.Sessions.LongBreakInterval,
+		LongBreakInterval: t.Opts.Settings.LongBreakInterval,
 		EndTime:           sess.EndTime,
 	}
 
@@ -383,22 +403,22 @@ func (t *Timer) notify(
 	_ context.Context,
 	sessName, nextSessName config.SessionType,
 ) {
-	if !t.Opts.Notification.Enabled {
+	if !t.Opts.Notifications.Enabled {
 		return
 	}
 
 	title := string(sessName + " is finished")
 
-	msg := t.Opts.Sessions.Messages[nextSessName]
+	msg := t.S[nextSessName].Message
 
 	// TODO: Need to update this
-	sound := t.Opts.Notification.Sounds[config.ShortBreak]
+	sound := t.Opts.ShortBreak.Sound
 
 	if sessName != config.Work {
-		sound = t.Opts.Notification.Sounds[config.Work]
+		sound = t.Opts.Work.Sound
 	}
 
-	configDir := filepath.Base(filepath.Dir(t.Opts.System.ConfigPath))
+	configDir := filepath.Base(filepath.Dir(config.ConfigFilePath()))
 
 	// pathToIcon will be an empty string if file is not found
 	pathToIcon, _ := xdg.SearchDataFile(
