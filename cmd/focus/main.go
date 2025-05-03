@@ -4,12 +4,11 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/pterm/pterm"
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/ayoisaiah/focus/app"
-	"github.com/ayoisaiah/focus/internal/config"
-	"github.com/ayoisaiah/focus/internal/pathutil"
+	_ "github.com/ayoisaiah/focus/internal/static"
+	"github.com/ayoisaiah/focus/report"
 )
 
 func initLogger() {
@@ -33,15 +32,10 @@ func run(args []string) error {
 }
 
 func main() {
-	pathutil.Initialize()
-	config.InitializePaths()
-
 	initLogger()
 
 	err := run(os.Args)
 	if err != nil {
-		slog.Error("an error occurred", slog.Any("error", err))
-		pterm.Error.Println(err)
-		os.Exit(1)
+		report.Quit(err)
 	}
 }

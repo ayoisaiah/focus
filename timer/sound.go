@@ -2,12 +2,10 @@ package timer
 
 import (
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/adrg/xdg"
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/flac"
 	"github.com/gopxl/beep/v2/mp3"
@@ -15,41 +13,13 @@ import (
 	"github.com/gopxl/beep/v2/vorbis"
 	"github.com/gopxl/beep/v2/wav"
 
-	"github.com/ayoisaiah/focus/internal/pathutil"
-	"github.com/ayoisaiah/focus/internal/static"
+	"github.com/ayoisaiah/focus/internal/config"
 )
 
 // DefaultBufferSize controls audio buffering.
 const DefaultBufferSize = 10
 
-var soundOpts []string
-
 var speakerInitialized bool
-
-func init() {
-	dir, err := fs.ReadDir(
-		static.Files,
-		filepath.Join("files", "ambient_sound"),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, v := range dir {
-		soundOpts = append(soundOpts, pathutil.StripExtension(v.Name()))
-	}
-
-	path := filepath.Join(xdg.DataHome, "focus", "ambient_sound")
-
-	dirs, err := os.ReadDir(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, v := range dirs {
-		soundOpts = append(soundOpts, v.Name())
-	}
-}
 
 func initSpeaker(format beep.Format) error {
 	if speakerInitialized {
@@ -79,26 +49,18 @@ func prepSoundStream(sound string) (beep.StreamSeekCloser, error) {
 	)
 
 	ext := filepath.Ext(sound)
-	// without extension, treat as OGG file
 	if ext == "" {
 		sound += ".ogg"
-
-		f, err = static.Files.Open(static.AmbientSound(sound))
-		if err != nil {
-			// TODO: Update error
-			return nil, err
-		}
-	} else {
-		f, err = os.Open(filepath.Join(xdg.DataHome, "focus", "ambient_sound", sound))
-		// TODO: Update error
-		if err != nil {
-			return nil, err
-		}
 	}
 
-	defer func() {
-		_ = f.Close()
-	}()
+	f, err = os.Open(
+		filepath.Join(config.AmbientSoundPath(), sound),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	defer f.Close()
 
 	ext = filepath.Ext(sound)
 

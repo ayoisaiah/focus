@@ -48,33 +48,10 @@ func migrateSessionsV1_4_0(tx *bbolt.Tx) error {
 	return nil
 }
 
-// Delete all exisiting timers as it won't be possible to resume paused sessions
-// after migrating the sessions.
-func migrateTimersV1_4_0(tx *bbolt.Tx) error {
-	timerBucket := "timers"
-	bucket := tx.Bucket([]byte(timerBucket))
-
-	cur := bucket.Cursor()
-
-	for k, _ := cur.First(); k != nil; k, _ = cur.Next() {
-		err := cur.Delete()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (c *Client) migrateV1_4_0(tx *bbolt.Tx) error {
 	slog.Info(
 		"running db migrations to v1.4.0 format",
 	)
 
-	err := migrateSessionsV1_4_0(tx)
-	if err != nil {
-		return err
-	}
-
-	return migrateTimersV1_4_0(tx)
+	return migrateSessionsV1_4_0(tx)
 }

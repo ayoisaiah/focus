@@ -32,7 +32,6 @@ import (
 
 	"github.com/ayoisaiah/focus/internal/config"
 	"github.com/ayoisaiah/focus/internal/models"
-	"github.com/ayoisaiah/focus/internal/pathutil"
 	"github.com/ayoisaiah/focus/report"
 	"github.com/ayoisaiah/focus/store"
 )
@@ -456,8 +455,8 @@ func (t *Timer) notify(
 
 // ReportStatus reports the status of the currently running timer.
 func (t *Timer) ReportStatus() error {
-	dbFilePath := pathutil.DBFilePath()
-	statusFilePath := pathutil.StatusFilePath()
+	dbFilePath := config.DBFilePath()
+	statusFilePath := config.StatusFilePath()
 
 	var fileMode fs.FileMode = 0o600
 

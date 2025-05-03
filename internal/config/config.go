@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/adrg/xdg"
-	"github.com/pterm/pterm"
+
+	"github.com/ayoisaiah/focus/internal/pathutil"
+	"github.com/ayoisaiah/focus/report"
 )
 
 type (
@@ -22,6 +24,7 @@ type (
 		Settings      SettingsConfig `mapstructure:"settings"`
 		Display       DisplayConfig  `mapstructue:"display"`
 		Notifications NotificationConfig
+		firstRun      bool
 	}
 
 	SessionConfig struct {
@@ -75,15 +78,14 @@ const (
 )
 
 var (
-	configDir      = "focus"
-	configFileName = "config.yml"
-	dbFileName     = "focus.db"
-	statusFileName = "status.json"
-	logFileName    = "focus.log"
+	appName        = "focus"
+	configFile     = "config.yml"
+	dbFile         = "focus.db"
+	statusFile     = "status.json"
+	logFile        = "focus.log"
 	dbFilePath     string
 	configFilePath string
 	statusFilePath string
-	logFilePath    string
 )
 
 var (
@@ -92,56 +94,64 @@ var (
 	Stderr io.Writer = os.Stderr
 )
 
+func init() {
+	focusEnv := strings.TrimSpace(os.Getenv("FOCUS_ENV"))
+
+	if focusEnv != "" {
+		configFile = fmt.Sprintf("config_%s.yml", focusEnv)
+		dbFile = fmt.Sprintf("focus_%s.db", focusEnv)
+		statusFile = fmt.Sprintf("status_%s.json", focusEnv)
+	}
+
+	var err error
+
+	configFilePath, err = xdg.ConfigFile(filepath.Join(appName, configFile))
+	if err != nil {
+		report.Quit(err)
+	}
+
+	dbFilePath, err = xdg.DataFile(filepath.Join(appName, dbFile))
+	if err != nil {
+		report.Quit(err)
+	}
+	// statusFilePath = filepath.Join(dataDir, statusFile)
+}
+
 func Dir() string {
-	return configDir
+	return appName
 }
 
 func DBFilePath() string {
 	return dbFilePath
 }
 
-func StatusFilePath() string {
-	return statusFilePath
+func alertSoundPath() string {
+	return filepath.Join(xdg.DataHome, appName, "alert_sound")
 }
 
-func LogFilePath() string {
-	return logFilePath
+func AmbientSoundPath() string {
+	return filepath.Join(xdg.DataHome, appName, "ambient_sound")
+}
+
+func StatusFilePath() string {
+	return statusFilePath
 }
 
 func ConfigFilePath() string {
 	return configFilePath
 }
 
-func InitializePaths() {
-	focusEnv := strings.TrimSpace(os.Getenv("FOCUS_ENV"))
-	if focusEnv != "" {
-		configFileName = fmt.Sprintf("config_%s.yml", focusEnv)
-		dbFileName = fmt.Sprintf("focus_%s.db", focusEnv)
-		statusFileName = fmt.Sprintf("status_%s.json", focusEnv)
-		logFileName = fmt.Sprintf("focus_%s.log", focusEnv)
+func SoundOpts() []string {
+	var sounds []string
+
+	dirs, err := os.ReadDir(AmbientSoundPath())
+	if err == nil {
+		for _, v := range dirs {
+			sounds = append(sounds, pathutil.StripExtension(v.Name()))
+		}
 	}
 
-	var err error
-
-	relPath := filepath.Join(configDir, configFileName)
-
-	configFilePath, err = xdg.ConfigFile(relPath)
-	if err != nil {
-		pterm.Error.Println(err)
-		os.Exit(1)
-	}
-
-	dataDir, err := xdg.DataFile(configDir)
-	if err != nil {
-		pterm.Error.Println(err)
-		os.Exit(1)
-	}
-
-	dbFilePath = filepath.Join(dataDir, dbFileName)
-
-	statusFilePath = filepath.Join(dataDir, statusFileName)
-
-	logFilePath = filepath.Join(dataDir, "log", logFileName)
+	return sounds
 }
 
 // New creates a new Config with default values and applies options.
@@ -150,13 +160,13 @@ func New(opts ...Option) (*Config, error) {
 
 	for _, opt := range opts {
 		if err := opt(cfg); err != nil {
-			return nil, fmt.Errorf("config option error: %w", err)
+			return nil, errConfigOption.Wrap(err)
 		}
 	}
 
-	// if err := cfg.Validate(); err != nil {
-	//     return nil, fmt.Errorf("config validation error: %w", err)
-	// }
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("config validation error: %w", err)
+	}
 
 	return cfg, nil
 }

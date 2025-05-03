@@ -1,5 +1,5 @@
-// Package static provides utilities for working with static files embedded in
-// the executable
+// Package static embeds static files into the binary and copies them to the
+// filesystem
 package static
 
 import (
@@ -7,64 +7,70 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/adrg/xdg"
-	"github.com/pterm/pterm"
 
 	"github.com/ayoisaiah/focus/internal/config"
+	"github.com/ayoisaiah/focus/report"
 )
 
 const (
-	dir = "files"
+	filesDir = "files"
 )
 
 //go:embed files/*
-var Files embed.FS
+var embeddedFiles embed.FS
 
-// FilePath returns the path to the specified file.
-func FilePath(fileName string) string {
-	return filepath.Join(dir, fileName)
-}
-
-// AmbientSound returns the path to the specified ambient sound file.
-func AmbientSound(fileName string) string {
-	return filepath.Join(dir, "ambient_sound", fileName)
-}
-
-func init() {
-	_ = fs.WalkDir(
-		Files,
-		dir,
+func copyEmbeddedFilesToDataDir() error {
+	return fs.WalkDir(
+		embeddedFiles,
+		filesDir,
 		func(path string, d fs.DirEntry, err error) error {
-			if d.Name() == "icon.png" {
-				var b []byte
+			if err != nil {
+				return err
+			}
 
-				b, err = fs.ReadFile(Files, path)
-				if err != nil {
-					pterm.Error.Println(err)
-					os.Exit(1)
+			if d.IsDir() {
+				return nil
+			}
+
+			b, err := embeddedFiles.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			stripped := strings.TrimPrefix(
+				path,
+				filesDir+string(os.PathSeparator),
+			)
+
+			relPath := filepath.Join(config.Dir(), stripped)
+
+			destPath, err := xdg.DataFile(relPath)
+			if err != nil {
+				return err
+			}
+
+			// Only write if file does not already exist
+			if _, err := os.Stat(destPath); os.IsNotExist(err) {
+				if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+					return err
 				}
 
-				relPath := filepath.Join(config.Dir(), path)
-
-				var pathToFile string
-
-				pathToFile, err = xdg.DataFile(relPath)
-				if err != nil {
-					pterm.Error.Println(err)
-					os.Exit(1)
-				}
-
-				if _, err = xdg.SearchDataFile(relPath); err != nil {
-					err = os.WriteFile(pathToFile, b, os.ModePerm)
-					if err != nil {
-						pterm.Error.Println(err)
-						os.Exit(1)
-					}
+				if err := os.WriteFile(destPath, b, 0o644); err != nil {
+					return err
 				}
 			}
 
-			return err
+			return nil
 		},
 	)
+}
+
+func init() {
+	err := copyEmbeddedFilesToDataDir()
+	if err != nil {
+		report.Quit(err)
+	}
 }

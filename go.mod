@@ -1,6 +1,6 @@
 module github.com/ayoisaiah/focus
 
-go 1.24.0
+go 1.24.2
 
 toolchain go1.24.1
 
@@ -39,6 +39,8 @@ require (
 	atomicgo.dev/schedule v0.1.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/br0xen/boltbrowser v0.0.0-20230531143731-fcc13603daaf // indirect
+	github.com/br0xen/termbox-util v0.0.0-20170904143325-de1d4c83380e // indirect
 	github.com/catppuccin/go v0.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.3.0 // indirect
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
@@ -74,9 +76,11 @@ require (
 	github.com/mewkiz/pkg v0.0.0-20250313101258-36943cedaadb // indirect
 	github.com/mewpkg/term v0.0.0-20241026122259-37a80af23985 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
+	github.com/nsf/termbox-go v1.1.1 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

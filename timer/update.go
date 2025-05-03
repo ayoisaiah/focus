@@ -102,7 +102,7 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					huh.NewGroup(
 						huh.NewSelect[string]().
 							Key("sound").
-							Options(huh.NewOptions(soundOpts...)...).
+							Options(huh.NewOptions(config.SoundOpts()...)...).
 							Title("Select ambient sound"),
 					),
 				)

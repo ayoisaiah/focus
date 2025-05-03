@@ -45,6 +45,6 @@ func Fatal(err error) tea.Cmd {
 }
 
 func Quit(err error) {
-	fmt.Println(defaultStyle.success.Render(err.Error()))
+	fmt.Println(defaultStyle.error.Render(err.Error()))
 	os.Exit(1)
 }

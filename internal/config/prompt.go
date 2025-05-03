@@ -35,6 +35,8 @@ func WithPromptConfig(configPath string) Option {
 			return err
 		}
 
+		c.firstRun = true
+
 		opts, err := promptUser()
 		if err != nil {
 			return fmt.Errorf("user prompt failed: %w", err)

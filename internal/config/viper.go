@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/spf13/viper"
 )
@@ -43,9 +42,7 @@ func WithViperConfig(configPath string) Option {
 		v.SetConfigFile(configPath)
 		v.SetConfigType("yaml")
 
-		if err := setupViper(v, c); err != nil {
-			return fmt.Errorf("viper setup failed: %w", err)
-		}
+		setupViper(v, c)
 
 		err := v.ReadInConfig()
 		if err == nil {
@@ -53,11 +50,11 @@ func WithViperConfig(configPath string) Option {
 		}
 
 		if !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("reading config file failed: %w", err)
+			return errReadConfig.Wrap(err)
 		}
 
 		if err := v.WriteConfig(); err != nil {
-			return fmt.Errorf("writing default config failed: %w", err)
+			return errWriteConfig.Wrap(err)
 		}
 
 		return loadViperConfig(v, c)
@@ -65,7 +62,7 @@ func WithViperConfig(configPath string) Option {
 }
 
 // setupViper configures Viper with defaults and prompt values.
-func setupViper(v *viper.Viper, c *Config) error {
+func setupViper(v *viper.Viper, c *Config) {
 	// Set defaults
 	v.SetDefault(keyWorkDuration, "25m")
 	v.SetDefault(keyWorkMessage, "Focus on your task")
@@ -89,64 +86,28 @@ func setupViper(v *viper.Viper, c *Config) error {
 	v.SetDefault(keyAmbientSound, "")
 	v.SetDefault(keySessionCmd, "")
 
-	// if c.Sessions.Durations != nil {
-	// 	v.Set(keyWorkDuration, c.Sessions.Durations[Work].String())
-	// 	v.Set(keyShortBreakDuration, c.Sessions.Durations[ShortBreak].String())
-	// 	v.Set(keyLongBreakDuration, c.Sessions.Durations[LongBreak].String())
-	// }
-	//
-	// if c.Sessions.LongBreakInterval != 0 {
-	// 	v.Set(keyLongBreakInterval, c.Sessions.LongBreakInterval)
-	// }
+	if c.firstRun {
+		v.SetDefault(
+			keyWorkDuration,
+			fmt.Sprintf("%dm", int(c.Work.Duration.Minutes())),
+		)
+		v.SetDefault(
+			keyShortBreakDuration,
+			fmt.Sprintf("%dm", int(c.ShortBreak.Duration.Minutes())),
+		)
 
-	return nil
+		v.SetDefault(
+			keyLongBreakDuration,
+			fmt.Sprintf("%dm", int(c.LongBreak.Duration.Minutes())),
+		)
+
+		if c.Settings.LongBreakInterval != 0 {
+			v.SetDefault(keyLongBreakInterval, c.Settings.LongBreakInterval)
+		}
+	}
 }
 
 // loadViperConfig loads configuration from Viper into the Config struct.
 func loadViperConfig(v *viper.Viper, c *Config) error {
-	// if err := loadDurations(v, c); err != nil {
-	// 	return fmt.Errorf("loading durations failed: %w", err)
-	// }
-	v.Unmarshal(c)
-
-	return nil
-}
-
-// loadDurations handles parsing duration strings from Viper.
-// func loadDurations(v *viper.Viper, c *Config) error {
-// 	durations := map[SessionType]string{
-// 		Work:       v.GetString(keyWorkDuration),
-// 		ShortBreak: v.GetString(keyShortBreakDuration),
-// 		LongBreak:  v.GetString(keyLongBreakDuration),
-// 	}
-//
-// 	c.Sessions.Durations = make(map[SessionType]time.Duration)
-//
-// 	for sessType, durStr := range durations {
-// 		dur, err := parseDuration(durStr)
-// 		if err != nil {
-// 			return fmt.Errorf("invalid duration for %s: %w", sessType, err)
-// 		}
-//
-// 		c.Sessions.Durations[sessType] = dur
-// 	}
-//
-// 	return nil
-// }
-
-// duration strings.
-func parseDuration(s string) (time.Duration, error) {
-	// Try parsing as duration string first
-	dur, err := time.ParseDuration(s)
-	if err == nil {
-		return dur, nil
-	}
-
-	// Try parsing as minutes in case duration unit is absent
-	mins, err := time.ParseDuration(s + "m")
-	if err != nil {
-		return 0, fmt.Errorf("invalid duration format: %s", s)
-	}
-
-	return mins, nil
+	return v.Unmarshal(c)
 }
