@@ -1,8 +1,9 @@
-name: golangci-lint
+name: Lint code
 on:
-  pull_request:
+  push:
     branches:
       - master
+  pull_request:
 
 permissions:
   contents: read
@@ -14,14 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v4
+      - name: Setup Go ${{ vars.GO_VERSION }}
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.21
-
-      - name: Install libasound2-dev
-        run: sudo apt install libasound2-dev
+          go-version: ${{ vars.GO_VERSION }}
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.55
+        uses: golangci/golangci-lint-action@v7

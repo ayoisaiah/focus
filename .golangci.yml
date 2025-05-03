@@ -1,76 +1,41 @@
-linters-settings:
-  decorder:
-    disable-dec-num-check: true
-    disable-dec-order-check: false
-  errcheck:
-    check-type-assertions: true
-  goconst:
-    min-len: 2
-    min-occurrences: 3
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - performance
-      - style
-  goimports:
-    local-prefixes: github.com/ayoisaiah/focus
-  gomnd:
-    checks:
-      - argument
-      - case
-      - condition
-      - return
-  govet:
-    check-shadowing: true
-    enable-all: true
-  nolintlint:
-    require-explanation: true
-    require-specific: true
-  revive:
-    rules:
-      - name: error-naming
-        severity: warning
-        disabled: true # handled by errname
-
+version: "2"
+run:
+  issues-exit-code: 1
+  allow-parallel-runners: true
 linters:
-  disable-all: true
+  default: none
   enable:
     - bodyclose
+    - decorder
     - dogsled
     - dupl
     - durationcheck
-    - decorder
     - errcheck
-    - errorlint
     - errname
-    - exportloopref
+    - errorlint
     - exhaustive
     - gocheckcompilerdirectives
     - gochecksumtype
     - goconst
-    - godot
     - gocritic
-    - gofmt
-    - goimports
-    - gomnd
     - gocyclo
+    - godot
     - goprintffuncname
     - gosec
-    - gosimple
     - govet
     - ineffassign
     - mirror
     - misspell
+    - mnd
     - nakedret
     - nilnil
     - nolintlint
+    - perfsprint
     - prealloc
     - predeclared
-    - perfsprint
     - revive
-    - staticcheck
-    - stylecheck
     - sloglint
+    - staticcheck
     - thelper
     - tparallel
     - unconvert
@@ -78,29 +43,72 @@ linters:
     - unused
     - whitespace
     - wsl
-
+  settings:
+    decorder:
+      disable-dec-num-check: true
+      disable-dec-order-check: false
+    errcheck:
+      check-type-assertions: true
+    goconst:
+      min-len: 2
+      min-occurrences: 3
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+    govet:
+      enable:
+        - fieldalignment
+    mnd:
+      checks:
+        - argument
+        - case
+        - condition
+        - return
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    revive:
+      rules:
+        - name: error-naming
+          severity: warning
+          disabled: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - gocyclo
+          - gosec
+        path: _test\.go
+      - linters:
+          - staticcheck
+        text: error strings should not be capitalized
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  fix: true
-  exclude-rules:
-    # disable some linters for test files
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - gosec
-        - dupl
-    - linters:
-        - stylecheck
-      text: 'error strings should not be capitalized'
-    - linters:
-        - typecheck
-      text: 'has no field or method'
-    - linters:
-        - typecheck
-      text: 'undeclared name'
-
   max-issues-per-linter: 0
   max-same-issues: 0
-
-run:
-  issues-exit-code: 1
-  allow-parallel-runners: true
+  fix: true
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/ayoisaiah/focus
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
