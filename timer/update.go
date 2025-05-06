@@ -90,9 +90,15 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 
-			t.waitForNextSession = false
-			t.clock = btimer.New(t.Current.Duration)
-			cmd = t.clock.Init()
+			if t.waitForNextSession {
+				t.waitForNextSession = false
+
+				sessName := t.nextSession(t.Current.Name)
+				t.Current = t.newSession(sessName)
+
+				t.clock = btimer.New(t.Current.Duration)
+				cmd = t.clock.Init()
+			}
 
 			return t, cmd
 

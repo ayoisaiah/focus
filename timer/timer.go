@@ -245,10 +245,10 @@ func (t *Timer) nextSession(current config.SessionType) config.SessionType {
 // Returns a tea.Cmd for initializing the timer if auto-start is enabled.
 func (t *Timer) initSession() tea.Cmd {
 	sessName := t.nextSession(t.Current.Name)
-	t.Current = t.newSession(sessName)
+	newSess := t.newSession(sessName)
 
-	if t.Current.Name == config.Work && !t.Opts.Settings.AutoStartWork ||
-		t.Current.Name != config.Work && !t.Opts.Settings.AutoStartBreak {
+	if newSess.Name == config.Work && !t.Opts.Settings.AutoStartWork ||
+		newSess.Name != config.Work && !t.Opts.Settings.AutoStartBreak {
 		t.waitForNextSession = true
 	}
 
@@ -262,6 +262,8 @@ func (t *Timer) initSession() tea.Cmd {
 	}
 
 	if !t.waitForNextSession {
+		t.Current = newSess
+
 		t.clock = btimer.New(t.Current.Duration)
 		return t.clock.Init()
 	}
