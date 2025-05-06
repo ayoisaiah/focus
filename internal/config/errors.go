@@ -1,6 +1,10 @@
 package config
 
-import "github.com/ayoisaiah/focus/internal/apperr"
+import (
+	"fmt"
+
+	"github.com/ayoisaiah/focus/internal/apperr"
+)
 
 var (
 	errSessionOverlap = &apperr.Error{
@@ -28,7 +32,7 @@ var (
 	}
 
 	errLongBreakTooShort = &apperr.Error{
-		Message: "long break duration (%v) must be greater than short break duration (%v)",
+		Message: "long break duration (%v) must not be less than short break duration (%v)",
 	}
 
 	errUnknownAlertSound = &apperr.Error{
@@ -56,6 +60,14 @@ var (
 	}
 
 	errInvalidLongBreakInterval = &apperr.Error{
-		Message: "long break interval must be between %d and %d sessions",
+		Message: fmt.Sprintf(
+			"long break interval must be between %d and %d sessions",
+			minLongBreakInterval,
+			maxLongBreakInterval,
+		),
+	}
+
+	errInvalidCLIDuration = &apperr.Error{
+		Message: "invalid duration for %s: %v",
 	}
 )

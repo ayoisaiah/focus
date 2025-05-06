@@ -52,37 +52,30 @@ func WithCLIConfig(ctx *cli.Context) Option {
 
 // applyCLIOptions applies CLI options to the config.
 func applyCLIOptions(c *Config, opts CLIOptions) error {
-	// Handle session durations
 	if err := applyCLIDurations(c, opts); err != nil {
 		return fmt.Errorf("applying CLI durations: %w", err)
 	}
 
-	// Handle tags
 	if opts.Tags != "" {
 		c.CLI.Tags = splitAndTrimTags(opts.Tags)
 	}
 
-	// Handle notifications
 	if opts.DisableNotify {
 		c.Notifications.Enabled = false
 	}
 
-	// Handle strict mode
 	if opts.Strict {
 		c.Settings.Strict = true
 	}
 
-	// Handle sounds
 	if err := applyCLISounds(c, opts); err != nil {
 		return fmt.Errorf("applying CLI sounds: %w", err)
 	}
 
-	// Handle session command
 	if opts.SessionCmd != "" {
 		c.Settings.Cmd = opts.SessionCmd
 	}
 
-	// Handle since time
 	if opts.Since != "" {
 		startTime, err := timeutil.FromStr(opts.Since)
 		if err != nil {
@@ -99,23 +92,33 @@ func applyCLIOptions(c *Config, opts CLIOptions) error {
 
 // applyCLIDurations handles parsing and applying duration settings from CLI.
 func applyCLIDurations(c *Config, opts CLIOptions) error {
-	// durationsMap := map[SessionType]string{
-	// 	Work:       opts.Work,
-	// 	ShortBreak: opts.ShortBreak,
-	// 	LongBreak:  opts.LongBreak,
-	// }
-	//
-	// for sessType, durStr := range durationsMap {
-	// 	if durStr != "" {
-	// 		dur, err := parseDuration(durStr)
-	// 		if err != nil {
-	// 			return fmt.Errorf("invalid duration for %s: %w", sessType, err)
-	// 		}
-	//
-	//
-	// 		// c.Sessions.Durations[sessType] = dur
-	// 	}
-	// }
+	durationsMap := map[SessionType]string{
+		Work:       opts.Work,
+		ShortBreak: opts.ShortBreak,
+		LongBreak:  opts.LongBreak,
+	}
+
+	for sessType, durStr := range durationsMap {
+		if durStr != "" {
+			dur, err := time.ParseDuration(durStr)
+			if err != nil {
+				return errInvalidCLIDuration.Fmt(sessType, err)
+			}
+
+			if sessType == Work {
+				c.Work.Duration = dur
+			}
+
+			if sessType == ShortBreak {
+				c.ShortBreak.Duration = dur
+			}
+
+			if sessType == LongBreak {
+				c.LongBreak.Duration = dur
+			}
+		}
+	}
+
 	if opts.LongBreakInterval > 0 {
 		c.Settings.LongBreakInterval = int(opts.LongBreakInterval)
 	}
@@ -125,7 +128,6 @@ func applyCLIDurations(c *Config, opts CLIOptions) error {
 
 // applyCLISounds handles sound-related CLI options.
 func applyCLISounds(c *Config, opts CLIOptions) error {
-	// Handle ambient sound
 	if opts.AmbientSound != "" {
 		if opts.AmbientSound == "off" {
 			c.Settings.AmbientSound = ""
@@ -134,7 +136,6 @@ func applyCLISounds(c *Config, opts CLIOptions) error {
 		}
 	}
 
-	// Handle break sound
 	if opts.BreakSound != "" {
 		if opts.BreakSound == "off" {
 			c.ShortBreak.Sound = ""
@@ -145,7 +146,6 @@ func applyCLISounds(c *Config, opts CLIOptions) error {
 		}
 	}
 
-	// Handle work sound
 	if opts.WorkSound != "" {
 		if opts.WorkSound == "off" {
 			c.Work.Sound = ""
@@ -154,7 +154,6 @@ func applyCLISounds(c *Config, opts CLIOptions) error {
 		}
 	}
 
-	// Handle sound on break setting
 	c.Settings.SoundOnBreak = opts.SoundOnBreak
 
 	return nil

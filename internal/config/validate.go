@@ -83,10 +83,7 @@ func (c *Config) validateSessionConfig(
 func (c *Config) validateSettings() error {
 	if c.Settings.LongBreakInterval < minLongBreakInterval ||
 		c.Settings.LongBreakInterval > maxLongBreakInterval {
-		return errInvalidDuration.Fmt(
-			minLongBreakInterval,
-			maxLongBreakInterval,
-		)
+		return errInvalidDuration
 	}
 
 	if c.Settings.AmbientSound != "" {
@@ -104,7 +101,7 @@ func (c *Config) validateSessionRelationships() error {
 		return errShortBreakTooLong.Fmt(c.ShortBreak.Duration, c.Work.Duration)
 	}
 
-	if c.LongBreak.Duration <= c.ShortBreak.Duration {
+	if c.LongBreak.Duration < c.ShortBreak.Duration {
 		return errLongBreakTooShort.Fmt(
 			c.LongBreak.Duration,
 			c.ShortBreak.Duration,
