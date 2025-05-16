@@ -28,19 +28,16 @@ func defaultConfig() *config.Config {
 	return &config.Config{
 		Work: config.SessionConfig{
 			Message:  "Focus on your task",
-			Color:    "#B0DB43",
 			Sound:    "loud_bell",
 			Duration: 25 * time.Minute,
 		},
 		ShortBreak: config.SessionConfig{
 			Message:  "Take a breather",
-			Color:    "#12EAEA",
 			Sound:    "bell",
 			Duration: 5 * time.Minute,
 		},
 		LongBreak: config.SessionConfig{
 			Message:  "Take a long break",
-			Color:    "#C492B1",
 			Sound:    "bell",
 			Duration: 15 * time.Minute,
 		},
@@ -104,19 +101,16 @@ func TestViperReadConfig(t *testing.T) {
 		Want: &config.Config{
 			Work: config.SessionConfig{
 				Message:  "Focus on your task",
-				Color:    "#B0DB43",
 				Sound:    "loud_bell",
 				Duration: 50 * time.Minute,
 			},
 			ShortBreak: config.SessionConfig{
 				Message:  "Take a short rest",
-				Color:    "#12EAEA",
 				Sound:    "loud_bell",
 				Duration: 10 * time.Minute,
 			},
 			LongBreak: config.SessionConfig{
 				Message:  "Rest a little longer",
-				Color:    "#C492B1",
 				Sound:    "loud_bell",
 				Duration: 30 * time.Minute,
 			},

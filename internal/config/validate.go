@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -19,9 +18,6 @@ var (
 	// Valid long break intervals.
 	minLongBreakInterval = 4
 	maxLongBreakInterval = 10
-
-	// Color format validation.
-	hexColorRegex = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
 )
 
 // Validate performs validation checks on the Config struct and its fields.
@@ -64,10 +60,6 @@ func (c *Config) validateSessionConfig(
 
 	if strings.TrimSpace(sc.Message) == "" {
 		return errEmptyMsg.Fmt(sessionType)
-	}
-
-	if !hexColorRegex.MatchString(sc.Color) {
-		return errInvalidColor.Fmt(sessionType, sc.Color)
 	}
 
 	if sc.Sound != "" {

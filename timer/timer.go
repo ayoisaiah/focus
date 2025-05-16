@@ -4,7 +4,6 @@ package timer
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,7 +38,7 @@ import (
 type (
 	settingsView string
 
-	S map[config.SessionType]struct {
+	SessParams map[config.SessionType]struct {
 		Message  string
 		Duration time.Duration
 	}
@@ -47,15 +46,12 @@ type (
 	// Timer represents a running timer.
 	Timer struct {
 		help               help.Model
-		StartTime          time.Time      `json:"start_time"`
-		SessionKey         time.Time      `json:"session_key"`
-		PausedTime         time.Time      `json:"paused_time"`
 		SoundStream        beep.Streamer  `json:"-"`
 		db                 store.DB       `json:"-"`
 		Opts               *config.Config `json:"opts"`
-		Current            *Session
+		CurrentSess        *Session
 		soundForm          *huh.Form
-		S                  S
+		SessParams         SessParams
 		settings           settingsView
 		progress           progress.Model
 		clock              btimer.Model
@@ -70,14 +66,6 @@ type (
 		quit       key.Binding
 		esc        key.Binding
 	}
-
-	style struct {
-		work       lipgloss.Style
-		shortBreak lipgloss.Style
-		longBreak  lipgloss.Style
-		base       lipgloss.Style
-		help       lipgloss.Style
-	}
 )
 
 const (
@@ -86,7 +74,7 @@ const (
 )
 
 var (
-	defaultStyle  style
+	baseStyle     = lipgloss.NewStyle().Padding(1, 1)
 	defaultKeymap = keymap{
 		togglePlay: key.NewBinding(
 			key.WithKeys("p"),
@@ -117,32 +105,13 @@ var (
 var soundView settingsView = "sound"
 
 // New creates a new timer.
-func New(dbClient store.DB, cfg *config.Config) (*Timer, error) {
-	defaultStyle = style{
-		work: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(cfg.Work.Color)).
-			MarginRight(1).
-			SetString(cfg.Work.Message),
-		shortBreak: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(cfg.ShortBreak.Color)).
-			MarginRight(1).
-			SetString(cfg.ShortBreak.Message),
-		longBreak: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(cfg.LongBreak.Color)).
-			MarginRight(1).
-			SetString(cfg.LongBreak.Message),
-		base: lipgloss.NewStyle().Padding(1, 1),
-		help: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("240")).
-			MarginTop(2),
-	}
-
+func New(dbClient store.DB, cfg *config.Config) *Timer {
 	t := &Timer{
 		db:       dbClient,
 		Opts:     cfg,
 		help:     help.New(),
-		progress: progress.New(progress.WithDefaultGradient()),
-		S: S{
+		progress: progress.New(),
+		SessParams: SessParams{
 			config.Work: {
 				Duration: cfg.Work.Duration,
 				Message:  cfg.Work.Message,
@@ -158,19 +127,21 @@ func New(dbClient store.DB, cfg *config.Config) (*Timer, error) {
 		},
 	}
 
-	err := t.setAmbientSound()
+	t.progress.PercentageStyle = t.Opts.Style.Main
 
-	return t, err
+	return t
 }
 
-// sessions added with the --since flag.
+// Init initializes the timer for an interactive session, setting up the
+// current session and its clock. It handles the special case where a completed
+// session was added via --since reporting the successful addition and then
+// exiting the application. Otherwise, for a new interactive session,
+// it returns a command to initialize the timer's internal clock.
 func (t *Timer) Init() tea.Cmd {
-	t.StartTime = time.Now()
-
-	err := t.new()
+	err := t.setupSession()
 
 	// If --since is used to add a completed session
-	if t.Current.Completed {
+	if t.CurrentSess.Completed {
 		report.SessionAdded()
 
 		return tea.Quit
@@ -183,16 +154,25 @@ func (t *Timer) Init() tea.Cmd {
 	return t.clock.Init()
 }
 
-// new creates a new timer.
-func (t *Timer) new() error {
-	sess, err := t.createSession()
-	if err != nil {
-		return err
+// setupSession creates a session and initializes the timer with it.
+func (t *Timer) setupSession() error {
+	sess := t.newSession(config.Work)
+
+	if !t.Opts.CLI.StartTime.IsZero() {
+		sess.Adjust(t.Opts.CLI.StartTime)
+
+		if time.Now().After(sess.EndTime) {
+			sess.Completed = true
+			t.CurrentSess = sess
+
+			return t.persist()
+		}
 	}
 
-	t.Current = sess
+	t.CurrentSess = sess
 	t.WorkCycle = 1
-	t.clock = btimer.New(t.Current.Duration)
+	t.clock = btimer.New(t.CurrentSess.Duration)
+	t.setProgressColor(sess)
 
 	return nil
 }
@@ -201,7 +181,7 @@ func (t *Timer) new() error {
 func (t *Timer) newSession(
 	name config.SessionType,
 ) *Session {
-	duration := t.S[name].Duration
+	duration := t.SessParams[name].Duration
 	startTime := time.Now()
 	endTime := startTime.Add(duration)
 
@@ -240,17 +220,38 @@ func (t *Timer) nextSession(current config.SessionType) config.SessionType {
 	return next
 }
 
-// initSession prepares the next session based on the current session type.
-// It handles work cycle counting, session creation, and auto-start settings.
-// Returns a tea.Cmd for initializing the timer if auto-start is enabled.
+func (t *Timer) setProgressColor(newSess *Session) {
+	if newSess.Name == config.Work {
+		t.progress.FullColor = config.ColorWork.Light
+
+		if t.Opts.Display.DarkTheme {
+			t.progress.FullColor = config.ColorWork.Dark
+		}
+	}
+
+	if newSess.Name == config.ShortBreak {
+		t.progress.FullColor = config.ColorShortBreak.Light
+
+		if t.Opts.Display.DarkTheme {
+			t.progress.FullColor = config.ColorShortBreak.Dark
+		}
+	}
+
+	if newSess.Name == config.LongBreak {
+		t.progress.FullColor = config.ColorLongBreak.Light
+
+		if t.Opts.Display.DarkTheme {
+			t.progress.FullColor = config.ColorLongBreak.Dark
+		}
+	}
+}
+
+// immediately.
 func (t *Timer) initSession() tea.Cmd {
-	sessName := t.nextSession(t.Current.Name)
+	sessName := t.nextSession(t.CurrentSess.Name)
 	newSess := t.newSession(sessName)
 
-	if newSess.Name == config.Work && !t.Opts.Settings.AutoStartWork ||
-		newSess.Name != config.Work && !t.Opts.Settings.AutoStartBreak {
-		t.waitForNextSession = true
-	}
+	t.setProgressColor(newSess)
 
 	// increment or reset the work cycle accordingly
 	if sessName == config.Work {
@@ -261,42 +262,16 @@ func (t *Timer) initSession() tea.Cmd {
 		}
 	}
 
-	if !t.waitForNextSession {
-		t.Current = newSess
+	t.CurrentSess = newSess
 
-		t.clock = btimer.New(t.Current.Duration)
-		return t.clock.Init()
-	}
+	t.clock = btimer.New(t.CurrentSess.Duration)
 
-	return nil
-}
-
-// createSession initializes a new work session with the configured start time.
-// If --since is specified, adjusts the session time accordingly.
-// Returns the session and marks it completed if the end time is in the past.
-func (t *Timer) createSession() (*Session, error) {
-	sess := t.newSession(config.Work)
-
-	if !t.Opts.CLI.StartTime.IsZero() {
-		sess.Adjust(t.Opts.CLI.StartTime)
-
-		if time.Now().After(sess.EndTime) {
-			t.Current = sess
-
-			err := t.persist()
-			if err != nil {
-				return nil, err
-			}
-
-			sess.Completed = true
-		}
-	}
-
-	return sess, nil
+	return t.clock.Init()
 }
 
 func (t *Timer) postSession() error {
-	// t.notify(t.Context, t.Current.Name, sessName)
+	t.notify(t.CurrentSess.Name, t.nextSession(t.CurrentSess.Name))
+
 	err := t.runSessionCmd(t.Opts.Settings.Cmd)
 	if err != nil {
 		return err
@@ -307,7 +282,7 @@ func (t *Timer) postSession() error {
 
 // persist saves the current timer and session to the database.
 func (t *Timer) persist() error {
-	sess := *t.Current
+	sess := *t.CurrentSess
 
 	if sess.Name != config.Work {
 		return nil
@@ -335,7 +310,7 @@ func (t *Timer) persist() error {
 // The status includes session details, work cycle count, and timing information.
 // This file is used by other processes to query the timer's current state.
 func (t *Timer) writeStatusFile() error {
-	sess := t.Current
+	sess := t.CurrentSess
 
 	s := report.Status{
 		Name:              string(sess.Name),
@@ -401,7 +376,6 @@ func (t *Timer) runSessionCmd(sessionCmd string) error {
 // notify sends a desktop notification and plays a notification sound when a
 // session ends if enabled.
 func (t *Timer) notify(
-	_ context.Context,
 	sessName, nextSessName config.SessionType,
 ) {
 	if !t.Opts.Notifications.Enabled {
@@ -410,7 +384,7 @@ func (t *Timer) notify(
 
 	title := string(sessName + " is finished")
 
-	msg := t.S[nextSessName].Message
+	msg := t.SessParams[nextSessName].Message
 
 	// TODO: Need to update this
 	sound := t.Opts.ShortBreak.Sound
@@ -426,10 +400,7 @@ func (t *Timer) notify(
 		filepath.Join(configDir, "static", "icon.png"),
 	)
 
-	err := beeep.Notify(title, msg, pathToIcon)
-	if err != nil {
-		pterm.Error.Printfln("unable to display notification: %v", err)
-	}
+	_ = beeep.Notify(title, msg, pathToIcon)
 
 	if sound == "off" || sound == "" {
 		return
@@ -437,7 +408,7 @@ func (t *Timer) notify(
 
 	stream, err := prepSoundStream(sound)
 	if err != nil {
-		pterm.Error.Printfln("unable to play sound: %v", err)
+		// TODO: Log error
 		return
 	}
 

@@ -50,6 +50,7 @@ func (s *Session) Adjust(since time.Time) {
 	s.StartTime = since
 	s.EndTime = s.StartTime.Add(s.Duration)
 
+	s.Timeline[0].StartTime = since
 	s.Timeline[0].EndTime = s.EndTime
 }
 

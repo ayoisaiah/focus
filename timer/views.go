@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
 
 	"github.com/ayoisaiah/focus/internal/config"
 	"github.com/ayoisaiah/focus/internal/timeutil"
@@ -28,18 +26,18 @@ func (t *Timer) sessionPromptView() string {
 	title := "Your focus session is complete"
 	msg := "It's time to take a well-deserved break!"
 
-	if t.Current.Name == config.Work {
+	if t.CurrentSess.Name == config.Work {
 		title = "Your break is over"
-		msg = "Time to refocus and get back to work!"
+		msg = "It's time to refocus and get back to work!"
 	}
 
-	s.WriteString(
-		lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#DB2763")).
-			SetString(title).
-			String(),
+	s.WriteString(t.Opts.Style.Main.SetString(title).String())
+	s.WriteString("\n\n" + t.Opts.Style.Secondary.SetString(msg).String())
+	s.WriteString("\n\n" + t.help.ShortHelpView([]key.Binding{
+		defaultKeymap.enter,
+		defaultKeymap.quit,
+	}),
 	)
-	s.WriteString("\n\n" + msg)
 
 	return s.String()
 }
@@ -47,21 +45,13 @@ func (t *Timer) sessionPromptView() string {
 func (t *Timer) timerView() string {
 	var s strings.Builder
 
-	percent := (float64(
-		t.clock.Timeout.Seconds(),
-	) / float64(
-		t.Current.Duration.Seconds(),
-	))
-
-	timeRemaining := t.formatTimeRemaining()
-
-	switch t.Current.Name {
+	switch t.CurrentSess.Name {
 	case config.Work:
-		s.WriteString(defaultStyle.work.Render())
+		s.WriteString(t.Opts.Style.Work.Render())
 	case config.ShortBreak:
-		s.WriteString(defaultStyle.shortBreak.Render())
+		s.WriteString(t.Opts.Style.ShortBreak.Render())
 	case config.LongBreak:
-		s.WriteString(defaultStyle.longBreak.Render())
+		s.WriteString(t.Opts.Style.LongBreak.Render())
 	}
 
 	var timeFormat string
@@ -72,23 +62,18 @@ func (t *Timer) timerView() string {
 	}
 
 	if !t.clock.Running() && !t.clock.Timedout() {
-		s.WriteString(
-			lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#DB2763")).
-				SetString("[Paused]").
-				String(),
-		)
+		s.WriteString(t.Opts.Style.Secondary.SetString("[Paused]").String())
 	} else {
 		s.WriteString(
 			strings.TrimSpace(
-				defaultStyle.help.SetString("until " + t.Current.EndTime.Format(timeFormat)).String()),
+				t.Opts.Style.Hint.SetString("until " + t.CurrentSess.EndTime.Format(timeFormat)).String()),
 		)
 	}
 
-	if t.Current.Name == config.Work {
+	if t.CurrentSess.Name == config.Work {
 		s.WriteString(
 			strings.TrimSpace(
-				defaultStyle.help.SetString(
+				t.Opts.Style.Hint.SetString(
 					fmt.Sprintf(
 						" (%d/%d)",
 						t.WorkCycle,
@@ -97,81 +82,57 @@ func (t *Timer) timerView() string {
 				).String()))
 	}
 
+	percent := (float64(
+		t.clock.Timeout.Seconds(),
+	) / float64(
+		t.CurrentSess.Duration.Seconds(),
+	))
+
+	timeRemaining := t.formatTimeRemaining()
+
 	s.WriteString("\n\n")
-	s.WriteString(timeRemaining)
+	s.WriteString(t.Opts.Style.Main.SetString(timeRemaining).String())
 	s.WriteString("\n\n")
 	s.WriteString(t.progress.ViewAs(float64(1 - percent)))
-	s.WriteString("\n")
-	s.WriteString(t.helpView())
+	s.WriteString(t.sessionHelpView())
 
 	return s.String()
 }
 
-func (t *Timer) pickSoundView() string {
-	if t.soundForm.State == huh.StateCompleted {
-		sound := t.soundForm.GetString("sound")
-		t.Opts.Settings.AmbientSound = sound
-		t.settings = ""
-
-		err := t.setAmbientSound()
-		if err != nil {
-			return err.Error()
-		}
-
-		return ""
-	}
-
-	return t.soundForm.View()
-}
-
-func (t *Timer) settingsView() string {
+func (t *Timer) settingsView(view string) string {
 	if t.settings == soundView {
-		return t.pickSoundView()
+		return view + "\n\n" + t.soundForm.View()
 	}
 
-	return ""
+	return view
 }
 
-func (t *Timer) helpView() string {
-	if t.waitForNextSession {
-		return "\n" + t.help.ShortHelpView([]key.Binding{
-			defaultKeymap.enter,
-			defaultKeymap.quit,
-		})
-	}
-
-	if t.Current.Name == config.Work {
-		return "\n" + t.help.ShortHelpView([]key.Binding{
+func (t *Timer) sessionHelpView() string {
+	if t.CurrentSess.Name == config.Work {
+		return "\n\n" + t.help.ShortHelpView([]key.Binding{
 			defaultKeymap.togglePlay,
 			defaultKeymap.sound,
 			defaultKeymap.quit,
 		})
 	}
 
-	return "\n" + t.help.ShortHelpView([]key.Binding{
+	return "\n\n" + t.help.ShortHelpView([]key.Binding{
 		defaultKeymap.esc,
+		defaultKeymap.sound,
 		defaultKeymap.quit,
 	})
 }
 
 func (t *Timer) View() string {
 	if t.waitForNextSession {
-		return defaultStyle.base.Render(
-			t.sessionPromptView(),
-			"\n",
-			t.helpView(),
-		)
+		return t.Opts.Style.Base.Render(t.sessionPromptView())
 	}
 
-	if t.clock.Timedout() || t.Current.Completed {
+	if t.clock.Timedout() || t.CurrentSess.Completed {
 		return ""
 	}
 
-	view := t.timerView()
+	view := t.settingsView(t.timerView())
 
-	if t.settings != "" {
-		view += "\n\n" + t.settingsView()
-	}
-
-	return defaultStyle.base.Render(view)
+	return t.Opts.Style.Base.Render(view)
 }

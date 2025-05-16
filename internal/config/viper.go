@@ -66,13 +66,10 @@ func setupViper(v *viper.Viper, c *Config) {
 	// Set defaults
 	v.SetDefault(keyWorkDuration, "25m")
 	v.SetDefault(keyWorkMessage, "Focus on your task")
-	v.SetDefault(keyWorkColor, "#B0DB43")
 	v.SetDefault(keyWorkSound, "loud_bell")
 	v.SetDefault(keyShortBreakDuration, "5m")
 	v.SetDefault(keyShortBreakMessage, "Take a breather")
-	v.SetDefault(keyShortBreakColor, "#12EAEA")
 	v.SetDefault(keyShortBreakSound, "bell")
-	v.SetDefault(keyLongBreakColor, "#C492B1")
 	v.SetDefault(keyLongBreakMessage, "Take a long break")
 	v.SetDefault(keyLongBreakDuration, "15m")
 	v.SetDefault(keyLongBreakSound, "bell")

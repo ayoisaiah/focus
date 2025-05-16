@@ -183,10 +183,7 @@ func defaultAction(ctx *cli.Context) error {
 		return err
 	}
 
-	t, err := timer.New(dbClient, cfg)
-	if err != nil {
-		return err
-	}
+	t := timer.New(dbClient, cfg)
 
 	p := tea.NewProgram(t)
 

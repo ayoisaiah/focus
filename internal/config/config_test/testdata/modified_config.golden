@@ -1,7 +1,6 @@
 display:
     dark_theme: true
 long_break:
-    color: '#C492B1'
     duration: 30m
     message: Rest a little longer
     sound: loud_bell
@@ -16,12 +15,10 @@ settings:
     sound_on_break: false
     strict: false
 short_break:
-    color: '#12EAEA'
     duration: 10m
     message: Take a short rest
     sound: loud_bell
 work:
-    color: '#B0DB43'
     duration: 50m
     message: Focus on your task
     sound: loud_bell
