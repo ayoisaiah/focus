@@ -151,8 +151,14 @@ func (s *Stats) Server(port uint) error {
 
 	pterm.Info.Printfln("starting server on port: %d", port)
 
-	openbrowser("http://localhost:1111")
+	// openbrowser("http://localhost:1111")
 
 	//nolint:gosec // no timeout is ok
-	return http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	return nil
 }

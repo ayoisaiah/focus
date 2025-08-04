@@ -118,7 +118,7 @@ func New(dbClient store.DB, cfg *config.Config) *Timer {
 			},
 			config.ShortBreak: {
 				Duration: cfg.ShortBreak.Duration,
-				Message:  cfg.Work.Message,
+				Message:  cfg.ShortBreak.Message,
 			},
 			config.LongBreak: {
 				Duration: cfg.LongBreak.Duration,

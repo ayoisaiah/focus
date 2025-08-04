@@ -1,30 +1,50 @@
-name: Tests
+name: Run tests
 
 on:
+  push:
+    branches:
+      - master
+    tags:
+      - v*
   pull_request:
     branches:
       - master
 
 jobs:
-  run_tests:
+  test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v4
 
-      # Setup Go
-      - name: Setup Go
-        uses: actions/setup-go@v4
+      - name: Setup Go ${{ vars.GO_VERSION }}
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: ${{ vars.GO_VERSION }}
 
       - name: Install libasound2-dev
         run: sudo apt install libasound2-dev
         if: matrix.os == 'ubuntu-latest'
 
-      # Tests
+      - name: Set up gotestfmt
+        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
+
       - name: Run tests
-        run: go test ./... -race
+        run: go test ./... -json -v -race 2>&1 | gotestfmt -hide 'empty-packages'
+
+  trigger_stable_release:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Trigger repository_dispatch event
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.PERSONAL_ACCESS_TOKEN }}" \
+            https://api.github.com/repos/ayoisaiah/focus/dispatches \
+            -d '{"event_type": "release_stable", "client_payload":{"tag": "${{ github.ref }}", "tag_name": "${{ github.ref_name }}" }}'
+

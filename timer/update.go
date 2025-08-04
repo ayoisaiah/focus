@@ -175,5 +175,4 @@ func (t *Timer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	default:
 		return t, tea.Batch(t.handleSettings(msg))
 	}
-
 }

@@ -40,6 +40,8 @@ func copyEmbeddedFilesToDataDir() error {
 				return err
 			}
 
+			path = filepath.FromSlash(path)
+
 			stripped := strings.TrimPrefix(
 				path,
 				filesDir+string(os.PathSeparator),

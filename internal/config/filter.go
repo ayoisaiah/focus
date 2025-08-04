@@ -79,6 +79,8 @@ func setFilterConfig(ctx *cli.Context) (*FilterConfig, error) {
 		return nil, errInvalidPeriod
 	}
 
+	period = "all-time"
+
 	if period != "" {
 		filterCfg.StartTime, filterCfg.EndTime = getTimeRange(period)
 

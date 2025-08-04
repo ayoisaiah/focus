@@ -32,7 +32,9 @@ var defaultStyle = style{
 }
 
 func SessionAdded() {
-	fmt.Println(defaultStyle.success.Render("session added successfully"))
+	fmt.Println(
+		defaultStyle.success.Render("completed session recorded successfully"),
+	)
 }
 
 func Error(err error) {
@@ -40,7 +42,7 @@ func Error(err error) {
 }
 
 func Fatal(err error) tea.Cmd {
-	fmt.Println(defaultStyle.success.Render(err.Error()))
+	fmt.Println(defaultStyle.error.Render(err.Error()))
 	return tea.Quit
 }
 
