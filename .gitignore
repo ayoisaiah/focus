@@ -20,3 +20,9 @@ tags
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Logs
+app.log
+
+# Compiled files
+focus

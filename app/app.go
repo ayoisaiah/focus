@@ -69,6 +69,7 @@ func Get() *cli.App {
 			sessionCmdFlag,
 			addTagFlag,
 			strictFlag,
+			flowTimerFlag,
 		},
 		Action: defaultAction,
 		Before: beforeAction,

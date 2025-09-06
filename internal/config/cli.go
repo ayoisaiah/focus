@@ -25,6 +25,7 @@ type CLIOptions struct {
 	DisableNotify     bool
 	SoundOnBreak      bool
 	Strict            bool
+	FlowMode          bool
 }
 
 // WithCLIConfig returns an Option that loads configuration from CLI flags.
@@ -44,6 +45,7 @@ func WithCLIConfig(ctx *cli.Context) Option {
 			DisableNotify:     ctx.Bool("disable-notification"),
 			SoundOnBreak:      ctx.Bool("sound-on-break"),
 			Strict:            ctx.Bool("strict"),
+			FlowMode:          ctx.Bool("flow"),
 		}
 
 		return applyCLIOptions(c, opts)
@@ -66,6 +68,10 @@ func applyCLIOptions(c *Config, opts CLIOptions) error {
 
 	if opts.Strict {
 		c.Settings.Strict = true
+	}
+
+	if opts.FlowMode {
+		c.CLI.FlowMode = true
 	}
 
 	if err := applyCLISounds(c, opts); err != nil {

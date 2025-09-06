@@ -31,6 +31,7 @@ time management method developed by Francesco Cirillo in the late 1980s.
 - Work and break session lengths are customisable.
 - You can pause and resume work sessions.
 - You can skip break sessions.
+- **Flow timer mode**: Count-up timer with task tracking and milestone notifications.
 - You can customise the number of sessions before a long break.
 - You can set a maximum number of sessions.
 - Desktop notifications are supported on all platforms.
@@ -133,6 +134,10 @@ sound_on_break: false # play ambient sound during break sessions
 
 dark_theme: true # use colours befitting a dark background
 
+flow_bell: true # play bell sounds at flow timer milestones (50% and 100%)
+
+flow_bell_sound: 'tibetan_bell' # sound file for flow timer bells (bell, loud_bell, tibetan_bell)
+
 session_cmd: '' # execute an arbitrary command after each session
 ```
 
@@ -175,6 +180,51 @@ Focus has 3 types of sessions: work, short break, and long break.
 - If `auto_start_break` is `false`, you will be prompted to start each break
   session manually. Otherwise if set to `true`, it will start without your
   intervention.
+
+### ⏰ Flow timer mode
+
+Flow timer mode is an alternative to the traditional Pomodoro technique that counts up instead of down, allowing for more flexible work sessions. Use the `--flow` or `-f` option to enable flow mode:
+
+```bash
+focus --flow
+```
+
+When you start flow mode, you'll be prompted to:
+
+1. **Enter a task name** - What you're working on (e.g., "Writing blog post")
+2. **Set estimated time** - How long you expect to work (e.g., "25m", "1h30m")
+
+#### Flow mode features:
+
+- **Count-up timer**: Shows elapsed time instead of counting down
+- **Visual progress**: Displays elapsed vs estimated time with a progress bar
+- **Overtime indicator**: Time turns red when you exceed your estimated time
+- **Milestone notifications**: Desktop notifications and optional bell sounds at 50% and 100% of estimated time
+- **Flexible duration**: Continue working past your estimate or stop early as needed
+- **Task tracking**: Your task name is included in the session record
+
+#### Flow bell configuration:
+
+Flow timer bells are enabled by default and can be configured in your `config.yml`:
+
+```yml
+flow_bell: true               # Enable/disable flow timer bells
+flow_bell_sound: 'tibetan_bell'  # Which sound to use (bell, loud_bell, tibetan_bell)
+```
+
+Available flow bell sounds:
+- `bell` - Standard bell sound
+- `loud_bell` - Louder bell sound  
+- `tibetan_bell` - Peaceful Tibetan singing bowl (default)
+
+You can disable flow bells by setting `flow_bell: false` in your config.
+
+#### Visual feedback:
+
+Focus provides visual feedback for control states:
+- **Play/pause button**: The active state (`play` or `pause`) is highlighted in neon green
+- **Sound button**: Highlighted in neon green when ambient sound is active
+- **Controls**: Use `p` for play/pause, `s` for sound selection, and `q` to quit
 
 ## Tagging sessions
 

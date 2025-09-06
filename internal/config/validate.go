@@ -125,7 +125,7 @@ func (c *Config) validateSound(sound, group string) error {
 	}
 
 	if group == "alert" {
-		_, err := os.Stat(filepath.Join(alertSoundPath(), sound))
+		_, err := os.Stat(filepath.Join(AlertSoundPath(), sound))
 		if errors.Is(err, os.ErrNotExist) {
 			return errUnknownAlertSound.Fmt(sound)
 		}

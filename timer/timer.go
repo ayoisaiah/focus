@@ -22,8 +22,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/faiface/beep"
-	"github.com/faiface/beep/speaker"
+	"github.com/gopxl/beep/v2"
+	"github.com/gopxl/beep/v2/speaker"
 	"github.com/gen2brain/beeep"
 	"github.com/kballard/go-shellquote"
 	"github.com/pterm/pterm"
@@ -61,6 +61,18 @@ type (
 		clock              btimer.Model
 		WorkCycle          int `json:"work_cycle"`
 		waitForNextSession bool
+		flowMode           bool
+		taskName           string
+		estimatedTime      time.Duration
+		estimatedTimeStr   string
+		elapsedTime        time.Duration
+		pausedDuration     time.Duration
+		halfwayBellPlayed  bool
+		completeBellPlayed bool
+		// Custom sound selection (replacing huh form)
+		soundOptions       []string
+		selectedSoundIndex int
+		showingSoundMenu   bool
 	}
 
 	keymap struct {
@@ -142,6 +154,9 @@ func New(dbClient store.DB, cfg *config.Config) (*Timer, error) {
 		Opts:     cfg,
 		help:     help.New(),
 		progress: progress.New(progress.WithDefaultGradient()),
+		flowMode: cfg.CLI.FlowMode,
+		taskName: cfg.CLI.TaskName,
+		estimatedTime: cfg.CLI.EstimatedTime,
 		S: S{
 			config.Work: {
 				Duration: cfg.Work.Duration,
@@ -163,8 +178,206 @@ func New(dbClient store.DB, cfg *config.Config) (*Timer, error) {
 	return t, err
 }
 
+// playingBell tracks if a bell is currently playing to prevent conflicts
+var playingBell bool
+
+// playSystemSound tries to play a sound using available system audio players
+func (t *Timer) playSystemSound(soundPath string) {
+	// List of audio players to try, in order of preference
+	players := [][]string{
+		{"ffplay", "-nodisp", "-autoexit", soundPath},                    // Linux/macOS/Windows (if ffmpeg installed)
+		{"aplay", soundPath},                                             // Linux ALSA
+		{"paplay", soundPath},                                            // Linux PulseAudio  
+		{"afplay", soundPath},                                            // macOS
+		{"powershell", "-c", "(New-Object Media.SoundPlayer '" + soundPath + "').PlaySync();"}, // Windows
+	}
+	
+	go func() {
+		for _, cmd := range players {
+			// Check if command exists
+			if _, err := exec.LookPath(cmd[0]); err != nil {
+				continue
+			}
+			
+			// Try to play the sound
+			execCmd := exec.Command(cmd[0], cmd[1:]...)
+			err := execCmd.Run()
+			if err != nil {
+				continue
+			}
+			
+			return // Success
+		}
+	}()
+}
+
+// playFlowBell plays a bell sound for flow timer milestones
+func (t *Timer) playFlowBell() {
+	// Prevent concurrent bell plays
+	if playingBell {
+		fmt.Fprintf(os.Stderr, "[DEBUG] Bell already playing, skipping\n")
+		return
+	}
+	playingBell = true
+	defer func() { playingBell = false }()
+	
+	// Use configured flow bell sound or default to tibetan_bell
+	sound := t.Opts.Settings.FlowBellSound
+	if sound == "" {
+		sound = "tibetan_bell"
+	}
+	
+	// If there's no ambient sound playing, we can play the bell normally
+	if t.SoundStream == nil {
+		stream, err := prepAlertSoundStream(sound)
+		if err != nil {
+			return
+		}
+		
+		// Play the bell at normal volume
+		speaker.Play(stream)
+		
+		// Close stream after a reasonable delay in a goroutine
+		go func() {
+			time.Sleep(5 * time.Second) // Give it time to play (tibetan bell is ~43 seconds but most of it is silence)
+			if closer, ok := stream.(interface{ Close() error }); ok {
+				closer.Close()
+			}
+		}()
+		
+		return
+	}
+	
+	// If ambient sound is playing, temporarily pause it, play bell, then resume
+	stream, err := prepAlertSoundStream(sound)
+	if err != nil {
+		return
+	}
+	
+	go func() {
+		defer stream.Close()
+		
+		// Clear current playback
+		speaker.Clear()
+		
+		// Play the bell
+		done := make(chan bool)
+		speaker.Play(beep.Seq(stream, beep.Callback(func() {
+			done <- true
+		})))
+		
+		<-done
+		
+		// Resume ambient sound if it was playing
+		if t.SoundStream != nil && t.Opts.Settings.AmbientSound != "" {
+			speaker.Play(t.SoundStream)
+		}
+	}()
+}
+
+// notifyFlowMilestone sends a desktop notification for flow timer milestones
+func (t *Timer) notifyFlowMilestone(milestone string) {
+	if !t.Opts.Notifications.Enabled {
+		return
+	}
+
+	var title, message string
+	taskName := t.taskName
+	if taskName == "" {
+		taskName = "your task"
+	}
+	
+	switch milestone {
+	case "halfway":
+		title = "Halfway point reached"
+		message = fmt.Sprintf("You're halfway through %s - keep going!", taskName)
+	case "complete":
+		title = "Estimated time reached"
+		message = fmt.Sprintf("You've reached your estimated time for %s", taskName)
+	}
+
+	configDir := filepath.Base(filepath.Dir(config.ConfigFilePath()))
+
+	// pathToIcon will be an empty string if file is not found
+	pathToIcon, _ := xdg.SearchDataFile(
+		filepath.Join(configDir, "static", "icon.png"),
+	)
+
+	err := beeep.Notify(title, message, pathToIcon)
+	if err != nil {
+		pterm.Error.Printfln("unable to display notification: %v", err)
+	}
+}
+
+// promptFlowModeInfo prompts for task name and estimated time in flow mode.
+func (t *Timer) promptFlowModeInfo() tea.Cmd {
+	// Create a form to get task name and estimated time
+	t.soundForm = huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Key("taskName").
+				Title("What are you working on?").
+				Value(&t.taskName).
+				Placeholder("Enter task name..."),
+			huh.NewInput().
+				Key("estimatedTime").
+				Title("Estimated time (e.g., 25m, 1h30m)?").
+				Value(&t.estimatedTimeStr).
+				Placeholder("25m"),
+		),
+	)
+	t.settings = "flowPrompt"
+	return t.soundForm.Init()
+}
+
+// initFlowTimer initializes the timer in flow mode (counting up)
+func (t *Timer) initFlowTimer() error {
+	// Parse the estimated time string
+	dur, err := time.ParseDuration(t.estimatedTimeStr)
+	if err != nil {
+		// Default to 25 minutes if parsing fails
+		dur = 25 * time.Minute
+	}
+	t.estimatedTime = dur
+	
+	// Create a session with the task name
+	sess := &Session{
+		Name:      config.Work,
+		Duration:  dur,
+		Tags:      append(t.Opts.CLI.Tags, t.taskName),
+		Completed: false,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(dur),
+		Timeline: []Timeline{
+			{
+				StartTime: time.Now(),
+				EndTime:   time.Now().Add(dur),
+			},
+		},
+	}
+	
+	t.Current = sess
+	t.WorkCycle = 1
+	
+	// For flow mode, we'll use a timer with a very long duration
+	// and track elapsed time manually
+	t.clock = btimer.New(24 * time.Hour)
+	t.elapsedTime = 0
+	t.pausedDuration = 0
+	
+	// StartTime will be set when the timer actually starts running
+	
+	return nil
+}
+
 // sessions added with the --since flag.
 func (t *Timer) Init() tea.Cmd {
+	// If in flow mode, prompt for task name and estimated time
+	// StartTime will be set when the timer actually starts running
+	if t.flowMode {
+		return t.promptFlowModeInfo()
+	}
+
 	t.StartTime = time.Now()
 
 	err := t.new()

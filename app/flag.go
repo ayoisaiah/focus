@@ -100,4 +100,10 @@ var (
 		Aliases: []string{"w"},
 		Usage:   "Work duration in minutes (default: 25)",
 	}
+
+	flowTimerFlag = &cli.BoolFlag{
+		Name:    "flow",
+		Aliases: []string{"f"},
+		Usage:   "Use flow timer mode (counts up with estimated time)",
+	}
 )

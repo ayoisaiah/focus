@@ -31,6 +31,8 @@ const (
 	keyAmbientSound         = "settings.ambient_sound"
 	keySessionCmd           = "settings.cmd"
 	keyTwentyFourHour       = "settings.24hr_clock"
+	keyFlowBell             = "settings.flow_bell"
+	keyFlowBellSound        = "settings.flow_bell_sound"
 	keyDarkTheme            = "display.dark_theme"
 )
 
@@ -83,6 +85,8 @@ func setupViper(v *viper.Viper, c *Config) {
 	v.SetDefault(keySoundOnBreak, false)
 	v.SetDefault(keyDarkTheme, true)
 	v.SetDefault(keyStrict, false)
+	v.SetDefault(keyFlowBell, true)
+	v.SetDefault(keyFlowBellSound, "tibetan_bell")
 	v.SetDefault(keyAmbientSound, "")
 	v.SetDefault(keySessionCmd, "")
 

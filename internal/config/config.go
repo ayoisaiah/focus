@@ -44,12 +44,17 @@ type (
 		SoundOnBreak      bool   `mapstructure:"sound_on_break"`
 		Strict            bool   `mapstructure:"strict"`
 		TwentyFourHour    bool   `mapstructure:"24hr_clock"`
+		FlowBell          bool   `mapstructure:"flow_bell"`
+		FlowBellSound     string `mapstructure:"flow_bell_sound"`
 	}
 
 	// arguments.
 	CLIConfig struct {
-		StartTime time.Time
-		Tags      []string
+		StartTime   time.Time
+		Tags        []string
+		FlowMode    bool
+		TaskName    string
+		EstimatedTime time.Duration
 	}
 
 	// NotificationConfig holds notification settings.
@@ -125,7 +130,7 @@ func DBFilePath() string {
 	return dbFilePath
 }
 
-func alertSoundPath() string {
+func AlertSoundPath() string {
 	return filepath.Join(xdg.DataHome, appName, "alert_sound")
 }
 
@@ -143,6 +148,9 @@ func ConfigFilePath() string {
 
 func SoundOpts() []string {
 	var sounds []string
+	
+	// Add "off" option first
+	sounds = append(sounds, "off")
 
 	dirs, err := os.ReadDir(AmbientSoundPath())
 	if err == nil {
