@@ -59,21 +59,10 @@ var (
 		Usage:   "Add comma-delimited tags to a session",
 	}
 
-	listJSONFlag = &cli.BoolFlag{
-		Name:  "json",
-		Usage: "List Focus sessions in JSON format",
-	}
-
 	statsPortFlag = &cli.UintFlag{
 		Name:  "port",
 		Usage: "Specify the port for the statistics server",
 		Value: 1111,
-	}
-
-	resetTimerFlag = &cli.BoolFlag{
-		Name:    "reset",
-		Aliases: []string{"r"},
-		Usage:   "Reset the timer to the beginning of the set",
 	}
 
 	shortBreakFlag = &cli.StringFlag{

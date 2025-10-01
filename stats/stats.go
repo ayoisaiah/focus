@@ -12,27 +12,22 @@ import (
 
 	"github.com/maruel/natural"
 
-	"github.com/ayoisaiah/focus/internal/config"
 	"github.com/ayoisaiah/focus/internal/models"
 	"github.com/ayoisaiah/focus/internal/timeutil"
 	"github.com/ayoisaiah/focus/store"
 )
 
 type (
-	Opts struct {
-		config.FilterConfig
-	}
-
 	// Stats represents the computed focus statistics for a period of time.
 	Stats struct {
 		Aggregates      Aggregates        `json:"aggregates"`
 		StartTime       time.Time         `json:"start_time"`
 		EndTime         time.Time         `json:"end_time"`
 		DB              store.DB          `json:"-"`
-		Opts            Opts              `json:"-"`
 		Sessions        []*models.Session `json:"-"`
 		LastDayTimeline []Timeline        `json:"timeline"`
 		Summary         Summary           `json:"summary"`
+		Tags            []string          `json:"tags"`
 	}
 
 	Timeline struct {
@@ -161,7 +156,7 @@ func (s *Stats) getSessionDuration(
 
 outer:
 	for _, event := range sess.Timeline {
-		if event.StartTime.After(s.Opts.StartTime) && event.EndTime.Before(s.Opts.EndTime) {
+		if event.StartTime.After(s.StartTime) && event.EndTime.Before(s.EndTime) {
 			duration += event.EndTime.Sub(event.StartTime)
 			continue
 		}
@@ -169,11 +164,11 @@ outer:
 		for date := event.StartTime; date.Before(event.EndTime); date = date.Add(1 * time.Minute) {
 			// prevent minutes that fall outside the specified bounds
 			// from being included
-			if date.Before(s.Opts.StartTime) {
+			if date.Before(s.StartTime) {
 				continue
 			}
 
-			if date.After(s.Opts.EndTime) {
+			if date.After(s.EndTime) {
 				break outer
 			}
 
@@ -190,11 +185,11 @@ func (s *Stats) updateAggr(
 	period aggregatePeriod,
 ) {
 	for date := event.StartTime; date.Before(event.EndTime); date = date.Add(1 * time.Minute) {
-		if date.Before(s.Opts.StartTime) {
+		if date.Before(s.StartTime) {
 			continue
 		}
 
-		if date.After(s.Opts.EndTime) {
+		if date.After(s.EndTime) {
 			break
 		}
 
@@ -245,7 +240,7 @@ func (s *Stats) updateAggr(
 func (s *Stats) computeAggregates() {
 	var totals Aggregates
 
-	totals.init(s.Opts.StartTime, s.Opts.EndTime)
+	totals.init(s.StartTime, s.EndTime)
 
 	s.LastDayTimeline = []Timeline{}
 
@@ -258,7 +253,7 @@ func (s *Stats) computeAggregates() {
 
 			t := Timeline{}
 
-			endTimeBeginning := timeutil.RoundToStart(s.Opts.EndTime)
+			endTimeBeginning := timeutil.RoundToStart(s.EndTime)
 
 			if end.After(endTimeBeginning) {
 				for date := start; date.Before(end); date = date.Add(1 * time.Minute) {
@@ -275,7 +270,7 @@ func (s *Stats) computeAggregates() {
 				}
 			}
 
-			if start.After(s.Opts.StartTime) && end.Before(s.Opts.EndTime) {
+			if start.After(s.StartTime) && end.Before(s.EndTime) {
 				if start.Year() == end.Year() {
 					totals.Yearly[strconv.Itoa(start.Year())] += end.Sub(start)
 				} else {
@@ -331,8 +326,8 @@ func (s *Stats) computeAggregates() {
 	s.Aggregates = totals
 }
 
-// computeSummary calculates the total minutes, completed sessions,
-// and abandoned sessions for the current time period.
+// computeSummary calculates the total minutes, completed sessions, and
+// abandoned sessions for the current time period.
 func (s *Stats) computeSummary() {
 	var totals Summary
 
@@ -360,7 +355,7 @@ func (s *Stats) computeSummary() {
 		}
 	}
 
-	hoursDiff := timeutil.Round(s.Opts.EndTime.Sub(s.Opts.StartTime).Hours())
+	hoursDiff := timeutil.Round(s.EndTime.Sub(s.StartTime).Hours())
 
 	numberOfDays := hoursDiff / timeutil.HoursInADay
 
@@ -502,22 +497,4 @@ func (s *Stats) ToJSON() ([]byte, error) {
 	sortByName(r.Yearly)
 
 	return json.Marshal(r)
-}
-
-// Compute calculates Focus statistics for a specific time period.
-func (s *Stats) Compute(sessions []*models.Session) {
-	s.Sessions = sessions
-
-	// TODO: Filter invalid sessions?
-
-	// For all-time, set start time to the date of the first session
-	if s.Opts.StartTime.IsZero() && len(sessions) > 0 {
-		s.Opts.StartTime = timeutil.RoundToStart(sessions[0].StartTime)
-	}
-
-	s.StartTime = s.Opts.StartTime
-	s.EndTime = s.Opts.EndTime
-
-	s.computeSummary()
-	s.computeAggregates()
 }

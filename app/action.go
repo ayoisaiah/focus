@@ -123,37 +123,14 @@ func editConfigAction(ctx *cli.Context) error {
 	return nil
 }
 
-// statsAction computes the stats for the specified time period.
+// statsAction launches the statistics server
 func statsAction(ctx *cli.Context) error {
-	sessions, db, err := sessionHelper(ctx)
+	db, err := store.NewClient(config.DBFilePath())
 	if err != nil {
 		return err
 	}
 
-	opts := config.Filter(ctx)
-
-	//nolint:govet // unkeyed fields are fine here
-	s := &stats.Stats{
-		Opts: stats.Opts{
-			*opts,
-		},
-		DB: db,
-	}
-
-	s.Compute(sessions)
-
-	if ctx.Bool("json") {
-		b, err := s.ToJSON()
-		if err != nil {
-			return err
-		}
-
-		fmt.Println(string(b))
-
-		return nil
-	}
-
-	return s.Server(ctx.Uint("port"))
+	return stats.Server(db, ctx.Uint("port"))
 }
 
 // statusAction handles the status command and prints the status of the currently

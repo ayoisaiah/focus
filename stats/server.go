@@ -17,6 +17,7 @@ import (
 	"github.com/pterm/pterm"
 
 	"github.com/ayoisaiah/focus/internal/timeutil"
+	"github.com/ayoisaiah/focus/store"
 )
 
 type (
@@ -27,16 +28,9 @@ type (
 		MainChart string
 		Days      int
 	}
-
-	errorHandler func(w http.ResponseWriter, r *http.Request) error
 )
 
-//go:embed web/*
-var web embed.FS
-
-var tpl = template.Must(
-	template.New("index.html").ParseFS(web, "web/index.html"),
-)
+type errorHandler func(w http.ResponseWriter, r *http.Request) error
 
 func (h errorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := h(w, r)
@@ -45,29 +39,37 @@ func (h errorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Stats) getStats(
-	startTime, endTime time.Time,
-	tagList []string,
-) ([]byte, error) {
-	s.Opts.StartTime = startTime
-	s.Opts.EndTime = endTime
-	s.Opts.Tags = tagList
+//go:embed web/*
+var web embed.FS
 
-	sessions, err := s.DB.GetSessions(
-		s.Opts.StartTime,
-		s.Opts.EndTime,
-		s.Opts.Tags,
-	)
+var db store.DB
+
+var tpl = template.Must(
+	template.New("index.html").ParseFS(web, "web/index.html"),
+)
+
+// computeSummary calculates the total minutes, completed sessions,
+// and abandoned sessions for the current time period.
+func (s *Stats) computeStats() ([]byte, error) {
+	sessions, err := db.GetSessions(s.StartTime, s.EndTime, s.Tags)
 	if err != nil {
 		return nil, err
 	}
 
-	s.Compute(sessions)
+	s.Sessions = sessions
+
+	// For all-time, set start time to the date of the first session
+	if s.StartTime.IsZero() && len(s.Sessions) > 0 {
+		s.StartTime = timeutil.RoundToStart(s.Sessions[0].StartTime)
+	}
+
+	s.computeSummary()
+	// s.computeAggregates()
 
 	return s.ToJSON()
 }
 
-func (s *Stats) index(w http.ResponseWriter, r *http.Request) error {
+func (s *Stats) Index(w http.ResponseWriter, r *http.Request) error {
 	query := r.URL.Query()
 
 	start := query.Get("start_time")
@@ -93,10 +95,16 @@ func (s *Stats) index(w http.ResponseWriter, r *http.Request) error {
 		tagList = strings.Split(tags, ",")
 	}
 
-	b, err := s.getStats(startTime, endTime, tagList)
+	s.StartTime = startTime
+	s.EndTime = endTime
+	s.Tags = tagList
+
+	b, err := s.computeStats()
 	if err != nil {
 		return err
 	}
+
+	fmt.Println(string(b))
 
 	var buf bytes.Buffer
 
@@ -140,18 +148,22 @@ func openbrowser(url string) {
 	}
 }
 
-func (s *Stats) Server(port uint) error {
+func Server(dB store.DB, port uint) error {
 	mux := http.NewServeMux()
+
+	s := &Stats{
+		DB: db,
+	}
 
 	staticFS := http.FS(web)
 	fs := http.FileServer(staticFS)
 
 	mux.Handle("/web/", fs)
-	mux.Handle("/", errorHandler(s.index))
+	mux.Handle("/", errorHandler(s.Index))
 
 	pterm.Info.Printfln("starting server on port: %d", port)
 
-	openbrowser("http://localhost:1111")
+	// openbrowser("http://localhost:1111")
 
 	//nolint:gosec // no timeout is ok
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
