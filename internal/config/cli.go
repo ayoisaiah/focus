@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -100,6 +101,10 @@ func applyCLIDurations(c *Config, opts CLIOptions) error {
 
 	for sessType, durStr := range durationsMap {
 		if durStr != "" {
+			if _, err := strconv.ParseInt(durStr, 10, 64); err == nil {
+				durStr += "m"
+			}
+
 			dur, err := time.ParseDuration(durStr)
 			if err != nil {
 				return errInvalidCLIDuration.Fmt(sessType, err)
