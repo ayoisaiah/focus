@@ -85,6 +85,7 @@ func setupViper(v *viper.Viper, c *Config) {
 	v.SetDefault(keyStrict, false)
 	v.SetDefault(keyAmbientSound, "")
 	v.SetDefault(keySessionCmd, "")
+	v.SetDefault(keyTwentyFourHour, true)
 
 	if c.firstRun {
 		v.SetDefault(
